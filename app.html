@@ -490,6 +490,7 @@ let addingList = false, newListName = '';
 let dragTodoId = null, dragTrashId = null, dragOverEl = null;
 let modalMode = null, modalLists = [], modalAllChecked = false, importPayload = null;
 let fileDragOver = false;
+let listTrash = [], showListTrash = false;
 
 // ── Persistence ────────────────────────────────────────
 function load() {
@@ -500,9 +501,10 @@ function load() {
   }
   selectedListId = lists[0].id;
 
-  // Todo / Trash 読み込み
+  // Todo / Trash / ListTrash 読み込み
   try { todos = JSON.parse(localStorage.getItem('todo-app-todos') || '[]'); } catch { todos = []; }
   try { trash = JSON.parse(localStorage.getItem('todo-app-trash') || '[]'); } catch { trash = []; }
+  try { listTrash = JSON.parse(localStorage.getItem('todo-app-list-trash') || '[]'); } catch { listTrash = []; }
 
   // listId がない既存データを最初のリストへマイグレーション
   const defId = lists[0].id;
@@ -515,6 +517,7 @@ function save() {
   localStorage.setItem('todo-app-todos',  JSON.stringify(todos));
   localStorage.setItem('todo-app-trash',  JSON.stringify(trash));
   localStorage.setItem('todo-app-lists',  JSON.stringify(lists));
+  localStorage.setItem('todo-app-list-trash', JSON.stringify(listTrash));
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -624,6 +627,37 @@ function htmlSidebar() {
        </div>`
     : `<button class="list-add-btn" data-a="start-add-list">${I.plus}リストを追加</button>`;
 
+  // リストゴミ箱セクション
+  const ltItems = listTrash.length === 0
+    ? `<li class="trash-empty" style="padding:16px 0;font-size:12px">ゴミ箱は空です</li>`
+    : listTrash.map((entry, i) => {
+        const cnt = entry.todos.length;
+        return `<li class="list-nav-item" style="padding:6px 10px">
+          <div class="list-item-row">
+            <span class="list-item-name" style="color:var(--t3)">${esc(entry.list.name)}</span>
+            <span class="list-count-pill">${cnt}</span>
+            <div style="display:flex;gap:2px;flex-shrink:0">
+              <button class="list-del-btn" style="opacity:1;color:#818cf8" data-a="restore-list" data-idx="${i}" title="復元">${I.restore}</button>
+              <button class="list-del-btn" style="opacity:1" data-a="del-list-permanent" data-idx="${i}" title="削除">${I.x}</button>
+            </div>
+          </div>
+        </li>`;
+      }).join('');
+
+  const listTrashSection = showListTrash ? `<div style="border-top:1px solid var(--divider)">
+    <div style="padding:8px 16px 4px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:4px">${I.trash}ゴミ箱 (${listTrash.length})</span>
+      ${listTrash.length > 0 ? `<button class="empty-all" data-a="empty-list-trash" style="font-size:10px;padding:2px 6px">すべて削除</button>` : ''}
+    </div>
+    <ul class="list-nav" style="padding:4px 8px">${ltItems}</ul>
+  </div>` : '';
+
+  const trashToggle = `<div style="padding:4px 8px;border-top:1px solid var(--divider)">
+    <button class="list-add-btn" data-a="toggle-list-trash" style="margin-top:0">
+      ${I.trash}ゴミ箱${listTrash.length > 0 ? ` <span class="trash-cnt" style="width:14px;height:14px;font-size:9px">${listTrash.length}</span>` : ''}
+    </button>
+  </div>`;
+
   return `<div class="sidebar-col">
     <div class="card">
       <div class="sidebar-hd">リスト</div>
@@ -633,6 +667,8 @@ function htmlSidebar() {
         <button class="io-btn" data-a="open-export">${I.download}エクスポート</button>
         <button class="io-btn" data-a="open-import">${I.upload}インポート</button>
       </div>
+      ${trashToggle}
+      ${listTrashSection}
     </div>
   </div>`;
 }
@@ -924,12 +960,40 @@ function commitAddList() {
 }
 function handleDeleteList(id) {
   if (lists.length <= 1) return;
+  const lst = lists.find(l => l.id === id);
+  if (!lst) return;
+  // リストとそのTodo/Trashをゴミ箱へ移動
+  listTrash.unshift({
+    list: lst,
+    todos: todos.filter(t => t.listId === id),
+    trash: trash.filter(t => t.listId === id),
+    deletedAt: Date.now(),
+  });
   lists = lists.filter(l => l.id !== id);
   todos = todos.filter(t => t.listId !== id);
   trash = trash.filter(t => t.listId !== id);
   if (selectedListId === id) { selectedListId = lists[0].id; filter = 'all'; showTrash = false; }
   save(); render();
 }
+function restoreList(index) {
+  const entry = listTrash[index];
+  if (!entry) return;
+  listTrash.splice(index, 1);
+  lists.push(entry.list);
+  todos.push(...entry.todos);
+  trash.push(...entry.trash);
+  selectedListId = entry.list.id; filter = 'all'; showTrash = false;
+  save(); render();
+}
+function deleteListPermanently(index) {
+  listTrash.splice(index, 1);
+  save(); render();
+}
+function emptyListTrash() {
+  listTrash = [];
+  save(); render();
+}
+function toggleListTrash() { showListTrash = !showListTrash; render(); }
 
 // ── Import / Export ────────────────────────────────────
 function closeModal() {
@@ -1103,6 +1167,10 @@ document.addEventListener('click', e => {
     case 'modal-toggle-all': toggleModalAll(); break;
     case 'modal-toggle':    toggleModalItem(id); break;
     case 'modal-confirm':   if (modalMode === 'export') executeExport(); else executeImport(); break;
+    case 'toggle-list-trash': toggleListTrash(); break;
+    case 'restore-list':      { const idx = e.target.closest('[data-idx]')?.dataset.idx; if (idx != null) restoreList(+idx); break; }
+    case 'del-list-permanent': { e.stopPropagation(); const idx = e.target.closest('[data-idx]')?.dataset.idx; if (idx != null) deleteListPermanently(+idx); break; }
+    case 'empty-list-trash':  emptyListTrash(); break;
   }
 });
 

@@ -374,6 +374,108 @@
     }
     html.dark .tip { background:#374151; }
     .tip-wrap:hover .tip { opacity:1; }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      position:fixed; inset:0; z-index:100;
+      background:rgba(0,0,0,.45);
+      display:flex; align-items:center; justify-content:center;
+      animation:fadeIn .15s ease;
+    }
+    html.dark .modal-overlay { background:rgba(0,0,0,.65); }
+    .modal {
+      background:var(--card); border-radius:16px; border:1px solid var(--card-border);
+      box-shadow:0 25px 50px -12px rgba(0,0,0,.25);
+      width:90%; max-width:420px; max-height:80vh;
+      display:flex; flex-direction:column; overflow:hidden;
+      animation:modalIn .2s ease;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes modalIn { from{opacity:0;transform:scale(.95) translateY(8px)} to{opacity:1;transform:none} }
+    .modal-header {
+      padding:16px 20px; border-bottom:1px solid var(--divider);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .modal-title { font-size:15px; font-weight:700; color:var(--t1); }
+    .modal-close {
+      width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+      border-radius:8px; border:none; background:transparent; color:var(--t2);
+      cursor:pointer; transition:all .15s;
+    }
+    .modal-close:hover { background:var(--filter-bg); color:var(--t1); }
+    .modal-close svg { width:14px; height:14px; }
+    .modal-body { padding:12px 20px; overflow-y:auto; flex:1; }
+    .modal-check-row {
+      display:flex; align-items:center; gap:10px; padding:8px 0;
+      border-bottom:1px solid var(--item-border); cursor:pointer; user-select:none;
+    }
+    .modal-check-row:last-child { border-bottom:none; }
+    .modal-check-row.select-all {
+      font-weight:700; font-size:13px; color:var(--t2);
+      padding-bottom:10px; margin-bottom:4px;
+      border-bottom:2px solid var(--divider);
+    }
+    .modal-cb {
+      width:18px; height:18px; border-radius:4px; border:2px solid #d1d5db;
+      background:transparent; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; transition:all .15s; cursor:pointer;
+    }
+    html.dark .modal-cb { border-color:#4b5563; }
+    .modal-cb.checked { background:#6366f1; border-color:#6366f1; }
+    .modal-cb svg { width:12px; height:12px; display:none; }
+    .modal-cb.checked svg { display:block; }
+    .modal-list-name {
+      flex:1; font-size:14px; color:var(--t1);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .modal-list-count { flex-shrink:0; font-size:11px; color:var(--t3); }
+    .modal-footer {
+      padding:12px 20px; border-top:1px solid var(--divider);
+      display:flex; align-items:center; justify-content:flex-end; gap:8px;
+    }
+    .modal-btn-cancel {
+      padding:8px 16px; font-size:13px; font-weight:500; border-radius:10px;
+      border:1px solid var(--input-border); background:var(--card); color:var(--t2);
+      cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    .modal-btn-cancel:hover { border-color:#818cf8; color:var(--t1); }
+    .modal-btn-primary {
+      padding:8px 16px; font-size:13px; font-weight:600; border-radius:10px;
+      border:none; background:rgba(99,102,241,.8); color:#fff;
+      cursor:pointer; transition:all .15s; font-family:inherit;
+      box-shadow:0 1px 2px rgba(99,102,241,.2);
+    }
+    .modal-btn-primary:hover { background:rgba(99,102,241,.9); }
+    .modal-btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+
+    /* ── Sidebar IO buttons ── */
+    .io-area { padding:8px; border-top:1px solid var(--divider); display:flex; gap:4px; }
+    .io-btn {
+      flex:1; display:flex; align-items:center; justify-content:center; gap:4px;
+      padding:6px 0; font-size:11px; font-weight:500; color:var(--t3);
+      background:none; border:none; cursor:pointer; border-radius:8px;
+      transition:all .15s; font-family:inherit;
+    }
+    .io-btn:hover { color:#6366f1; background:rgba(99,102,241,.07); }
+    html.dark .io-btn:hover { color:#a5b4fc; background:rgba(99,102,241,.15); }
+    .io-btn svg { width:12px; height:12px; }
+
+    /* ── File drop zone overlay ── */
+    .drop-zone-overlay {
+      position:fixed; inset:0; z-index:200;
+      background:rgba(99,102,241,.08);
+      border:3px dashed #6366f1;
+      display:flex; align-items:center; justify-content:center;
+      pointer-events:none;
+    }
+    html.dark .drop-zone-overlay { background:rgba(99,102,241,.15); border-color:#818cf8; }
+    .drop-zone-text {
+      padding:16px 32px; border-radius:16px;
+      background:var(--card); border:1px solid var(--card-border);
+      box-shadow:0 10px 25px rgba(0,0,0,.15);
+      font-size:16px; font-weight:700; color:#6366f1;
+    }
+    html.dark .drop-zone-text { color:#a5b4fc; }
   </style>
 </head>
 <body>
@@ -386,6 +488,8 @@ let editId = null, editText = '', editDue = '';
 let editingListId = null, editingListName = '';
 let addingList = false, newListName = '';
 let dragTodoId = null, dragTrashId = null, dragOverEl = null;
+let modalMode = null, modalLists = [], modalAllChecked = false, importPayload = null;
+let fileDragOver = false;
 
 // ── Persistence ────────────────────────────────────────
 function load() {
@@ -470,6 +574,8 @@ const I = {
   moon:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
   grip:    `<svg fill="currentColor" viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>`,
   check:   `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
+  download:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>`,
+  upload:  `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>`,
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -523,6 +629,10 @@ function htmlSidebar() {
       <div class="sidebar-hd">リスト</div>
       <ul class="list-nav">${items}</ul>
       <div class="list-add-area">${addArea}</div>
+      <div class="io-area">
+        <button class="io-btn" data-a="open-export">${I.download}エクスポート</button>
+        <button class="io-btn" data-a="open-import">${I.upload}インポート</button>
+      </div>
     </div>
   </div>`;
 }
@@ -635,9 +745,51 @@ function htmlMain() {
   </div>`;
 }
 
+// ── Modal HTML ────────────────────────────────────────
+function htmlModal() {
+  if (!modalMode) return '';
+  const isExport = modalMode === 'export';
+  const title = isExport ? 'エクスポート' : 'インポート';
+  const actionLabel = isExport ? 'エクスポート' : 'インポート';
+  const selectedCount = modalLists.filter(l => l.checked).length;
+
+  const checkSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+
+  const allRow = `<div class="modal-check-row select-all" data-a="modal-toggle-all">
+    <div class="modal-cb${modalAllChecked ? ' checked' : ''}">${checkSvg}</div>
+    <span class="modal-list-name">すべて選択</span>
+  </div>`;
+
+  const rows = modalLists.map(l => {
+    const cnt = isExport
+      ? todos.filter(t => t.listId === l.id).length
+      : (l.todoCount || 0);
+    return `<div class="modal-check-row" data-a="modal-toggle" data-id="${l.id}">
+      <div class="modal-cb${l.checked ? ' checked' : ''}">${checkSvg}</div>
+      <span class="modal-list-name">${esc(l.name)}</span>
+      <span class="modal-list-count">${cnt}件</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">${title}</span>
+        <button class="modal-close" data-a="modal-close">${I.x}</button>
+      </div>
+      <div class="modal-body">${allRow}${rows}</div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" data-a="modal-close">キャンセル</button>
+        <button class="modal-btn-primary" data-a="modal-confirm" ${selectedCount === 0 ? 'disabled' : ''}>${actionLabel} (${selectedCount})</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 // ── Build full page HTML ───────────────────────────────
 function html() {
   const dark = document.documentElement.classList.contains('dark');
+  const dropZone = fileDragOver ? `<div class="drop-zone-overlay"><div class="drop-zone-text">${I.upload} ファイルをドロップしてインポート</div></div>` : '';
   return `
     <div class="header">
       <div class="header-left">
@@ -652,7 +804,9 @@ function html() {
     <div class="layout">
       ${htmlSidebar()}
       ${htmlMain()}
-    </div>`;
+    </div>
+    ${htmlModal()}
+    ${dropZone}`;
 }
 
 // ── Render ─────────────────────────────────────────────
@@ -777,6 +931,139 @@ function handleDeleteList(id) {
   save(); render();
 }
 
+// ── Import / Export ────────────────────────────────────
+function closeModal() {
+  modalMode = null; modalLists = []; modalAllChecked = false; importPayload = null;
+  render();
+}
+function renderModal() {
+  const checkSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+  // Update "select all" checkbox
+  const allCb = document.querySelector('.select-all .modal-cb');
+  if (allCb) { allCb.className = 'modal-cb' + (modalAllChecked ? ' checked' : ''); allCb.innerHTML = checkSvg; }
+  // Update individual checkboxes
+  document.querySelectorAll('.modal-check-row[data-a="modal-toggle"]').forEach(row => {
+    const id = row.dataset.id;
+    const item = modalLists.find(l => l.id === id);
+    if (!item) return;
+    const cb = row.querySelector('.modal-cb');
+    if (cb) { cb.className = 'modal-cb' + (item.checked ? ' checked' : ''); cb.innerHTML = checkSvg; }
+  });
+  // Update confirm button
+  const selectedCount = modalLists.filter(l => l.checked).length;
+  const btn = document.querySelector('[data-a="modal-confirm"]');
+  if (btn) {
+    const label = modalMode === 'export' ? 'エクスポート' : 'インポート';
+    btn.textContent = `${label} (${selectedCount})`;
+    btn.disabled = selectedCount === 0;
+  }
+}
+function toggleModalAll() {
+  modalAllChecked = !modalAllChecked;
+  modalLists = modalLists.map(l => ({ ...l, checked: modalAllChecked }));
+  renderModal();
+}
+function toggleModalItem(id) {
+  modalLists = modalLists.map(l => l.id === id ? { ...l, checked: !l.checked } : l);
+  modalAllChecked = modalLists.every(l => l.checked);
+  renderModal();
+}
+function openExportModal() {
+  modalMode = 'export';
+  modalLists = lists.map(l => ({ id: l.id, name: l.name, checked: true }));
+  modalAllChecked = true;
+  render();
+}
+function executeExport() {
+  const selectedIds = new Set(modalLists.filter(l => l.checked).map(l => l.id));
+  if (selectedIds.size === 0) return;
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    lists: lists.filter(l => selectedIds.has(l.id)),
+    todos: todos.filter(t => selectedIds.has(t.listId)),
+    trash: trash.filter(t => selectedIds.has(t.listId)),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tasks-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  closeModal();
+}
+function openImportModal() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => processImportFile(ev.target.result);
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function processImportFile(text) {
+  try {
+    const data = JSON.parse(text);
+    if (!validateImportData(data)) { alert('無効なファイル形式です。'); return; }
+    importPayload = data;
+    modalMode = 'import';
+    modalLists = data.lists.map(l => ({
+      id: l.id, name: l.name, checked: true,
+      todoCount: (data.todos || []).filter(t => t.listId === l.id).length,
+    }));
+    modalAllChecked = true;
+    render();
+  } catch { alert('ファイルの読み込みに失敗しました。'); }
+}
+function validateImportData(data) {
+  if (!data || typeof data !== 'object') return false;
+  if (!Array.isArray(data.lists) || data.lists.length === 0) return false;
+  if (!Array.isArray(data.todos)) return false;
+  if (!data.lists.every(l => l.id && l.name)) return false;
+  return true;
+}
+function executeImport() {
+  const selectedIds = new Set(modalLists.filter(l => l.checked).map(l => l.id));
+  if (selectedIds.size === 0 || !importPayload) return;
+  const idMap = new Map();
+  const existingNames = new Set(lists.map(l => l.name));
+  for (const l of importPayload.lists) {
+    if (!selectedIds.has(l.id)) continue;
+    const newId = crypto.randomUUID();
+    idMap.set(l.id, newId);
+    let name = l.name;
+    if (existingNames.has(name)) {
+      let n = 2;
+      while (existingNames.has(`${l.name} (${n})`)) n++;
+      name = `${l.name} (${n})`;
+    }
+    existingNames.add(name);
+    lists.push({ id: newId, name, createdAt: l.createdAt || Date.now() });
+  }
+  for (const t of (importPayload.todos || [])) {
+    if (!selectedIds.has(t.listId)) continue;
+    const newListId = idMap.get(t.listId);
+    if (!newListId) continue;
+    todos.push({ ...t, id: crypto.randomUUID(), listId: newListId });
+  }
+  for (const t of (importPayload.trash || [])) {
+    if (!selectedIds.has(t.listId)) continue;
+    const newListId = idMap.get(t.listId);
+    if (!newListId) continue;
+    trash.push({ ...t, id: crypto.randomUUID(), listId: newListId });
+  }
+  save();
+  const firstImported = idMap.values().next().value;
+  if (firstImported) { selectedListId = firstImported; filter = 'all'; showTrash = false; }
+  closeModal();
+}
+
 // ── Drag visual helpers ─────────────────────────────────
 function setDragOver(el) {
   if (dragOverEl === el) return;
@@ -809,6 +1096,13 @@ document.addEventListener('click', e => {
     case 'select-list':  selectList(id); break;
     case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;
     case 'start-add-list': addingList = true; newListName = ''; render(); break;
+    case 'open-export':     openExportModal(); break;
+    case 'open-import':     openImportModal(); break;
+    case 'modal-close':     closeModal(); break;
+    case 'modal-overlay':   if (e.target.classList.contains('modal-overlay')) closeModal(); break;
+    case 'modal-toggle-all': toggleModalAll(); break;
+    case 'modal-toggle':    toggleModalItem(id); break;
+    case 'modal-confirm':   if (modalMode === 'export') executeExport(); else executeImport(); break;
   }
 });
 
@@ -840,6 +1134,7 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('keydown', e => {
+  if (modalMode && e.key === 'Escape') { closeModal(); return; }
   if (e.target.id === 'ei-text') {
     if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
     if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
@@ -922,6 +1217,37 @@ document.addEventListener('drop', e => {
     dragTrashId = null;
   }
 });
+
+// ── File Drag & Drop Import ─────────────────────────────
+let fileDragCounter = 0;
+document.addEventListener('dragover', e => {
+  if (dragTodoId || dragTrashId) return;
+  if (e.dataTransfer && e.dataTransfer.types.includes('Files')) e.preventDefault();
+});
+document.addEventListener('dragenter', e => {
+  if (dragTodoId || dragTrashId) return;
+  if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+  fileDragCounter++;
+  if (!fileDragOver) { fileDragOver = true; render(); }
+});
+document.addEventListener('dragleave', e => {
+  if (dragTodoId || dragTrashId) return;
+  fileDragCounter--;
+  if (fileDragCounter <= 0) { fileDragCounter = 0; if (fileDragOver) { fileDragOver = false; render(); } }
+});
+document.addEventListener('drop', e => {
+  if (dragTodoId || dragTrashId) return;
+  fileDragCounter = 0;
+  if (fileDragOver) { fileDragOver = false; render(); }
+  const files = e.dataTransfer?.files;
+  if (!files || files.length === 0) return;
+  const file = files[0];
+  if (!file.name.endsWith('.json')) { alert('JSONファイルのみインポート可能です。'); return; }
+  e.preventDefault();
+  const reader = new FileReader();
+  reader.onload = ev => processImportFile(ev.target.result);
+  reader.readAsText(file);
+}, true);
 
 // ── Init ───────────────────────────────────────────────
 load();

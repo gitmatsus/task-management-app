@@ -1247,8 +1247,10 @@ document.addEventListener('dragover', e => {
     const overTodo   = e.target.closest('.todo-item');
     const overTBtn   = e.target.closest('#trash-btn');
     const overTPanel = e.target.closest('#trash-panel');
-    if (overTodo || overTBtn || overTPanel) e.preventDefault();
+    const overList   = e.target.closest('.list-nav-item[data-a="select-list"]');
+    if (overTodo || overTBtn || overTPanel || overList) e.preventDefault();
     if      (overTodo && overTodo.dataset.id !== dragTodoId) setDragOver(overTodo);
+    else if (overList && overList.dataset.id !== selectedListId) setDragOver(overList);
     else if (overTBtn)   setDragOver(overTBtn);
     else if (overTPanel) setDragOver(overTPanel);
     else clearDragOver();
@@ -1269,7 +1271,11 @@ document.addEventListener('drop', e => {
   if (dragTodoId) {
     const onTodo  = e.target.closest('.todo-item');
     const onTrash = e.target.closest('#trash-btn, #trash-panel');
-    if (onTodo && onTodo.dataset.id !== dragTodoId) reorder(dragTodoId, onTodo.dataset.id);
+    const onList  = e.target.closest('.list-nav-item[data-a="select-list"]');
+    if (onList && onList.dataset.id !== selectedListId) {
+      const t = todos.find(x => x.id === dragTodoId);
+      if (t) { t.listId = onList.dataset.id; save(); render(); }
+    } else if (onTodo && onTodo.dataset.id !== dragTodoId) reorder(dragTodoId, onTodo.dataset.id);
     else if (onTrash) moveToTrash(dragTodoId);
     dragTodoId = null; return;
   }

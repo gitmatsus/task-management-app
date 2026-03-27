@@ -92,6 +92,8 @@
     }
     .list-nav-item:hover:not(.active) { background:var(--item-hover); }
     .list-nav-item.active { background:var(--sidebar-act-bg); }
+    .list-nav-item.dragging { opacity:.4; }
+    .list-nav-item.drag-over { background:rgba(99,102,241,.12); }
     .list-item-row { display:flex; align-items:center; gap:6px; min-width:0; }
     .list-item-name {
       flex:1; min-width:0; font-size:14px; font-weight:500; color:var(--t1);
@@ -509,7 +511,7 @@ let filter = 'all', showTrash = false;
 let editId = null, editText = '', editDue = '';
 let editingListId = null, editingListName = '';
 let addingList = false, newListName = '';
-let dragTodoId = null, dragTrashId = null, dragOverEl = null;
+let dragTodoId = null, dragTrashId = null, dragListId = null, dragOverEl = null;
 let modalMode = null, modalLists = [], modalAllChecked = false, importPayload = null;
 let fileDragOver = false;
 let listTrash = [], showListTrash = false;
@@ -625,7 +627,7 @@ function htmlSidebar() {
            <span class="tip">削除</span>
          </div>` : ''}`;
 
-    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
+    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}" draggable="${!isEditing}">
       <div class="list-item-row">${nameRow}</div>
       ${dots}
     </li>`;
@@ -929,6 +931,14 @@ function reorder(fromId, toId) {
   const to   = todos.findIndex(x => x.id === toId);
   if (from < 0 || to < 0) return;
   todos.splice(to, 0, todos.splice(from, 1)[0]);
+  save(); render();
+}
+
+function reorderList(fromId, toId) {
+  const from = lists.findIndex(x => x.id === fromId);
+  const to   = lists.findIndex(x => x.id === toId);
+  if (from < 0 || to < 0) return;
+  lists.splice(to, 0, lists.splice(from, 1)[0]);
   save(); render();
 }
 
@@ -1239,18 +1249,27 @@ document.addEventListener('focusout', e => {
 document.addEventListener('dragstart', e => {
   const todo  = e.target.closest('.todo-item');
   const trsh  = e.target.closest('.trash-item');
+  const lnav  = e.target.closest('.list-nav-item[data-a="select-list"]');
   if (todo)  { dragTodoId  = todo.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => todo.classList.add('dragging'),  0); }
-  if (trsh)  { dragTrashId = trsh.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => trsh.classList.add('dragging'), 0); }
+  else if (trsh)  { dragTrashId = trsh.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => trsh.classList.add('dragging'), 0); }
+  else if (lnav) { dragListId = lnav.dataset.id; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => lnav.classList.add('dragging'), 0); }
 });
 
 document.addEventListener('dragend', () => {
   document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
   clearDragOver();
-  dragTodoId = null; dragTrashId = null;
+  dragTodoId = null; dragTrashId = null; dragListId = null;
 });
 
 document.addEventListener('dragover', e => {
-  if (!dragTodoId && !dragTrashId) return;
+  if (!dragTodoId && !dragTrashId && !dragListId) return;
+
+  if (dragListId) {
+    const overList = e.target.closest('.list-nav-item[data-a="select-list"]');
+    if (overList && overList.dataset.id !== dragListId) { e.preventDefault(); setDragOver(overList); }
+    else clearDragOver();
+    return;
+  }
 
   if (dragTodoId) {
     const overTodo   = e.target.closest('.todo-item');
@@ -1276,6 +1295,12 @@ document.addEventListener('dragover', e => {
 document.addEventListener('drop', e => {
   e.preventDefault();
   clearDragOver();
+
+  if (dragListId) {
+    const onList = e.target.closest('.list-nav-item[data-a="select-list"]');
+    if (onList && onList.dataset.id !== dragListId) reorderList(dragListId, onList.dataset.id);
+    dragListId = null; return;
+  }
 
   if (dragTodoId) {
     const onTodo  = e.target.closest('.todo-item');

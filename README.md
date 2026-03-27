@@ -1,6 +1,14 @@
 # タスク管理アプリ (Modern To-Do App)
 
 ブラウザひとつで完結する、軽量かつ高機能なシングルページ・タスク管理アプリケーションです。HTMLファイルを開くだけですぐに使用を開始できます。
+---
+
+### 🌐 ブラウザで今すぐ利用する
+以下のURLから、ブラウザ上で直接ツールを起動できます。
+**[https://gitmatsus.github.io/task-management-app/app.html](https://gitmatsus.github.io/task-management-app/app.html)**
+> ※ ツールはHTMLファイル1つで完結しており、サーバーへデータを送信することなくローカル環境で動作します。
+> 
+---
 
 ## 🚀 主な機能
 

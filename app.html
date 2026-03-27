@@ -476,6 +476,28 @@
       font-size:16px; font-weight:700; color:#6366f1;
     }
     html.dark .drop-zone-text { color:#a5b4fc; }
+
+    /* ── Sidebar list trash ── */
+    .sidebar-trash-section { border-top:1px solid var(--divider); }
+    .sidebar-trash-hd {
+      padding:8px 16px 4px; display:flex; align-items:center; justify-content:space-between;
+    }
+    .sidebar-trash-title {
+      font-size:10px; font-weight:700; color:var(--t3);
+      text-transform:uppercase; letter-spacing:.1em;
+      display:flex; align-items:center; gap:4px;
+    }
+    .sidebar-trash-toggle { padding:4px 8px; border-top:1px solid var(--divider); }
+    .sidebar-trash-toggle .list-add-btn { margin-top:0; }
+    .list-trash-item { padding:6px 10px; }
+    .list-trash-item .list-item-name { color:var(--t3); }
+    .list-trash-actions { display:flex; gap:2px; flex-shrink:0; }
+    .list-trash-actions .list-del-btn { opacity:1; }
+    .list-trash-actions .list-del-btn.restore-color { color:#818cf8; }
+    .sidebar-trash-empty { padding:16px 0; font-size:12px; }
+    .sidebar-trash-list { padding:4px 8px; }
+    .empty-all-sm { font-size:10px; padding:2px 6px; }
+    .trash-cnt-sm { width:14px; height:14px; font-size:9px; }
   </style>
 </head>
 <body>
@@ -529,39 +551,27 @@ const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 function currentTodos() { return todos.filter(x => x.listId === selectedListId); }
 function currentTrash() { return trash.filter(x => x.listId === selectedListId); }
 
-// 現在リストのカウント
-function counts() {
+// リスト統計（counts と listStats を統合）
+function listStats(lid) {
   const t = today();
-  const lst = currentTodos();
+  const lst = todos.filter(x => x.listId === lid);
+  const active = lst.filter(x => !x.completed);
   return {
     total:    lst.length,
-    active:   lst.filter(x => !x.completed).length,
-    done:     lst.filter(x =>  x.completed).length,
-    overdue:  lst.filter(x => !x.completed && x.dueDate && x.dueDate < t).length,
-    dueToday: lst.filter(x => !x.completed && x.dueDate === t).length,
-    future:   lst.filter(x => !x.completed && x.dueDate && x.dueDate > t).length,
-    noDate:   lst.filter(x => !x.completed && !x.dueDate).length,
+    active:   active.length,
+    done:     lst.length - active.length,
+    overdue:  active.filter(x => x.dueDate && x.dueDate < t).length,
+    dueToday: active.filter(x => x.dueDate === t).length,
+    future:   active.filter(x => x.dueDate && x.dueDate > t).length,
+    noDate:   active.filter(x => !x.dueDate).length,
   };
 }
+function counts() { return listStats(selectedListId); }
 function filtered() {
   const lst = currentTodos();
   if (filter === 'active')    return lst.filter(x => !x.completed);
   if (filter === 'completed') return lst.filter(x =>  x.completed);
   return lst;
-}
-
-// サイドバー表示用: 指定リストの統計
-function listStats(lid) {
-  const t = today();
-  const lst = todos.filter(x => x.listId === lid);
-  return {
-    total:    lst.length,
-    overdue:  lst.filter(x => !x.completed && x.dueDate && x.dueDate < t).length,
-    dueToday: lst.filter(x => !x.completed && x.dueDate === t).length,
-    future:   lst.filter(x => !x.completed && x.dueDate && x.dueDate > t).length,
-    noDate:   lst.filter(x => !x.completed && !x.dueDate).length,
-    done:     lst.filter(x =>  x.completed).length,
-  };
 }
 
 // ── SVG icons ──────────────────────────────────────────
@@ -629,32 +639,32 @@ function htmlSidebar() {
 
   // リストゴミ箱セクション
   const ltItems = listTrash.length === 0
-    ? `<li class="trash-empty" style="padding:16px 0;font-size:12px">ゴミ箱は空です</li>`
+    ? `<li class="trash-empty sidebar-trash-empty">ゴミ箱は空です</li>`
     : listTrash.map((entry, i) => {
         const cnt = entry.todos.length;
-        return `<li class="list-nav-item" style="padding:6px 10px">
+        return `<li class="list-nav-item list-trash-item">
           <div class="list-item-row">
-            <span class="list-item-name" style="color:var(--t3)">${esc(entry.list.name)}</span>
+            <span class="list-item-name">${esc(entry.list.name)}</span>
             <span class="list-count-pill">${cnt}</span>
-            <div style="display:flex;gap:2px;flex-shrink:0">
-              <button class="list-del-btn" style="opacity:1;color:#818cf8" data-a="restore-list" data-idx="${i}" title="復元">${I.restore}</button>
-              <button class="list-del-btn" style="opacity:1" data-a="del-list-permanent" data-idx="${i}" title="削除">${I.x}</button>
+            <div class="list-trash-actions">
+              <button class="list-del-btn restore-color" data-a="restore-list" data-idx="${i}" title="復元">${I.restore}</button>
+              <button class="list-del-btn" data-a="del-list-permanent" data-idx="${i}" title="削除">${I.x}</button>
             </div>
           </div>
         </li>`;
       }).join('');
 
-  const listTrashSection = showListTrash ? `<div style="border-top:1px solid var(--divider)">
-    <div style="padding:8px 16px 4px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:4px">${I.trash}ゴミ箱 (${listTrash.length})</span>
-      ${listTrash.length > 0 ? `<button class="empty-all" data-a="empty-list-trash" style="font-size:10px;padding:2px 6px">すべて削除</button>` : ''}
+  const listTrashSection = showListTrash ? `<div class="sidebar-trash-section">
+    <div class="sidebar-trash-hd">
+      <span class="sidebar-trash-title">${I.trash}ゴミ箱 (${listTrash.length})</span>
+      ${listTrash.length > 0 ? `<button class="empty-all empty-all-sm" data-a="empty-list-trash">すべて削除</button>` : ''}
     </div>
-    <ul class="list-nav" style="padding:4px 8px">${ltItems}</ul>
+    <ul class="list-nav sidebar-trash-list">${ltItems}</ul>
   </div>` : '';
 
-  const trashToggle = `<div style="padding:4px 8px;border-top:1px solid var(--divider)">
-    <button class="list-add-btn" data-a="toggle-list-trash" style="margin-top:0">
-      ${I.trash}ゴミ箱${listTrash.length > 0 ? ` <span class="trash-cnt" style="width:14px;height:14px;font-size:9px">${listTrash.length}</span>` : ''}
+  const trashToggle = `<div class="sidebar-trash-toggle">
+    <button class="list-add-btn" data-a="toggle-list-trash">
+      ${I.trash}ゴミ箱${listTrash.length > 0 ? ` <span class="trash-cnt trash-cnt-sm">${listTrash.length}</span>` : ''}
     </button>
   </div>`;
 
@@ -675,7 +685,6 @@ function htmlSidebar() {
 
 // ── Main content HTML ──────────────────────────────────
 function htmlMain() {
-  const dark = document.documentElement.classList.contains('dark');
   const c = counts();
   const list = filtered();
   const ct = currentTrash();
@@ -789,7 +798,7 @@ function htmlModal() {
   const actionLabel = isExport ? 'エクスポート' : 'インポート';
   const selectedCount = modalLists.filter(l => l.checked).length;
 
-  const checkSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+  const checkSvg = I.check;
 
   const allRow = `<div class="modal-check-row select-all" data-a="modal-toggle-all">
     <div class="modal-cb${modalAllChecked ? ' checked' : ''}">${checkSvg}</div>
@@ -1001,7 +1010,7 @@ function closeModal() {
   render();
 }
 function renderModal() {
-  const checkSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+  const checkSvg = I.check;
   // Update "select all" checkbox
   const allCb = document.querySelector('.select-all .modal-cb');
   if (allCb) { allCb.className = 'modal-cb' + (modalAllChecked ? ' checked' : ''); allCb.innerHTML = checkSvg; }

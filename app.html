@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タスク管理</title>
+  <script>(function(){var s=localStorage.getItem('darkMode');if(s!==null?s==='true':true)document.documentElement.classList.add('dark');}());</script>
+  <style>
+    :root {
+      --body-from:#f1f5f9; --body-via:#eef2ff; --body-to:#f5f3ff;
+      --card:#fff; --card-border:#f3f4f6; --card-shadow:0 20px 25px -5px rgba(99,102,241,.1),0 8px 10px -6px rgba(99,102,241,.05);
+      --input-bg:#f9fafb; --input-border:#e5e7eb;
+      --t1:#1f2937; --t2:#6b7280; --t3:#9ca3af;
+      --filter-bg:#f3f4f6; --filter-hover:rgba(255,255,255,.7);
+      --filter-act-from:#fff; --filter-act-to:rgba(238,242,255,.8); --filter-act-text:#4338ca;
+      --item-border:#f3f4f6; --item-hover:#f9fafb;
+      --divider:#f3f4f6;
+      --sidebar-act-bg:rgba(99,102,241,.06); --sidebar-act-text:#4338ca;
+      --sidebar-pill-bg:#f3f4f6; --sidebar-pill-text:#9ca3af;
+      --sidebar-act-pill-bg:#e0e7ff; --sidebar-act-pill-text:#4338ca;
+    }
+    html.dark {
+      --body-from:#030712; --body-via:#0f172a; --body-to:#1e1b4b;
+      --card:#111827; --card-border:#1f2937; --card-shadow:0 20px 25px -5px rgba(0,0,0,.6);
+      --input-bg:#1f2937; --input-border:#374151;
+      --t1:#f9fafb; --t2:#9ca3af; --t3:#6b7280;
+      --filter-bg:#1f2937; --filter-hover:rgba(55,65,81,.7);
+      --filter-act-from:rgba(99,102,241,.5); --filter-act-to:rgba(99,102,241,.2); --filter-act-text:#a5b4fc;
+      --item-border:#1f2937; --item-hover:rgba(31,41,55,.6);
+      --divider:#1f2937;
+      --sidebar-act-bg:rgba(99,102,241,.2); --sidebar-act-text:#a5b4fc;
+      --sidebar-pill-bg:#374151; --sidebar-pill-text:#6b7280;
+      --sidebar-act-pill-bg:rgba(99,102,241,.35); --sidebar-act-pill-text:#a5b4fc;
+    }
+    html { background:#030712; }
+    html:not(.dark) { background:#f1f5f9; }
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;
+      background:linear-gradient(135deg,var(--body-from),var(--body-via),var(--body-to));
+      min-height:100vh; display:flex; align-items:flex-start; justify-content:center;
+      padding:48px 16px 32px; color:var(--t1);
+    }
+    button { font-family:inherit; }
+    .app { width:100%; max-width:58rem; }
+
+    /* ── Header ── */
+    .header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:24px; padding:0 4px;
+    }
+    .header-left { display:flex; align-items:center; gap:10px; }
+    .header-icon {
+      width:32px; height:32px; border-radius:8px; background:#6366f1; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 10px 15px -3px rgba(99,102,241,.25);
+    }
+    .header-icon svg { width:16px; height:16px; }
+    h1 { font-size:20px; font-weight:700; color:var(--t1); letter-spacing:-.025em; line-height:1.2; }
+    .header-sub { font-size:11px; color:var(--t3); }
+    .dark-toggle {
+      width:36px; height:36px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; border-radius:50%;
+      background:var(--card); border:1px solid var(--input-border); cursor:pointer;
+      color:var(--t2); transition:all .2s; box-shadow:0 1px 2px rgba(0,0,0,.05);
+    }
+    html.dark .dark-toggle { color:#fbbf24; }
+    .dark-toggle:hover { border-color:#818cf8; }
+    .dark-toggle svg { width:16px; height:16px; }
+
+    /* ── 2-column layout ── */
+    .layout { display:flex; gap:16px; align-items:flex-start; }
+    .sidebar-col { width:208px; flex-shrink:0; }
+    .main-col { flex:1; min-width:0; }
+
+    /* ── Card ── */
+    .card {
+      background:var(--card); border-radius:16px; box-shadow:var(--card-shadow);
+      border:1px solid var(--card-border); overflow:hidden; transition:background .3s,border-color .3s;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar-hd {
+      padding:10px 16px; border-bottom:1px solid var(--divider);
+      font-size:10px; font-weight:700; color:var(--t3);
+      text-transform:uppercase; letter-spacing:.1em;
+    }
+    .list-nav { list-style:none; padding:8px; }
+    .list-nav-item {
+      padding:8px 10px; border-radius:10px; cursor:pointer;
+      transition:background .15s; user-select:none;
+    }
+    .list-nav-item:hover:not(.active) { background:var(--item-hover); }
+    .list-nav-item.active { background:var(--sidebar-act-bg); }
+    .list-item-row { display:flex; align-items:center; gap:6px; min-width:0; }
+    .list-item-name {
+      flex:1; min-width:0; font-size:14px; font-weight:500; color:var(--t1);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .list-nav-item.active .list-item-name { color:var(--sidebar-act-text); }
+    .list-count-pill {
+      flex-shrink:0; padding:1px 6px; border-radius:9999px;
+      font-size:10px; font-weight:700;
+      background:var(--sidebar-pill-bg); color:var(--sidebar-pill-text);
+    }
+    .list-count-pill.sel { background:var(--sidebar-act-pill-bg); color:var(--sidebar-act-pill-text); }
+    .list-del-wrap { flex-shrink:0; position:relative; display:inline-flex; }
+    .list-del-btn {
+      width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+      background:none; border:none; cursor:pointer; border-radius:6px;
+      color:#d1d5db; opacity:0; transition:all .15s;
+    }
+    html.dark .list-del-btn { color:#374151; }
+    .list-nav-item:hover .list-del-btn { opacity:1; }
+    .list-del-btn:hover { color:#f87171; background:rgba(239,68,68,.07); }
+    html.dark .list-del-btn:hover { background:rgba(239,68,68,.15); }
+    .list-del-btn svg { width:12px; height:12px; }
+    .sidebar-dots { display:flex; gap:2px; padding-left:2px; margin-top:4px; }
+    .list-add-area { padding:4px 8px 10px; border-top:1px solid var(--divider); margin-top:2px; }
+    .list-add-btn {
+      width:100%; display:flex; align-items:center; gap:6px; padding:8px 10px; margin-top:4px;
+      font-size:12px; font-weight:500; color:var(--t3); background:none; border:none;
+      cursor:pointer; border-radius:10px; transition:all .15s;
+    }
+    .list-add-btn:hover { color:#6366f1; background:rgba(99,102,241,.07); }
+    html.dark .list-add-btn:hover { color:#a5b4fc; background:rgba(99,102,241,.15); }
+    .list-add-btn svg { width:14px; height:14px; }
+    .list-add-form { padding:4px 2px 0; }
+    .list-add-input, .list-rename-input {
+      width:100%; padding:4px 8px; border-radius:8px; border:1px solid #818cf8;
+      background:var(--card); color:var(--t1); font-size:12px; outline:none; font-family:inherit;
+    }
+    .list-add-input:focus, .list-rename-input:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
+
+    /* ── List card header (selected list name) ── */
+    .list-card-hd {
+      padding:14px 20px; border-bottom:1px solid var(--divider);
+      display:flex; align-items:center; gap:8px;
+    }
+    .list-card-icon {
+      width:24px; height:24px; border-radius:6px; background:rgba(99,102,241,.85);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+      box-shadow:0 1px 3px rgba(99,102,241,.3);
+    }
+    html.dark .list-card-icon { background:rgba(99,102,241,.75); }
+    .list-card-icon svg { width:14px; height:14px; }
+    .list-card-name { font-size:15px; font-weight:700; color:var(--t1); }
+
+    /* ── Input ── */
+    .input-section { padding:20px; border-bottom:1px solid var(--divider); }
+    .input-row { display:flex; gap:8px; }
+    .todo-input {
+      flex:1; padding:10px 16px; border-radius:12px;
+      border:1px solid var(--input-border); background:var(--input-bg);
+      color:var(--t1); font-size:14px; outline:none; transition:all .2s;
+    }
+    .todo-input::placeholder { color:var(--t3); }
+    .todo-input:focus { border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
+    .add-btn {
+      padding:10px 20px; background:rgba(99,102,241,.8); color:#fff;
+      font-size:14px; font-weight:600; border:none; border-radius:12px; cursor:pointer;
+      transition:all .15s; box-shadow:0 1px 2px rgba(99,102,241,.2);
+    }
+    .add-btn:hover { background:rgba(99,102,241,.9); }
+    .add-btn:active { transform:scale(.97); }
+
+    /* ── Filters ── */
+    .filters-section { padding:16px 20px 4px; }
+    .filters { display:flex; background:var(--filter-bg); border-radius:12px; padding:4px; gap:4px; }
+    .filter-btn {
+      flex:1; padding:6px 4px; font-size:12px; font-weight:600;
+      border:none; border-radius:8px; cursor:pointer; background:transparent;
+      color:var(--t2); display:flex; flex-direction:column; align-items:center; gap:4px; transition:all .2s;
+    }
+    .filter-btn:hover:not(.active) { background:var(--filter-hover); color:var(--t1); }
+    .filter-btn.active {
+      background:linear-gradient(to bottom,var(--filter-act-from),var(--filter-act-to));
+      color:var(--filter-act-text); box-shadow:0 1px 3px rgba(0,0,0,.1);
+    }
+    .filter-btn.drag-over { background:rgba(99,102,241,.15); color:#6366f1; transform:scale(1.05); }
+    html.dark .filter-btn.drag-over { background:rgba(99,102,241,.3); color:#a5b4fc; }
+    .filter-label { display:flex; align-items:center; gap:6px; }
+    .count-pill {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:1px 6px; border-radius:9999px; font-size:10px; font-weight:700;
+      background:#e5e7eb; color:#9ca3af;
+    }
+    html.dark .count-pill { background:#374151; color:#6b7280; }
+    .filter-btn.active .count-pill { background:#e0e7ff; color:#4338ca; }
+    html.dark .filter-btn.active .count-pill { background:rgba(99,102,241,.3); color:#a5b4fc; }
+    .filter-btn.active .count-pill.cp-done { background:#f3f4f6; color:#6b7280; }
+    html.dark .filter-btn.active .count-pill.cp-done { background:#4b5563; color:#d1d5db; }
+    .dot-badges { display:flex; gap:2px; }
+    .dot {
+      width:16px; height:16px; border-radius:50%; font-size:9px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .dot-ov  { background:#fecaca; color:#b91c1c; }
+    .dot-td  { background:#fef3c7; color:#d97706; }
+    .dot-fu  { background:#d1fae5; color:#059669; }
+    .dot-nd  { background:#e2e8f0; color:#64748b; }
+    .dot-dn  { background:#6366f1; color:#fff; }
+    html.dark .dot-ov { background:rgba(239,68,68,.4);   color:#fca5a5; }
+    html.dark .dot-td { background:rgba(245,158,11,.25);  color:#fbbf24; }
+    html.dark .dot-fu { background:rgba(16,185,129,.25);  color:#34d399; }
+    html.dark .dot-nd { background:#334155;               color:#94a3b8; }
+    html.dark .dot-dn { background:#4f46e5;               color:#fff; }
+
+    /* ── Todo list ── */
+    .todo-list { list-style:none; padding:8px 12px; min-height:96px; }
+    .empty-msg { padding:48px 0; text-align:center; color:var(--t3); font-size:14px; user-select:none; }
+    .todo-item {
+      display:flex; align-items:stretch; border-bottom:1px solid var(--item-border);
+      border-radius:8px; transition:background .15s,opacity .15s; cursor:text; position:relative;
+    }
+    .todo-item:last-child { border-bottom:none; }
+    .todo-item:hover:not(.drag-over) { background:var(--item-hover); }
+    .todo-item.drag-over { background:rgba(99,102,241,.07); }
+    html.dark .todo-item.drag-over { background:rgba(99,102,241,.15); }
+    .todo-item.dragging { opacity:.4; }
+    .drag-handle {
+      display:flex; align-items:center; padding:0 4px 0 6px;
+      opacity:0; cursor:grab; color:#d1d5db; transition:opacity .15s; flex-shrink:0;
+    }
+    html.dark .drag-handle { color:#374151; }
+    .todo-item:hover .drag-handle { opacity:1; }
+    .drag-handle:active { cursor:grabbing; }
+    .drag-handle svg { width:12px; height:12px; }
+    .cb-wrap { display:flex; align-items:center; padding:12px 14px 12px 6px; flex-shrink:0; }
+    .cb {
+      width:20px; height:20px; border-radius:50%; border:2px solid #d1d5db;
+      background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:all .2s; flex-shrink:0;
+    }
+    html.dark .cb { border-color:#4b5563; }
+    .cb:hover { border-color:#9ca3af; }
+    html.dark .cb:hover { border-color:#6b7280; }
+    .cb.checked { background:#6366f1; border-color:#6366f1; }
+    .cb svg { width:12px; height:12px; display:none; }
+    .cb.checked svg { display:block; }
+    .text-wrap { flex:1; min-width:0; padding:12px 12px 12px 0; display:flex; align-items:center; }
+    .todo-text { font-size:14px; line-height:1.4; color:var(--t1); }
+    .todo-text.done { text-decoration:line-through; color:#d1d5db; }
+    html.dark .todo-text.done { color:#4b5563; }
+    .due-wrap { display:flex; align-items:center; padding:12px 4px 12px 0; flex-shrink:0; }
+    .due-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 6px; border-radius:6px; font-size:10px; font-weight:600; white-space:nowrap;
+    }
+    .due-badge svg { width:10px; height:10px; flex-shrink:0; }
+    .due-ov { background:#fecaca; color:#b91c1c; }
+    .due-td { background:#fef3c7; color:#f59e0b; }
+    .due-fu { background:#d1fae5; color:#10b981; }
+    html.dark .due-ov { background:rgba(239,68,68,.4);   color:#fca5a5; }
+    html.dark .due-td { background:rgba(245,158,11,.25);  color:#f59e0b; }
+    html.dark .due-fu { background:rgba(16,185,129,.25);  color:#10b981; }
+    .item-del { display:flex; align-items:center; padding:12px 8px 12px 0; flex-shrink:0; }
+    .item-del button {
+      width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+      border-radius:8px; border:none; background:transparent; color:#d1d5db; cursor:pointer;
+      opacity:0; transition:all .15s;
+    }
+    html.dark .item-del button { color:#374151; }
+    .todo-item:hover .item-del button { opacity:1; }
+    .item-del button:hover { color:#f87171; background:rgba(239,68,68,.07); }
+    html.dark .item-del button:hover { background:rgba(239,68,68,.15); }
+    .item-del svg { width:14px; height:14px; }
+
+    /* ── Edit form ── */
+    .edit-form { width:100%; }
+    .edit-text {
+      width:100%; padding:4px 8px; border-radius:8px; border:1px solid #818cf8;
+      background:var(--card); color:var(--t1); font-size:14px; outline:none; margin-bottom:6px; font-family:inherit;
+    }
+    .edit-text:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
+    .edit-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .edit-date {
+      padding:4px 8px; border-radius:8px; border:1px solid var(--input-border);
+      background:var(--card); color:var(--t1); font-size:12px; outline:none; font-family:inherit;
+    }
+    .edit-date:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
+    .edit-clr { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; }
+    .edit-clr:hover { color:#f87171; }
+    .edit-save { margin-left:auto; padding:4px 12px; background:#6366f1; color:#fff; font-size:12px; font-weight:500; border:none; border-radius:8px; cursor:pointer; transition:background .15s; font-family:inherit; }
+    .edit-save:hover { background:#4f46e5; }
+    .edit-cancel { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; font-family:inherit; }
+    .edit-cancel:hover { color:var(--t1); }
+
+    /* ── Footer ── */
+    .footer { padding:14px 20px; border-top:1px solid var(--divider); display:flex; align-items:center; justify-content:space-between; }
+    .remaining { font-size:12px; color:var(--t3); }
+    .remaining strong { color:#6366f1; font-weight:700; }
+    .trash-btn {
+      display:flex; align-items:center; gap:6px; padding:6px 12px;
+      font-size:12px; font-weight:500; border-radius:8px; cursor:pointer;
+      border:1px solid transparent; background:transparent; color:var(--t2); transition:all .15s;
+    }
+    .trash-btn:hover { background:var(--filter-bg); }
+    .trash-btn.open { background:rgba(239,68,68,.07); color:#ef4444; border-color:#fecaca; }
+    html.dark .trash-btn.open { background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.4); }
+    .trash-btn.drag-over { background:rgba(239,68,68,.12); color:#ef4444; border-color:#fca5a5; transform:scale(1.05); }
+    html.dark .trash-btn.drag-over { background:rgba(239,68,68,.25); border-color:rgba(239,68,68,.5); }
+    .trash-btn svg { width:14px; height:14px; }
+    .trash-cnt {
+      background:#fecaca; color:#b91c1c; border-radius:50%;
+      width:16px; height:16px; display:flex; align-items:center; justify-content:center;
+      font-size:10px; font-weight:700;
+    }
+    html.dark .trash-cnt { background:rgba(239,68,68,.4); color:#fca5a5; }
+
+    /* ── Trash panel ── */
+    .trash-panel {
+      margin-top:12px; background:var(--card); border-radius:16px;
+      box-shadow:0 10px 15px -3px rgba(0,0,0,.07); border:1px solid var(--card-border);
+      overflow:hidden; transition:background .3s,border-color .3s,box-shadow .2s;
+    }
+    .trash-panel.drag-over { background:rgba(239,68,68,.05); border-color:#fca5a5; }
+    html.dark .trash-panel.drag-over { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.4); }
+    .trash-header {
+      padding:14px 20px; border-bottom:1px solid var(--divider);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .trash-title {
+      display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
+      color:var(--t2); text-transform:uppercase; letter-spacing:.05em;
+    }
+    .trash-title svg { width:14px; height:14px; }
+    .empty-all {
+      font-size:12px; font-weight:500; color:#f87171; background:none; border:none; cursor:pointer;
+      padding:4px 10px; border-radius:8px; transition:all .15s; font-family:inherit;
+    }
+    .empty-all:hover { background:rgba(239,68,68,.07); color:#ef4444; }
+    html.dark .empty-all:hover { background:rgba(239,68,68,.15); }
+    .trash-list { list-style:none; padding:8px 12px; min-height:48px; }
+    .trash-empty { padding:32px 0; text-align:center; color:var(--t3); font-size:14px; user-select:none; }
+    .trash-item {
+      display:flex; align-items:center; gap:8px; padding:10px 8px;
+      border-bottom:1px solid var(--item-border); border-radius:8px;
+      transition:background .15s,opacity .15s; cursor:grab;
+    }
+    .trash-item:last-child { border-bottom:none; }
+    .trash-item:hover { background:var(--item-hover); }
+    .trash-item.dragging { opacity:.4; }
+    .trash-item-text {
+      flex:1; min-width:0; font-size:14px; color:#9ca3af;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .trash-item-text.was-done { text-decoration:line-through; }
+    html.dark .trash-item-text { color:#4b5563; }
+    .trash-actions { display:flex; align-items:center; gap:4px; opacity:0; flex-shrink:0; transition:opacity .15s; }
+    .trash-item:hover .trash-actions { opacity:1; }
+    .restore-btn {
+      display:flex; align-items:center; gap:4px; padding:4px 8px;
+      font-size:12px; font-weight:500; color:#818cf8; background:none; border:none; cursor:pointer;
+      border-radius:8px; transition:all .15s; font-family:inherit;
+    }
+    .restore-btn:hover { color:#6366f1; background:rgba(99,102,241,.07); }
+    html.dark .restore-btn:hover { background:rgba(99,102,241,.15); }
+    .restore-btn svg { width:12px; height:12px; }
+    .tip-wrap { position:relative; display:inline-flex; }
+    .del-btn {
+      width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+      background:none; border:none; cursor:pointer; border-radius:8px; color:#d1d5db; transition:all .15s;
+    }
+    html.dark .del-btn { color:#374151; }
+    .del-btn:hover { color:#f87171; background:rgba(239,68,68,.07); }
+    html.dark .del-btn:hover { background:rgba(239,68,68,.15); }
+    .del-btn svg { width:14px; height:14px; }
+    .tip {
+      position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+      margin-bottom:6px; padding:2px 8px; background:#1f2937; color:#fff;
+      font-size:10px; font-weight:500; border-radius:6px; white-space:nowrap;
+      opacity:0; pointer-events:none; transition:opacity .15s; z-index:10;
+    }
+    html.dark .tip { background:#374151; }
+    .tip-wrap:hover .tip { opacity:1; }
+  </style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<script>
+// ── State ──────────────────────────────────────────────
+let todos = [], trash = [], lists = [], selectedListId = '';
+let filter = 'all', showTrash = false;
+let editId = null, editText = '', editDue = '';
+let editingListId = null, editingListName = '';
+let addingList = false, newListName = '';
+let dragTodoId = null, dragTrashId = null, dragOverEl = null;
+
+// ── Persistence ────────────────────────────────────────
+function load() {
+  // リスト読み込み（なければデフォルト作成）
+  try { lists = JSON.parse(localStorage.getItem('todo-app-lists') || '[]'); } catch { lists = []; }
+  if (!lists.length) {
+    lists = [{ id: crypto.randomUUID(), name: 'マイタスク', createdAt: Date.now() }];
+  }
+  selectedListId = lists[0].id;
+
+  // Todo / Trash 読み込み
+  try { todos = JSON.parse(localStorage.getItem('todo-app-todos') || '[]'); } catch { todos = []; }
+  try { trash = JSON.parse(localStorage.getItem('todo-app-trash') || '[]'); } catch { trash = []; }
+
+  // listId がない既存データを最初のリストへマイグレーション
+  const defId = lists[0].id;
+  todos = todos.map(t => t.listId ? t : { ...t, listId: defId });
+  trash = trash.map(t => t.listId ? t : { ...t, listId: defId });
+
+  save();
+}
+function save() {
+  localStorage.setItem('todo-app-todos',  JSON.stringify(todos));
+  localStorage.setItem('todo-app-trash',  JSON.stringify(trash));
+  localStorage.setItem('todo-app-lists',  JSON.stringify(lists));
+}
+
+// ── Helpers ────────────────────────────────────────────
+const today    = () => new Date().toISOString().slice(0, 10);
+const tomorrow = () => new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// 現在のリストに絞った Todo / Trash
+function currentTodos() { return todos.filter(x => x.listId === selectedListId); }
+function currentTrash() { return trash.filter(x => x.listId === selectedListId); }
+
+// 現在リストのカウント
+function counts() {
+  const t = today();
+  const lst = currentTodos();
+  return {
+    total:    lst.length,
+    active:   lst.filter(x => !x.completed).length,
+    done:     lst.filter(x =>  x.completed).length,
+    overdue:  lst.filter(x => !x.completed && x.dueDate && x.dueDate < t).length,
+    dueToday: lst.filter(x => !x.completed && x.dueDate === t).length,
+    future:   lst.filter(x => !x.completed && x.dueDate && x.dueDate > t).length,
+    noDate:   lst.filter(x => !x.completed && !x.dueDate).length,
+  };
+}
+function filtered() {
+  const lst = currentTodos();
+  if (filter === 'active')    return lst.filter(x => !x.completed);
+  if (filter === 'completed') return lst.filter(x =>  x.completed);
+  return lst;
+}
+
+// サイドバー表示用: 指定リストの統計
+function listStats(lid) {
+  const t = today();
+  const lst = todos.filter(x => x.listId === lid);
+  return {
+    total:    lst.length,
+    overdue:  lst.filter(x => !x.completed && x.dueDate && x.dueDate < t).length,
+    dueToday: lst.filter(x => !x.completed && x.dueDate === t).length,
+    future:   lst.filter(x => !x.completed && x.dueDate && x.dueDate > t).length,
+    noDate:   lst.filter(x => !x.completed && !x.dueDate).length,
+    done:     lst.filter(x =>  x.completed).length,
+  };
+}
+
+// ── SVG icons ──────────────────────────────────────────
+const I = {
+  app:     `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+  clip:    `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>`,
+  plus:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>`,
+  trash:   `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
+  restore: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>`,
+  x:       `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`,
+  cal:     `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
+  sun:     `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71m12.73 0-.71-.71M6.34 6.34l-.71-.71M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z"/></svg>`,
+  moon:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+  grip:    `<svg fill="currentColor" viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>`,
+  check:   `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
+};
+
+// ── Due badge HTML ─────────────────────────────────────
+function dueBadge(d) {
+  const t = today(), tm = tomorrow();
+  const ov = d < t, td = d === t, tmr = d === tm;
+  const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
+  const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
+  return `<span class="due-badge ${cls}">${I.cal}${ov ? `期限切れ (${lbl})` : lbl}</span>`;
+}
+
+// ── Sidebar HTML ───────────────────────────────────────
+function htmlSidebar() {
+  const items = lists.map(lst => {
+    const isSel     = lst.id === selectedListId;
+    const isEditing = editingListId === lst.id;
+    const s         = listStats(lst.id);
+    const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.future > 0 || s.noDate > 0 || s.done > 0;
+
+    const dots = hasDots ? `<div class="dot-badges sidebar-dots">
+      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`  : ''}
+      ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>` : ''}
+      ${s.future   > 0 ? `<span class="dot dot-fu">${s.future}</span>`   : ''}
+      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`   : ''}
+      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`     : ''}
+    </div>` : '';
+
+    const nameRow = isEditing
+      ? `<input id="list-rename-inp" class="list-rename-input" type="text" value="${esc(editingListName)}" autocomplete="off">`
+      : `<span class="list-item-name">${esc(lst.name)}</span>
+         <span class="list-count-pill${isSel ? ' sel' : ''}">${s.total}</span>
+         ${lists.length > 1 ? `<div class="tip-wrap list-del-wrap">
+           <button class="list-del-btn" data-a="del-list" data-id="${lst.id}">${I.x}</button>
+           <span class="tip">削除</span>
+         </div>` : ''}`;
+
+    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
+      <div class="list-item-row">${nameRow}</div>
+      ${dots}
+    </li>`;
+  }).join('');
+
+  const addArea = addingList
+    ? `<div class="list-add-form">
+        <input id="list-add-inp" class="list-add-input" type="text" placeholder="リスト名を入力..." autocomplete="off">
+       </div>`
+    : `<button class="list-add-btn" data-a="start-add-list">${I.plus}リストを追加</button>`;
+
+  return `<div class="sidebar-col">
+    <div class="card">
+      <div class="sidebar-hd">リスト</div>
+      <ul class="list-nav">${items}</ul>
+      <div class="list-add-area">${addArea}</div>
+    </div>
+  </div>`;
+}
+
+// ── Main content HTML ──────────────────────────────────
+function htmlMain() {
+  const dark = document.documentElement.classList.contains('dark');
+  const c = counts();
+  const list = filtered();
+  const ct = currentTrash();
+
+  // Filter buttons
+  const fbtn = [
+    { key:'all',       label:'すべて',   count:c.total,  cp:'' },
+    { key:'active',    label:'未完了',   count:c.active, cp:'' },
+    { key:'completed', label:'完了済み', count:c.done,   cp:'cp-done' },
+  ].map(f => {
+    const act = filter === f.key;
+    const showDots = (f.key === 'all' || f.key === 'active') &&
+      (c.overdue > 0 || c.dueToday > 0 || c.future > 0 || c.noDate > 0 || (f.key === 'all' && c.done > 0));
+    const dots = showDots ? `<span class="dot-badges">
+      ${c.overdue  > 0 ? `<span class="dot dot-ov">${c.overdue}</span>`  : ''}
+      ${c.dueToday > 0 ? `<span class="dot dot-td">${c.dueToday}</span>` : ''}
+      ${c.future   > 0 ? `<span class="dot dot-fu">${c.future}</span>`   : ''}
+      ${c.noDate   > 0 ? `<span class="dot dot-nd">${c.noDate}</span>`   : ''}
+      ${f.key==='all' && c.done > 0 ? `<span class="dot dot-dn">${c.done}</span>` : ''}
+    </span>` : '';
+    return `<button class="filter-btn${act?' active':''}" data-filter="${f.key}">
+      <span class="filter-label">${f.label}<span class="count-pill ${f.cp}">${f.count}</span></span>
+      ${dots}
+    </button>`;
+  }).join('');
+
+  // Todo items
+  const items = list.length === 0
+    ? `<li class="empty-msg">${filter==='all'?'🎉 タスクがありません！':'該当するタスクがありません。'}</li>`
+    : list.map(t => {
+        const editing = editId === t.id;
+        const body = editing ? `<div class="edit-form">
+          <input id="ei-text" class="edit-text" type="text" value="${esc(editText)}" autocomplete="off">
+          <div class="edit-actions">
+            <input id="ei-date" class="edit-date" type="date" value="${esc(editDue)}">
+            ${editDue ? `<button class="edit-clr" data-a="clr-date">削除</button>` : ''}
+            <button class="edit-save" data-a="save">保存</button>
+            <button class="edit-cancel" data-a="cancel">キャンセル</button>
+          </div>
+        </div>` : `<span class="todo-text${t.completed?' done':''}">${esc(t.text)}</span>`;
+
+        const badge = (t.dueDate && !t.completed && !editing)
+          ? `<div class="due-wrap">${dueBadge(t.dueDate)}</div>` : '';
+
+        return `<li class="todo-item" data-id="${t.id}" draggable="${!editing}">
+          <div class="drag-handle">${I.grip}</div>
+          <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
+          <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
+          ${badge}
+          <div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>
+        </li>`;
+      }).join('');
+
+  // Trash items
+  const titems = ct.length === 0
+    ? `<li class="trash-empty">ゴミ箱は空です</li>`
+    : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="true">
+        <span class="trash-item-text${t.completed?' was-done':''}">${esc(t.text)}</span>
+        <div class="trash-actions">
+          <button class="restore-btn" data-a="restore" data-id="${t.id}">${I.restore}復元</button>
+          <div class="tip-wrap">
+            <button class="del-btn" data-a="del-trash" data-id="${t.id}">${I.x}</button>
+            <span class="tip">削除</span>
+          </div>
+        </div>
+      </li>`).join('');
+
+  const trashPanel = showTrash ? `<div class="trash-panel" id="trash-panel">
+    <div class="trash-header">
+      <span class="trash-title">${I.trash}ゴミ箱 (${ct.length})</span>
+      ${ct.length > 0 ? `<button class="empty-all" data-a="empty">すべて削除</button>` : ''}
+    </div>
+    <ul class="trash-list">${titems}</ul>
+  </div>` : '';
+
+  // 選択中リスト名
+  const selList = lists.find(l => l.id === selectedListId) || lists[0];
+  const listName = selList ? esc(selList.name) : '';
+
+  return `<div class="main-col">
+    <div class="card">
+      <div class="list-card-hd">
+        <div class="list-card-icon">${I.clip}</div>
+        <span class="list-card-name">${listName}</span>
+      </div>
+      <div class="input-section">
+        <form class="input-row" data-a="add">
+          <input id="todo-inp" class="todo-input" type="text" placeholder="新しいタスクを入力..." autocomplete="off">
+          <button type="submit" class="add-btn">追加</button>
+        </form>
+      </div>
+      <div class="filters-section"><div class="filters" id="filters">${fbtn}</div></div>
+      <ul class="todo-list" id="todo-list">${items}</ul>
+      <div class="footer">
+        <span class="remaining">残り <strong>${c.active}</strong> 件</span>
+        <button class="trash-btn${showTrash?' open':''}" id="trash-btn" data-a="toggle-trash">
+          ${I.trash}ゴミ箱
+          ${ct.length > 0 ? `<span class="trash-cnt">${ct.length}</span>` : ''}
+        </button>
+      </div>
+    </div>
+    ${trashPanel}
+  </div>`;
+}
+
+// ── Build full page HTML ───────────────────────────────
+function html() {
+  const dark = document.documentElement.classList.contains('dark');
+  return `
+    <div class="header">
+      <div class="header-left">
+        <div class="header-icon">${I.app}</div>
+        <div>
+          <h1>タスク管理</h1>
+          <p class="header-sub">今日やることを整理しよう</p>
+        </div>
+      </div>
+      <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
+    </div>
+    <div class="layout">
+      ${htmlSidebar()}
+      ${htmlMain()}
+    </div>`;
+}
+
+// ── Render ─────────────────────────────────────────────
+function render() {
+  const sy = window.scrollY;
+  document.getElementById('app').innerHTML = html();
+  window.scrollTo(0, sy);
+  if (editId) {
+    const inp = document.getElementById('ei-text');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
+  if (editingListId) {
+    const inp = document.getElementById('list-rename-inp');
+    if (inp) { inp.focus(); inp.select(); }
+  }
+  if (addingList) {
+    const inp = document.getElementById('list-add-inp');
+    if (inp) inp.focus();
+  }
+}
+
+// ── Todo Actions ───────────────────────────────────────
+function toggleDark() {
+  const d = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('darkMode', String(d));
+  render();
+}
+function addTodo() {
+  const inp = document.getElementById('todo-inp');
+  const text = inp?.value.trim();
+  if (!text) return;
+  todos.push({ id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId });
+  save(); render();
+  document.getElementById('todo-inp')?.focus();
+}
+function toggleTodo(id) {
+  const t = todos.find(x => x.id === id);
+  if (t) { t.completed = !t.completed; save(); render(); }
+}
+function startEdit(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t || t.completed) return;
+  editId = id; editText = t.text; editDue = t.dueDate || '';
+  render();
+}
+function commitEdit() {
+  const text = editText.trim();
+  if (text && editId) {
+    const t = todos.find(x => x.id === editId);
+    if (t) { t.text = text; t.dueDate = editDue || undefined; }
+    save();
+  }
+  editId = null; editText = ''; editDue = ''; render();
+}
+function cancelEdit() { editId = null; editText = ''; editDue = ''; render(); }
+function moveToTrash(id) {
+  const i = todos.findIndex(x => x.id === id);
+  if (i < 0) return;
+  trash.unshift(todos.splice(i, 1)[0]);
+  save(); render();
+}
+function restoreFromTrash(id, asCompleted) {
+  const i = trash.findIndex(x => x.id === id);
+  if (i < 0) return;
+  const item = trash.splice(i, 1)[0];
+  if (asCompleted !== undefined) item.completed = asCompleted;
+  todos.push(item); save(); render();
+}
+function deleteFromTrash(id) { trash = trash.filter(x => x.id !== id); save(); render(); }
+function emptyTrash()        { trash = trash.filter(x => x.listId !== selectedListId); save(); render(); }
+function setFilter(f)        { if (f && filter !== f) { filter = f; render(); } }
+function toggleTrash()       { showTrash = !showTrash; render(); }
+function reorder(fromId, toId) {
+  const from = todos.findIndex(x => x.id === fromId);
+  const to   = todos.findIndex(x => x.id === toId);
+  if (from < 0 || to < 0) return;
+  todos.splice(to, 0, todos.splice(from, 1)[0]);
+  save(); render();
+}
+
+// ── List Actions ───────────────────────────────────────
+function selectList(id) {
+  if (selectedListId === id) return;
+  selectedListId = id;
+  filter = 'all'; showTrash = false; editId = null;
+  render();
+}
+function startRenameList(id) {
+  const lst = lists.find(l => l.id === id);
+  if (!lst) return;
+  editingListId = id; editingListName = lst.name;
+  render();
+}
+function commitRenameList() {
+  if (!editingListId) return;
+  const name = editingListName.trim();
+  if (name) {
+    const lst = lists.find(l => l.id === editingListId);
+    if (lst) { lst.name = name; save(); }
+  }
+  editingListId = null; render();
+}
+function commitAddList() {
+  if (!addingList) return;
+  const name = newListName.trim();
+  addingList = false; newListName = '';
+  if (name) {
+    const newList = { id: crypto.randomUUID(), name, createdAt: Date.now() };
+    lists.push(newList);
+    selectedListId = newList.id;
+    filter = 'all'; showTrash = false;
+    save();
+  }
+  render();
+}
+function handleDeleteList(id) {
+  if (lists.length <= 1) return;
+  lists = lists.filter(l => l.id !== id);
+  todos = todos.filter(t => t.listId !== id);
+  trash = trash.filter(t => t.listId !== id);
+  if (selectedListId === id) { selectedListId = lists[0].id; filter = 'all'; showTrash = false; }
+  save(); render();
+}
+
+// ── Drag visual helpers ─────────────────────────────────
+function setDragOver(el) {
+  if (dragOverEl === el) return;
+  if (dragOverEl) dragOverEl.classList.remove('drag-over');
+  dragOverEl = el;
+  if (dragOverEl) dragOverEl.classList.add('drag-over');
+}
+function clearDragOver() { setDragOver(null); }
+
+// ── Event handlers ─────────────────────────────────────
+document.addEventListener('click', e => {
+  // フィルターボタンは data-a を持たないため、早期リターンより先にチェック
+  const fb = e.target.closest('.filter-btn[data-filter]');
+  if (fb && !dragTrashId) { setFilter(fb.dataset.filter); return; }
+
+  const a  = e.target.closest('[data-a]')?.dataset.a;
+  const id = e.target.closest('[data-id]')?.dataset.id;
+  if (!a) return;
+  switch (a) {
+    case 'dark':         toggleDark(); break;
+    case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
+    case 'to-trash':     e.stopPropagation(); moveToTrash(id); break;
+    case 'toggle-trash': toggleTrash(); break;
+    case 'save':         commitEdit(); break;
+    case 'cancel':       cancelEdit(); break;
+    case 'clr-date':     editDue = ''; const di = document.getElementById('ei-date'); if(di) di.value=''; render(); break;
+    case 'restore':      restoreFromTrash(id); break;
+    case 'del-trash':    deleteFromTrash(id); break;
+    case 'empty':        emptyTrash(); break;
+    case 'select-list':  selectList(id); break;
+    case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;
+    case 'start-add-list': addingList = true; newListName = ''; render(); break;
+  }
+});
+
+document.addEventListener('submit', e => {
+  if (e.target.closest('[data-a="add"]')) { e.preventDefault(); addTodo(); }
+});
+
+document.addEventListener('dblclick', e => {
+  // Todo 編集
+  const todoItem = e.target.closest('.todo-item');
+  if (todoItem) {
+    if (e.target.closest('.cb-wrap') || e.target.closest('.item-del')) return;
+    if (editId !== todoItem.dataset.id) startEdit(todoItem.dataset.id);
+    return;
+  }
+  // リスト名リネーム
+  const listItem = e.target.closest('.list-nav-item');
+  if (listItem && !e.target.closest('button')) {
+    const lid = listItem.dataset.id;
+    if (lid && editingListId !== lid) startRenameList(lid);
+  }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'ei-text')         editText         = e.target.value;
+  if (e.target.id === 'ei-date')         editDue          = e.target.value;
+  if (e.target.id === 'list-rename-inp') editingListName  = e.target.value;
+  if (e.target.id === 'list-add-inp')    newListName      = e.target.value;
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.id === 'ei-text') {
+    if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+  }
+  if (e.target.id === 'list-rename-inp') {
+    if (e.key === 'Enter')  { e.preventDefault(); commitRenameList(); }
+    if (e.key === 'Escape') { editingListId = null; render(); }
+  }
+  if (e.target.id === 'list-add-inp') {
+    if (e.key === 'Enter')  { e.preventDefault(); commitAddList(); }
+    if (e.key === 'Escape') { addingList = false; newListName = ''; render(); }
+  }
+});
+
+// focusout（blur は bubbling しないため focusout を使用）
+document.addEventListener('focusout', e => {
+  if (e.target.id === 'list-rename-inp' && editingListId) commitRenameList();
+  if (e.target.id === 'list-add-inp'    && addingList) {
+    if (newListName.trim()) commitAddList();
+    else { addingList = false; newListName = ''; render(); }
+  }
+});
+
+// ── Drag & Drop ────────────────────────────────────────
+document.addEventListener('dragstart', e => {
+  const todo  = e.target.closest('.todo-item');
+  const trsh  = e.target.closest('.trash-item');
+  if (todo)  { dragTodoId  = todo.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => todo.classList.add('dragging'),  0); }
+  if (trsh)  { dragTrashId = trsh.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => trsh.classList.add('dragging'), 0); }
+});
+
+document.addEventListener('dragend', () => {
+  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+  clearDragOver();
+  dragTodoId = null; dragTrashId = null;
+});
+
+document.addEventListener('dragover', e => {
+  if (!dragTodoId && !dragTrashId) return;
+
+  if (dragTodoId) {
+    const overTodo   = e.target.closest('.todo-item');
+    const overTBtn   = e.target.closest('#trash-btn');
+    const overTPanel = e.target.closest('#trash-panel');
+    if (overTodo || overTBtn || overTPanel) e.preventDefault();
+    if      (overTodo && overTodo.dataset.id !== dragTodoId) setDragOver(overTodo);
+    else if (overTBtn)   setDragOver(overTBtn);
+    else if (overTPanel) setDragOver(overTPanel);
+    else clearDragOver();
+    return;
+  }
+
+  if (dragTrashId) {
+    const overFilter = e.target.closest('.filter-btn[data-filter]');
+    if (overFilter) { e.preventDefault(); setDragOver(overFilter); }
+    else clearDragOver();
+  }
+});
+
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  clearDragOver();
+
+  if (dragTodoId) {
+    const onTodo  = e.target.closest('.todo-item');
+    const onTrash = e.target.closest('#trash-btn, #trash-panel');
+    if (onTodo && onTodo.dataset.id !== dragTodoId) reorder(dragTodoId, onTodo.dataset.id);
+    else if (onTrash) moveToTrash(dragTodoId);
+    dragTodoId = null; return;
+  }
+
+  if (dragTrashId) {
+    const onFilter = e.target.closest('.filter-btn[data-filter]');
+    if (onFilter) {
+      const f = onFilter.dataset.filter;
+      const asC = f === 'active' ? false : f === 'completed' ? true : undefined;
+      restoreFromTrash(dragTrashId, asC);
+      setFilter(f);
+    }
+    dragTrashId = null;
+  }
+});
+
+// ── Init ───────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>

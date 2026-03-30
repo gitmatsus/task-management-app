@@ -5,6 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>タスク管理</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><path d='M30 52l12 12 28-28' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="タスク管理">
+  <meta name="theme-color" content="#6366f1">
+  <script>
+  // アプリアイコン生成（favicon + apple-touch-icon）
+  (function(){
+    var c=document.createElement('canvas');c.width=512;c.height=512;var x=c.getContext('2d');
+    // 背景：角丸四角（インディゴ）+ グラデーション
+    var g=x.createLinearGradient(0,0,512,512);g.addColorStop(0,'#818cf8');g.addColorStop(1,'#4f46e5');
+    x.beginPath();
+    var r=90;x.moveTo(r,0);x.lineTo(512-r,0);x.quadraticCurveTo(512,0,512,r);
+    x.lineTo(512,512-r);x.quadraticCurveTo(512,512,512-r,512);
+    x.lineTo(r,512);x.quadraticCurveTo(0,512,0,512-r);
+    x.lineTo(0,r);x.quadraticCurveTo(0,0,r,0);x.closePath();
+    x.fillStyle=g;x.fill();
+    // 影付きクリップボード
+    x.save();x.shadowColor='rgba(0,0,0,.18)';x.shadowBlur=24;x.shadowOffsetY=8;
+    // クリップボード本体
+    x.beginPath();
+    var bx=120,by=130,bw=272,bh=300,br=28;
+    x.moveTo(bx+br,by);x.lineTo(bx+bw-br,by);x.quadraticCurveTo(bx+bw,by,bx+bw,by+br);
+    x.lineTo(bx+bw,by+bh-br);x.quadraticCurveTo(bx+bw,by+bh,bx+bw-br,by+bh);
+    x.lineTo(bx+br,by+bh);x.quadraticCurveTo(bx,by+bh,bx,by+bh-br);
+    x.lineTo(bx,by+br);x.quadraticCurveTo(bx,by,bx+br,by);x.closePath();
+    x.fillStyle='rgba(255,255,255,.95)';x.fill();
+    x.restore();
+    // クリップ部分
+    x.beginPath();
+    var cx2=256,cy2=118,cw=80,ch=32,cr=12;
+    x.moveTo(cx2-cw/2+cr,cy2-ch/2);x.lineTo(cx2+cw/2-cr,cy2-ch/2);
+    x.quadraticCurveTo(cx2+cw/2,cy2-ch/2,cx2+cw/2,cy2-ch/2+cr);
+    x.lineTo(cx2+cw/2,cy2+ch/2-cr);x.quadraticCurveTo(cx2+cw/2,cy2+ch/2,cx2+cw/2-cr,cy2+ch/2);
+    x.lineTo(cx2-cw/2+cr,cy2+ch/2);x.quadraticCurveTo(cx2-cw/2,cy2+ch/2,cx2-cw/2,cy2+ch/2-cr);
+    x.lineTo(cx2-cw/2,cy2-ch/2+cr);x.quadraticCurveTo(cx2-cw/2,cy2-ch/2,cx2-cw/2+cr,cy2-ch/2);
+    x.closePath();x.fillStyle='#6366f1';x.fill();
+    // チェックマーク（3つ）
+    function chk(cy,done){
+      var lx=168,rx=lx+20,sz=16;
+      x.beginPath();x.arc(lx,cy,sz,0,Math.PI*2);
+      if(done){x.fillStyle='#6366f1';x.fill();x.beginPath();x.moveTo(lx-7,cy+1);x.lineTo(lx-2,cy+6);x.lineTo(lx+8,cy-5);x.strokeStyle='#fff';x.lineWidth=4;x.lineCap='round';x.lineJoin='round';x.stroke();}
+      else{x.strokeStyle='#d1d5db';x.lineWidth=3;x.stroke();}
+      // テキスト行
+      x.beginPath();x.moveTo(rx+20,cy);x.lineTo(rx+140,cy);
+      x.strokeStyle=done?'#d1d5db':'#6b7280';x.lineWidth=6;x.lineCap='round';x.stroke();
+    }
+    chk(210,true);chk(280,false);chk(350,false);
+    // apple-touch-icon
+    var link=document.createElement('link');link.rel='apple-touch-icon';link.href=c.toDataURL('image/png');document.head.appendChild(link);
+    // PWA manifest
+    var m={name:'タスク管理',short_name:'タスク管理',start_url:location.href,display:'standalone',background_color:'#6366f1',theme_color:'#6366f1',icons:[{src:c.toDataURL('image/png'),sizes:'512x512',type:'image/png'}]};
+    var blob=new Blob([JSON.stringify(m)],{type:'application/json'});
+    var ml=document.createElement('link');ml.rel='manifest';ml.href=URL.createObjectURL(blob);document.head.appendChild(ml);
+  })();
+  </script>
   <script>(function(){var s=localStorage.getItem('darkMode');if(s!==null?s==='true':true)document.documentElement.classList.add('dark');}());</script>
   <style>
     :root {
@@ -102,12 +157,22 @@
     .list-nav-item {
       padding:8px 10px; border-radius:10px; cursor:pointer;
       transition:background .15s; user-select:none;
+      display:flex; align-items:center; gap:0;
     }
+    .list-content { flex:1; min-width:0; }
     .list-nav-item:hover:not(.active) { background:var(--item-hover); }
     .list-nav-item.active { background:var(--sidebar-act-bg); }
     .list-nav-item.dragging { opacity:.4; }
     .list-nav-item.drag-over { background:rgba(99,102,241,.12); }
     .list-item-row { display:flex; align-items:center; gap:6px; min-width:0; }
+    .list-drag-handle {
+      display:flex; align-items:center; padding:0 2px 0 0;
+      opacity:0; cursor:grab; color:#d1d5db; transition:opacity .15s; flex-shrink:0;
+    }
+    html.dark .list-drag-handle { color:#374151; }
+    .list-nav-item:hover .list-drag-handle { opacity:1; }
+    .list-drag-handle:active { cursor:grabbing; }
+    .list-drag-handle svg { width:10px; height:10px; }
     .list-item-name {
       flex:1; min-width:0; font-size:14px; font-weight:500; color:var(--t1);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -548,6 +613,8 @@
     }
     .sidebar-trash-toggle { padding:4px 8px; border-top:1px solid var(--divider); }
     .sidebar-trash-toggle .list-add-btn { margin-top:0; }
+    .sidebar-trash-toggle .list-add-btn.open { background:rgba(239,68,68,.07); color:#ef4444; }
+    html.dark .sidebar-trash-toggle .list-add-btn.open { background:rgba(239,68,68,.15); color:#ef4444; }
     .list-trash-item { padding:6px 10px; }
     .list-trash-item .list-item-name { color:var(--t3); }
     .list-trash-actions { display:flex; gap:2px; flex-shrink:0; }
@@ -620,6 +687,7 @@
         /* タスクリスト */
       .todo-list { padding:6px 8px; }
       .drag-handle { display:flex; opacity:1; padding:0 8px 0 4px; }
+      .list-drag-handle { display:flex; opacity:1; padding:0 4px 0 0; }
       .todo-item.touch-dragging {
         opacity:.35; background:rgba(99,102,241,.08);
         border:1.5px dashed #818cf8; border-radius:8px;
@@ -802,9 +870,12 @@ function htmlSidebar() {
            <span class="tip">削除</span>
          </div>` : ''}`;
 
-    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}" draggable="${!isEditing && !isMobile()}">
-      <div class="list-item-row">${nameRow}</div>
-      ${dots}
+    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}" draggable="${!isEditing && !('ontouchstart' in window)}">
+      <div class="list-drag-handle">${I.grip}</div>
+      <div class="list-content">
+        <div class="list-item-row">${nameRow}</div>
+        ${dots}
+      </div>
     </li>`;
   }).join('');
 
@@ -839,7 +910,7 @@ function htmlSidebar() {
   </div>` : '';
 
   const trashToggle = `<div class="sidebar-trash-toggle">
-    <button class="list-add-btn" data-a="toggle-list-trash">
+    <button class="list-add-btn${showListTrash ? ' open' : ''}" data-a="toggle-list-trash">
       ${I.trash}ゴミ箱${listTrash.length > 0 ? ` <span class="trash-cnt trash-cnt-sm">${listTrash.length}</span>` : ''}
     </button>
   </div>`;
@@ -865,6 +936,7 @@ function htmlMain() {
   const list = filtered();
   const ct = currentTrash();
   const mobile = isMobile();
+  const hasTouch = 'ontouchstart' in window;
 
   const fbtn = [
     { key:'all',       label:'すべて',   count:c.total,  cp:'' },
@@ -917,7 +989,7 @@ function htmlMain() {
         const badge = (t.dueDate && !t.completed && !editing)
           ? `<div class="due-wrap">${dueBadge(t.dueDate)}</div>` : '';
 
-        return `<li class="todo-item" data-id="${t.id}" draggable="${!editing && !mobile}">
+        return `<li class="todo-item" data-id="${t.id}" draggable="${!editing && !hasTouch}">
           <div class="drag-handle" data-a="drag-handle" data-id="${t.id}">${I.grip}</div>
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
           <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
@@ -928,7 +1000,7 @@ function htmlMain() {
 
   const titems = ct.length === 0
     ? `<li class="trash-empty">ゴミ箱は空です</li>`
-    : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="${!mobile}">
+    : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="${!hasTouch}">
         <span class="trash-item-text${t.completed?' was-done':''}">${esc(t.text)}</span>
         <div class="trash-actions">
           <button class="restore-btn" data-a="restore" data-id="${t.id}">${I.restore}復元</button>
@@ -1415,7 +1487,6 @@ document.addEventListener('submit', e => {
 });
 
 document.addEventListener('dblclick', e => {
-  if (isMobile()) return; // モバイルではdblclickは使わない（touchで処理）
   const todoItem = e.target.closest('.todo-item');
   if (todoItem) {
     if (e.target.closest('.cb-wrap') || e.target.closest('.item-del')) return;
@@ -1434,7 +1505,7 @@ document.addEventListener('dblclick', e => {
   const DOUBLE_TAP_MS = 300;
   let lastTap = 0, lastTarget = null;
   document.addEventListener('touchend', e => {
-    if (!isMobile()) return;
+    if (!('ontouchstart' in window)) return;
     const now = Date.now();
     const target = e.target;
     const elapsed = now - lastTap;
@@ -1524,7 +1595,6 @@ document.addEventListener('focusout', e => {
 
 // ── Drag & Drop (デスクトップのみ) ─────────────────────
 document.addEventListener('dragstart', e => {
-  if (isMobile()) return;
   const todo  = e.target.closest('.todo-item');
   const trsh  = e.target.closest('.trash-item');
   const lnav  = e.target.closest('.list-nav-item[data-a="select-list"]');
@@ -1638,7 +1708,7 @@ document.addEventListener('drop', e => {
   let listTouchDragId = null, lastListOverId = null;
 
   document.addEventListener('touchstart', e => {
-    if (!isMobile()) return;
+    if (!('ontouchstart' in window)) return;
     // タスク並び替え（ドラッグハンドル長押し）
     const handle = e.target.closest('[data-a="drag-handle"]');
     if (handle) {
@@ -1668,7 +1738,7 @@ document.addEventListener('drop', e => {
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
-    if (!isMobile()) return;
+    if (!('ontouchstart' in window)) return;
     if (longPressTimer && !touchDragId && !listTouchDragId) {
       const dy = Math.abs(e.touches[0].clientY - touchStartY);
       const dx = Math.abs(e.touches[0].clientX - touchStartX);
@@ -1713,7 +1783,7 @@ document.addEventListener('drop', e => {
   }, { passive: false });
 
   document.addEventListener('touchend', e => {
-    if (!isMobile()) return;
+    if (!('ontouchstart' in window)) return;
     clearTimeout(longPressTimer); longPressTimer = null;
 
     if (touchDragId) {

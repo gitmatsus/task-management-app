@@ -333,9 +333,9 @@
       cursor:pointer; user-select:none;
     }
     /* 未選択時はinputを透明化してlabelを重ねる */
-    .edit-date-wrap { position:relative; display:inline-flex; }
+    .edit-date-wrap { position:relative; display:inline-flex; cursor:pointer; }
     .edit-date-wrap .edit-date {
-      position:absolute; inset:0; opacity:0; width:100%; cursor:pointer;
+      position:absolute; inset:0; opacity:0; width:100%; pointer-events:none;
     }
 .edit-clr { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; }
     .edit-clr:hover { color:#f87171; }
@@ -588,7 +588,7 @@
       }
 
       body {
-        padding:12px 12px 0;
+        padding:12px 12px 32px;
         align-items:flex-start;
       }
 
@@ -669,7 +669,8 @@
       /* 編集フォーム */
       .edit-text { font-size:16px; }
       .edit-actions { gap:6px; }
-      .edit-date { font-size:16px; }
+      .edit-date { font-size:12px; }
+      .edit-date-wrap .edit-date { pointer-events:auto; }
     }
 
 
@@ -681,7 +682,7 @@
 // ── State ──────────────────────────────────────────────
 let todos = [], trash = [], lists = [], selectedListId = '';
 let filter = 'all', showTrash = false;
-let editId = null, editText = '', editDue = '';
+let editId = null, editText = '', editDue = '', skipFocusRestore = false;
 let editingListId = null, editingListName = '';
 let addingList = false, newListName = '';
 let dragTodoId = null, dragTrashId = null, dragListId = null, dragOverEl = null;
@@ -1052,10 +1053,11 @@ function render() {
   const sy = window.scrollY;
   document.getElementById('app').innerHTML = html();
   window.scrollTo(0, sy);
-  if (editId) {
+  if (editId && !skipFocusRestore) {
     const inp = document.getElementById('ei-text');
     if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
   }
+  skipFocusRestore = false;
   if (editingListId) {
     const inp = document.getElementById('list-rename-inp');
     if (inp) { inp.focus(); inp.select(); }
@@ -1368,18 +1370,25 @@ document.addEventListener('click', e => {
   const fb = e.target.closest('.filter-btn[data-filter]');
   if (fb && !dragTrashId) { setFilter(fb.dataset.filter); return; }
 
+  // デスクトップ: 日付入力エリアクリック時にfocusしてピッカーを開く（focusinで処理）
+  if (!isMobile() && e.target.closest('.edit-date-wrap')) {
+    const dateInput = document.getElementById('ei-date');
+    if (dateInput) dateInput.focus();
+    return;
+  }
+
   const a  = e.target.closest('[data-a]')?.dataset.a;
   const id = e.target.closest('[data-id]')?.dataset.id;
   if (!a) return;
   switch (a) {
     case 'dark':         toggleDark(); break;
-    case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); if (sidebarOpen) window.scrollTo(0, 0); break;
+    case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); break;
     case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
     case 'to-trash':     e.stopPropagation(); moveToTrash(id); break;
     case 'toggle-trash': toggleTrash(); break;
     case 'save':         commitEdit(); break;
     case 'cancel':       cancelEdit(); break;
-    case 'clr-date':     editDue = ''; const di = document.getElementById('ei-date'); if(di) di.value=''; render(); break;
+    case 'clr-date':     editDue = ''; skipFocusRestore = true; render(); break;
     case 'restore':      restoreFromTrash(id); break;
     case 'del-trash':    deleteFromTrash(id); break;
     case 'empty':        emptyTrash(); break;
@@ -1459,6 +1468,17 @@ document.addEventListener('dblclick', e => {
 document.addEventListener('focusin', e => {
   if (e.target.id === 'ei-date') {
     e.target.dataset.prev = e.target.value;
+    if (!isMobile() && e.target.showPicker) { try { e.target.showPicker(); } catch(_){} }
+  }
+});
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+document.addEventListener('change', e => {
+  if (e.target.id === 'ei-date') {
+    const val = e.target.value;
+    editDue = val;
+    // iOS Safari: ホイール回転でchangeが発火するため非空値は描画しない（focusoutで処理）
+    if (!val || !isIOS) { skipFocusRestore = true; render(); }
   }
 });
 
@@ -1466,10 +1486,6 @@ document.addEventListener('input', e => {
   if (e.target.id === 'ei-text')         editText         = e.target.value;
   if (e.target.id === 'list-rename-inp') editingListName  = e.target.value;
   if (e.target.id === 'list-add-inp')    newListName      = e.target.value;
-});
-
-document.addEventListener('change', e => {
-  if (e.target.id === 'ei-date') { editDue = e.target.value; render(); }
 });
 
 document.addEventListener('keydown', e => {
@@ -1492,7 +1508,12 @@ document.addEventListener('keydown', e => {
 document.addEventListener('focusout', e => {
   if (e.target.id === 'ei-date') {
     const val = e.target.value;
-    if (val && val !== e.target.dataset.prev) { editDue = val; render(); }
+    if (val && val !== e.target.dataset.prev) {
+      const dueBefore = editDue;
+      setTimeout(() => {
+        if (editId && editDue === dueBefore) { editDue = val; render(); }
+      }, 150);
+    }
   }
   if (e.target.id === 'list-rename-inp' && editingListId) commitRenameList();
   if (e.target.id === 'list-add-inp' && addingList) {
@@ -1723,7 +1744,7 @@ document.addEventListener('drop', e => {
 
   document.addEventListener('touchcancel', () => {
     clearTimeout(longPressTimer); longPressTimer = null;
-    touchDragId = null; lastOverId = null;
+    touchDragId = null; touchDragEl = null; lastOverId = null;
     listTouchDragId = null; lastListOverId = null;
     document.querySelectorAll('.touch-dragging,.touch-drag-over,.list-touch-dragging,.list-touch-drag-over').forEach(el => {
       el.classList.remove('touch-dragging', 'touch-drag-over', 'list-touch-dragging', 'list-touch-drag-over');

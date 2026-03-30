@@ -253,6 +253,8 @@
       flex:1; padding:10px 16px; border-radius:12px;
       border:1px solid var(--input-border); background:var(--input-bg);
       color:var(--t1); font-size:14px; outline:none; transition:all .2s;
+      resize:none; overflow:hidden; min-height:38px; line-height:1.4;
+      font-family:inherit; field-sizing:content;
     }
     .todo-input::placeholder { color:var(--t3); }
     .todo-input:focus { border-color:#818cf8; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
@@ -402,6 +404,7 @@
     .edit-text {
       width:100%; padding:4px 8px; border-radius:8px; border:1px solid #818cf8;
       background:var(--card); color:var(--t1); font-size:14px; outline:none; margin-bottom:6px; font-family:inherit;
+      resize:none; overflow:hidden; line-height:1.4; field-sizing:content;
     }
     .edit-text:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
     .edit-actions { display:flex; flex-direction:column; gap:6px; }
@@ -1048,7 +1051,7 @@ function htmlMain() {
     : list.map(t => {
         const editing = editId === t.id;
         const body = editing ? `<div class="edit-form">
-          <input id="ei-text" class="edit-text" type="text" value="${esc(editText)}" autocomplete="off">
+          <textarea id="ei-text" class="edit-text" rows="1" autocomplete="off">${esc(editText)}</textarea>
           <div class="edit-actions">
             <div class="edit-actions-row1">
               ${editDue
@@ -1068,7 +1071,7 @@ function htmlMain() {
               <button class="edit-save" data-a="save">保存</button>
             </div>
           </div>
-        </div>` : `<span class="todo-text${t.completed?' done':''}">${esc(t.text)}</span>`;
+        </div>` : `<span class="todo-text${t.completed?' done':''}">${esc(t.text).replace(/\n/g,'<br>')}</span>`;
 
         const badge = (t.dueDate && !t.completed && !editing)
           ? `<div class="due-wrap">${dueBadge(t.dueDate)}</div>` : '';
@@ -1085,7 +1088,7 @@ function htmlMain() {
   const titems = ct.length === 0
     ? `<li class="trash-empty">ゴミ箱は空です</li>`
     : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="${!hasTouch}">
-        <span class="trash-item-text${t.completed?' was-done':''}">${esc(t.text)}</span>
+        <span class="trash-item-text${t.completed?' was-done':''}">${esc(t.text).replace(/\n/g,'<br>')}</span>
         <div class="trash-actions">
           <button class="restore-btn" data-a="restore" data-id="${t.id}">${I.restore}復元</button>
           <div class="tip-wrap">
@@ -1114,7 +1117,7 @@ function htmlMain() {
       </div>
       <div class="input-section">
         <form class="input-row" data-a="add">
-          <input id="todo-inp" class="todo-input" type="text" placeholder="新しいタスクを入力..." autocomplete="off">
+          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="新しいタスクを入力..." autocomplete="off"></textarea>
           <button type="submit" class="add-btn">追加</button>
         </form>
       </div>
@@ -1223,7 +1226,7 @@ function html() {
     </div>
     <div class="input-bar-mobile">
       <form class="input-row" data-a="add">
-        <input id="todo-inp-mobile" class="todo-input" type="text" placeholder="新しいタスクを入力..." autocomplete="off">
+        <textarea id="todo-inp-mobile" class="todo-input" rows="1" placeholder="新しいタスクを入力..." autocomplete="off"></textarea>
         <button type="submit" class="add-btn">追加</button>
       </form>
     </div>
@@ -1259,7 +1262,7 @@ function toggleDark() {
   render();
 }
 function addTodo(form) {
-  const inp = form ? form.querySelector('input[type="text"]')
+  const inp = form ? form.querySelector('textarea.todo-input')
             : (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'));
   const text = inp?.value.trim();
   if (!text) return;
@@ -1692,7 +1695,7 @@ document.addEventListener('input', e => {
 document.addEventListener('keydown', e => {
   if (modalMode && e.key === 'Escape') { closeModal(); return; }
   if (e.target.id === 'ei-text') {
-    if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitEdit(); }
     if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
   }
   if (e.target.id === 'list-rename-inp') {
@@ -1702,6 +1705,10 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'list-add-inp') {
     if (e.key === 'Enter')  { e.preventDefault(); commitAddList(); }
     if (e.key === 'Escape') { addingList = false; newListName = ''; render(); }
+  }
+  // textarea追加欄: Enter=追加, Shift+Enter=改行
+  if (e.target.id === 'todo-inp' || e.target.id === 'todo-inp-mobile') {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTodo(e.target.closest('form')); }
   }
 });
 

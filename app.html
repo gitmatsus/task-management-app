@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>タスク管理</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><path d='M30 52l12 12 28-28' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
   <script>(function(){var s=localStorage.getItem('darkMode');if(s!==null?s==='true':true)document.documentElement.classList.add('dark');}());</script>
@@ -36,6 +36,7 @@
     html { background:#030712; }
     html:not(.dark) { background:#f1f5f9; }
     *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
     body {
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;
       background:linear-gradient(135deg,var(--body-from),var(--body-via),var(--body-to));
@@ -59,6 +60,7 @@
     .header-icon svg { width:16px; height:16px; }
     h1 { font-size:20px; font-weight:700; color:var(--t1); letter-spacing:-.025em; line-height:1.2; }
     .header-sub { font-size:11px; color:var(--t3); }
+    .header-right { display:flex; align-items:center; gap:8px; }
     .dark-toggle {
       width:36px; height:36px; flex-shrink:0;
       display:flex; align-items:center; justify-content:center; border-radius:50%;
@@ -68,6 +70,16 @@
     html.dark .dark-toggle { color:#fbbf24; }
     .dark-toggle:hover { border-color:#818cf8; }
     .dark-toggle svg { width:16px; height:16px; }
+
+    /* モバイル用サイドバー開閉ボタン */
+    .sidebar-toggle-btn {
+      display:none;
+      width:36px; height:36px; flex-shrink:0; align-items:center; justify-content:center;
+      border-radius:50%; background:var(--card); border:1px solid var(--input-border);
+      cursor:pointer; color:var(--t2); transition:all .2s; box-shadow:0 1px 2px rgba(0,0,0,.05);
+    }
+    .sidebar-toggle-btn svg { width:16px; height:16px; }
+    .sidebar-toggle-btn.active { background:#6366f1; border-color:#6366f1; color:#fff; }
 
     /* ── 2-column layout ── */
     .layout { display:flex; gap:16px; align-items:flex-start; }
@@ -105,16 +117,16 @@
       flex-shrink:0; padding:1px 6px; border-radius:9999px;
       font-size:10px; font-weight:700;
       background:var(--sidebar-pill-bg); color:var(--sidebar-pill-text);
+      cursor:default;
     }
     .list-count-pill.sel { background:var(--sidebar-act-pill-bg); color:var(--sidebar-act-pill-text); }
     .list-del-wrap { flex-shrink:0; position:relative; display:inline-flex; }
     .list-del-btn {
       width:20px; height:20px; display:flex; align-items:center; justify-content:center;
       background:none; border:none; cursor:pointer; border-radius:6px;
-      color:#d1d5db; opacity:0; transition:all .15s;
+      color:#d1d5db; opacity:1; transition:all .15s;
     }
-    html.dark .list-del-btn { color:#374151; }
-    .list-nav-item:hover .list-del-btn { opacity:1; }
+    html.dark .list-del-btn { color:#4b5563; }
     .list-del-btn:hover { color:#f87171; background:rgba(239,68,68,.07); }
     html.dark .list-del-btn:hover { background:rgba(239,68,68,.15); }
     .list-del-btn svg { width:12px; height:12px; }
@@ -135,7 +147,7 @@
     }
     .list-add-input:focus, .list-rename-input:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
 
-    /* ── List card header (selected list name) ── */
+    /* ── List card header ── */
     .list-card-hd {
       padding:14px 20px; border-bottom:1px solid var(--divider);
       display:flex; align-items:center; gap:8px;
@@ -163,6 +175,7 @@
       padding:10px 20px; background:rgba(99,102,241,.8); color:#fff;
       font-size:14px; font-weight:600; border:none; border-radius:12px; cursor:pointer;
       transition:all .15s; box-shadow:0 1px 2px rgba(99,102,241,.2);
+      white-space:nowrap;
     }
     .add-btn:hover { background:rgba(99,102,241,.9); }
     .add-btn:active { transform:scale(.97); }
@@ -197,6 +210,7 @@
     .dot {
       width:16px; height:16px; border-radius:50%; font-size:9px; font-weight:700;
       display:flex; align-items:center; justify-content:center;
+      cursor:default; position:relative;
     }
     .dot-ov  { background:#fecaca; color:#b91c1c; }
     .dot-td  { background:#fef3c7; color:#d97706; }
@@ -238,13 +252,42 @@
     html.dark .cb { border-color:#4b5563; }
     .cb:hover { border-color:#9ca3af; }
     html.dark .cb:hover { border-color:#6b7280; }
+    .cb { transition:background .2s, border-color .2s, transform .15s; }
     .cb.checked { background:#6366f1; border-color:#6366f1; }
+    .cb.checked.animate { animation:cbPop .25s ease; }
     .cb svg { width:12px; height:12px; display:none; }
     .cb.checked svg { display:block; }
+    .cb.checked.animate svg { animation:checkIn .2s ease; }
+    @keyframes cbPop {
+      0%   { transform:scale(1); }
+      40%  { transform:scale(1.25); }
+      100% { transform:scale(1); }
+    }
+    @keyframes checkIn {
+      0%   { opacity:0; transform:scale(0) rotate(-10deg); }
+      60%  { transform:scale(1.2) rotate(5deg); }
+      100% { opacity:1; transform:scale(1) rotate(0); }
+    }
     .text-wrap { flex:1; min-width:0; padding:12px 12px 12px 0; display:flex; align-items:center; }
     .todo-text { font-size:14px; line-height:1.4; color:var(--t1); }
-    .todo-text.done { text-decoration:line-through; color:#d1d5db; }
+    .todo-text { transition:color .3s; }
+    .todo-text.done {
+      text-decoration:none;
+      color:#d1d5db;
+      background-image:linear-gradient(currentColor, currentColor);
+      background-size:100% 1.5px;
+      background-repeat:no-repeat;
+      background-position:left 55%;
+    }
+    .todo-text.done.animate {
+      background-size:0% 1.5px;
+      animation:strikeThrough .35s ease forwards;
+    }
     html.dark .todo-text.done { color:#4b5563; }
+    @keyframes strikeThrough {
+      0%   { background-size:0% 1.5px; }
+      100% { background-size:100% 1.5px; }
+    }
     .due-wrap { display:flex; align-items:center; padding:12px 4px 12px 0; flex-shrink:0; }
     .due-badge {
       display:inline-flex; align-items:center; gap:4px;
@@ -276,15 +319,27 @@
       background:var(--card); color:var(--t1); font-size:14px; outline:none; margin-bottom:6px; font-family:inherit;
     }
     .edit-text:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
-    .edit-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .edit-actions { display:flex; flex-direction:column; gap:6px; }
+    .edit-actions-row1 { display:flex; align-items:center; gap:6px; }
+    .edit-actions-row2 { display:flex; align-items:center; gap:8px; }
     .edit-date {
       padding:4px 8px; border-radius:8px; border:1px solid var(--input-border);
       background:var(--card); color:var(--t1); font-size:12px; outline:none; font-family:inherit;
     }
     .edit-date:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
-    .edit-clr { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; }
+    .edit-date-placeholder {
+      font-size:12px; color:var(--t3); padding:4px 8px;
+      border-radius:8px; border:1px dashed var(--input-border);
+      cursor:pointer; user-select:none;
+    }
+    /* 未選択時はinputを透明化してlabelを重ねる */
+    .edit-date-wrap { position:relative; display:inline-flex; }
+    .edit-date-wrap .edit-date {
+      position:absolute; inset:0; opacity:0; width:100%; cursor:pointer;
+    }
+.edit-clr { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; }
     .edit-clr:hover { color:#f87171; }
-    .edit-save { margin-left:auto; padding:4px 12px; background:#6366f1; color:#fff; font-size:12px; font-weight:500; border:none; border-radius:8px; cursor:pointer; transition:background .15s; font-family:inherit; }
+    .edit-save { margin-left:auto; padding:6px 16px; background:#6366f1; color:#fff; font-size:12px; font-weight:500; border:none; border-radius:8px; cursor:pointer; transition:background .15s; font-family:inherit; }
     .edit-save:hover { background:#4f46e5; }
     .edit-cancel { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; font-family:inherit; }
     .edit-cancel:hover { color:var(--t1); }
@@ -384,6 +439,7 @@
       background:rgba(0,0,0,.45);
       display:flex; align-items:center; justify-content:center;
       animation:fadeIn .15s ease;
+      padding:16px;
     }
     html.dark .modal-overlay { background:rgba(0,0,0,.65); }
     .modal {
@@ -501,6 +557,122 @@
     .sidebar-trash-list { padding:4px 8px; }
     .empty-all-sm { font-size:10px; padding:2px 6px; }
     .trash-cnt-sm { width:14px; height:14px; font-size:9px; }
+
+    /* ── モバイル用 固定入力バー ── */
+    .input-bar-mobile {
+      display:none;
+      position:fixed; bottom:0; left:0; right:0; z-index:90;
+      background:var(--card);
+      border-top:1px solid var(--card-border);
+      padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+      backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
+      box-shadow:0 -8px 24px rgba(0,0,0,.06);
+    }
+    html.dark .input-bar-mobile {
+      box-shadow:0 -8px 24px rgba(0,0,0,.3);
+    }
+    .input-bar-mobile .input-row { display:flex; gap:8px; }
+    .input-bar-mobile .todo-input { flex:1; font-size:16px; padding:10px 12px; }
+    .input-bar-mobile .add-btn { flex-shrink:0; padding:10px 16px; font-size:14px; }
+
+    /* ══════════════════════════════════════════
+       モバイル対応 (max-width: 640px)
+    ══════════════════════════════════════════ */
+    @media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+      /* 長押しコンテキストメニュー・テキスト選択を抑制 */
+      .todo-item, .list-nav-item, .drag-handle, .cb, .dot, .due-badge, .filter-btn, .trash-btn {
+        -webkit-touch-callout:none;
+        -webkit-user-select:none;
+        user-select:none;
+      }
+
+      body {
+        padding:12px 12px 0;
+        align-items:flex-start;
+      }
+
+      .app { max-width:100%; }
+
+      /* ヘッダー */
+      .header { margin-bottom:12px; }
+      h1 { font-size:17px; }
+      .sidebar-toggle-btn { display:flex; }
+
+      /* レイアウト：縦積みに変更 */
+      .layout { flex-direction:column; gap:12px; }
+      .sidebar-col { width:100%; }
+      .main-col { width:100%; }
+
+      /* サイドバー：デフォルト非表示、開いたら上に展開 */
+      .sidebar-col { display:none; }
+      .sidebar-col.open { display:block; }
+
+      /* インプット：カード内は非表示、固定バーを使用 */
+      .input-section { display:none; }
+      .input-bar-mobile { display:block; }
+      .main-col { padding-bottom:calc(80px + env(safe-area-inset-bottom)); }
+
+      /* フィルター */
+      .filters-section { padding:12px 14px 4px; }
+      .filter-btn { font-size:11px; padding:6px 2px; }
+
+        /* タスクリスト */
+      .todo-list { padding:6px 8px; }
+      .drag-handle { display:flex; opacity:1; padding:0 8px 0 4px; }
+      .todo-item.touch-dragging {
+        opacity:.35; background:rgba(99,102,241,.08);
+        border:1.5px dashed #818cf8; border-radius:8px;
+      }
+      .todo-item.touch-drag-over {
+        background:rgba(99,102,241,.15); border-radius:8px;
+        border-left:3px solid #6366f1;
+        transform:scale(1.02);
+        transition:transform .15s, background .15s;
+      }
+      .list-nav-item.list-touch-dragging {
+        opacity:.35; background:rgba(99,102,241,.08);
+        border:1.5px dashed #818cf8; border-radius:10px;
+      }
+      .list-nav-item.list-touch-drag-over {
+        background:rgba(99,102,241,.15); border-radius:10px;
+        border-left:3px solid #6366f1;
+        transform:scale(1.02);
+        transition:transform .15s, background .15s;
+      }
+
+      /* タスクアイテム：削除ボタンを常時表示 */
+      .item-del button { opacity:1; }
+      .trash-actions { opacity:1; }
+
+      /* 期限バッジを省スペース化 */
+      .due-badge { font-size:9px; padding:2px 4px; }
+
+      /* フッター */
+      .footer { padding:10px 14px; }
+
+      /* ゴミ箱パネル */
+      .trash-panel { margin-top:8px; }
+      .trash-header { padding:12px 14px; }
+      .trash-list { padding:6px 8px; }
+
+      /* モーダル：下から出るシート形式 */
+      .modal { width:100%; max-width:100%; max-height:90vh; border-radius:20px 20px 0 0; }
+      .modal-overlay { align-items:flex-end; padding:0; }
+
+      /* ドットバッジ：サイドバー内 */
+      .sidebar-dots { flex-wrap:wrap; }
+
+      /* リスト追加フォーム */
+      .list-add-input, .list-rename-input { font-size:16px; }
+
+      /* 編集フォーム */
+      .edit-text { font-size:16px; }
+      .edit-actions { gap:6px; }
+      .edit-date { font-size:16px; }
+    }
+
+
   </style>
 </head>
 <body>
@@ -516,33 +688,31 @@ let dragTodoId = null, dragTrashId = null, dragListId = null, dragOverEl = null;
 let modalMode = null, modalLists = [], modalAllChecked = false, importPayload = null;
 let fileDragOver = false;
 let listTrash = [], showListTrash = false;
+let sidebarOpen = false; // モバイル用サイドバー開閉状態
 
 // ── Persistence ────────────────────────────────────────
 function load() {
-  // リスト読み込み（なければデフォルト作成）
   try { lists = JSON.parse(localStorage.getItem('todo-app-lists') || '[]'); } catch { lists = []; }
   if (!lists.length) {
     lists = [{ id: crypto.randomUUID(), name: 'マイタスク', createdAt: Date.now() }];
   }
-  selectedListId = lists[0].id;
-
-  // Todo / Trash / ListTrash 読み込み
   try { todos = JSON.parse(localStorage.getItem('todo-app-todos') || '[]'); } catch { todos = []; }
   try { trash = JSON.parse(localStorage.getItem('todo-app-trash') || '[]'); } catch { trash = []; }
   try { listTrash = JSON.parse(localStorage.getItem('todo-app-list-trash') || '[]'); } catch { listTrash = []; }
-
-  // listId がない既存データを最初のリストへマイグレーション
   const defId = lists[0].id;
   todos = todos.map(t => t.listId ? t : { ...t, listId: defId });
   trash = trash.map(t => t.listId ? t : { ...t, listId: defId });
-
-  save();
+  // 全データ読み込み後に選択リストを復元
+  const savedListId = localStorage.getItem('todo-app-selected-list');
+  selectedListId = (savedListId && lists.find(l => l.id === savedListId))
+    ? savedListId : lists[0].id;
 }
 function save() {
   localStorage.setItem('todo-app-todos',  JSON.stringify(todos));
   localStorage.setItem('todo-app-trash',  JSON.stringify(trash));
   localStorage.setItem('todo-app-lists',  JSON.stringify(lists));
   localStorage.setItem('todo-app-list-trash', JSON.stringify(listTrash));
+  localStorage.setItem('todo-app-selected-list', selectedListId);
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -550,11 +720,14 @@ const today    = () => new Date().toISOString().slice(0, 10);
 const tomorrow = () => new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// 現在のリストに絞った Todo / Trash
+function isMobile() {
+  return window.innerWidth <= 640 ||
+    ('ontouchstart' in window && window.innerWidth <= 1024);
+}
+
 function currentTodos() { return todos.filter(x => x.listId === selectedListId); }
 function currentTrash() { return trash.filter(x => x.listId === selectedListId); }
 
-// リスト統計（counts と listStats を統合）
 function listStats(lid) {
   const t = today();
   const lst = todos.filter(x => x.listId === lid);
@@ -569,7 +742,6 @@ function listStats(lid) {
     noDate:   active.filter(x => !x.dueDate).length,
   };
 }
-function counts() { return listStats(selectedListId); }
 function filtered() {
   const lst = currentTodos();
   if (filter === 'active')    return lst.filter(x => !x.completed);
@@ -592,6 +764,7 @@ const I = {
   check:   `<svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
   download:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>`,
   upload:  `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>`,
+  menu:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>`,
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -612,11 +785,11 @@ function htmlSidebar() {
     const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.future > 0 || s.noDate > 0 || s.done > 0;
 
     const dots = hasDots ? `<div class="dot-badges sidebar-dots">
-      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`  : ''}
+      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`   : ''}
       ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>` : ''}
       ${s.future   > 0 ? `<span class="dot dot-fu">${s.future}</span>`   : ''}
-      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`   : ''}
-      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`     : ''}
+      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`     : ''}
+      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`             : ''}
     </div>` : '';
 
     const nameRow = isEditing
@@ -624,11 +797,11 @@ function htmlSidebar() {
       : `<span class="list-item-name">${esc(lst.name)}</span>
          <span class="list-count-pill${isSel ? ' sel' : ''}">${s.total}</span>
          ${lists.length > 1 ? `<div class="tip-wrap list-del-wrap">
-           <button class="list-del-btn" data-a="del-list" data-id="${lst.id}">${I.x}</button>
+           <button class="list-del-btn" data-a="del-list" data-id="${lst.id}">${I.trash}</button>
            <span class="tip">削除</span>
          </div>` : ''}`;
 
-    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}" draggable="${!isEditing}">
+    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}" draggable="${!isEditing && !isMobile()}">
       <div class="list-item-row">${nameRow}</div>
       ${dots}
     </li>`;
@@ -640,7 +813,6 @@ function htmlSidebar() {
        </div>`
     : `<button class="list-add-btn" data-a="start-add-list">${I.plus}リストを追加</button>`;
 
-  // リストゴミ箱セクション
   const ltItems = listTrash.length === 0
     ? `<li class="trash-empty sidebar-trash-empty">ゴミ箱は空です</li>`
     : listTrash.map((entry, i) => {
@@ -671,7 +843,7 @@ function htmlSidebar() {
     </button>
   </div>`;
 
-  return `<div class="sidebar-col">
+  return `<div class="sidebar-col${sidebarOpen ? ' open' : ''}" id="sidebar-col">
     <div class="card">
       <div class="sidebar-hd">リスト</div>
       <ul class="list-nav">${items}</ul>
@@ -688,24 +860,24 @@ function htmlSidebar() {
 
 // ── Main content HTML ──────────────────────────────────
 function htmlMain() {
-  const c = counts();
+  const c = listStats(selectedListId);
   const list = filtered();
   const ct = currentTrash();
+  const mobile = isMobile();
 
-  // Filter buttons
   const fbtn = [
     { key:'all',       label:'すべて',   count:c.total,  cp:'' },
     { key:'active',    label:'未完了',   count:c.active, cp:'' },
-    { key:'completed', label:'完了済み', count:c.done,   cp:'cp-done' },
+    { key:'completed', label:'完了', count:c.done,   cp:'cp-done' },
   ].map(f => {
     const act = filter === f.key;
     const showDots = (f.key === 'all' || f.key === 'active') &&
       (c.overdue > 0 || c.dueToday > 0 || c.future > 0 || c.noDate > 0 || (f.key === 'all' && c.done > 0));
     const dots = showDots ? `<span class="dot-badges">
-      ${c.overdue  > 0 ? `<span class="dot dot-ov">${c.overdue}</span>`  : ''}
+      ${c.overdue  > 0 ? `<span class="dot dot-ov">${c.overdue}</span>`   : ''}
       ${c.dueToday > 0 ? `<span class="dot dot-td">${c.dueToday}</span>` : ''}
       ${c.future   > 0 ? `<span class="dot dot-fu">${c.future}</span>`   : ''}
-      ${c.noDate   > 0 ? `<span class="dot dot-nd">${c.noDate}</span>`   : ''}
+      ${c.noDate   > 0 ? `<span class="dot dot-nd">${c.noDate}</span>`     : ''}
       ${f.key==='all' && c.done > 0 ? `<span class="dot dot-dn">${c.done}</span>` : ''}
     </span>` : '';
     return `<button class="filter-btn${act?' active':''}" data-filter="${f.key}">
@@ -714,7 +886,6 @@ function htmlMain() {
     </button>`;
   }).join('');
 
-  // Todo items
   const items = list.length === 0
     ? `<li class="empty-msg">${filter==='all'?'🎉 タスクがありません！':'該当するタスクがありません。'}</li>`
     : list.map(t => {
@@ -722,18 +893,31 @@ function htmlMain() {
         const body = editing ? `<div class="edit-form">
           <input id="ei-text" class="edit-text" type="text" value="${esc(editText)}" autocomplete="off">
           <div class="edit-actions">
-            <input id="ei-date" class="edit-date" type="date" value="${esc(editDue)}">
-            ${editDue ? `<button class="edit-clr" data-a="clr-date">削除</button>` : ''}
-            <button class="edit-save" data-a="save">保存</button>
-            <button class="edit-cancel" data-a="cancel">キャンセル</button>
+            <div class="edit-actions-row1">
+              ${editDue
+                ? `<div class="edit-date-wrap">
+                     <label for="ei-date" class="edit-date-placeholder" style="color:var(--t2);">📅 ${editDue.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3')}</label>
+                     <input id="ei-date" class="edit-date" type="date" value="${esc(editDue)}">
+                   </div>
+                   <button class="edit-clr" data-a="clr-date">クリア</button>`
+                : `<div class="edit-date-wrap">
+                     <label for="ei-date" class="edit-date-placeholder">📅 期限日を設定</label>
+                     <input id="ei-date" class="edit-date" type="date" value="">
+                   </div>`
+              }
+            </div>
+            <div class="edit-actions-row2">
+              <button class="edit-cancel" data-a="cancel">キャンセル</button>
+              <button class="edit-save" data-a="save">保存</button>
+            </div>
           </div>
         </div>` : `<span class="todo-text${t.completed?' done':''}">${esc(t.text)}</span>`;
 
         const badge = (t.dueDate && !t.completed && !editing)
           ? `<div class="due-wrap">${dueBadge(t.dueDate)}</div>` : '';
 
-        return `<li class="todo-item" data-id="${t.id}" draggable="${!editing}">
-          <div class="drag-handle">${I.grip}</div>
+        return `<li class="todo-item" data-id="${t.id}" draggable="${!editing && !mobile}">
+          <div class="drag-handle" data-a="drag-handle" data-id="${t.id}">${I.grip}</div>
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
           <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
           ${badge}
@@ -741,10 +925,9 @@ function htmlMain() {
         </li>`;
       }).join('');
 
-  // Trash items
   const titems = ct.length === 0
     ? `<li class="trash-empty">ゴミ箱は空です</li>`
-    : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="true">
+    : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="${!mobile}">
         <span class="trash-item-text${t.completed?' was-done':''}">${esc(t.text)}</span>
         <div class="trash-actions">
           <button class="restore-btn" data-a="restore" data-id="${t.id}">${I.restore}復元</button>
@@ -763,7 +946,6 @@ function htmlMain() {
     <ul class="trash-list">${titems}</ul>
   </div>` : '';
 
-  // 選択中リスト名
   const selList = lists.find(l => l.id === selectedListId) || lists[0];
   const listName = selList ? esc(selList.name) : '';
 
@@ -800,7 +982,6 @@ function htmlModal() {
   const title = isExport ? 'エクスポート' : 'インポート';
   const actionLabel = isExport ? 'エクスポート' : 'インポート';
   const selectedCount = modalLists.filter(l => l.checked).length;
-
   const checkSvg = I.check;
 
   const allRow = `<div class="modal-check-row select-all" data-a="modal-toggle-all">
@@ -847,11 +1028,20 @@ function html() {
           <p class="header-sub">今日やることを整理しよう</p>
         </div>
       </div>
-      <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
+      <div class="header-right">
+        <button class="sidebar-toggle-btn${sidebarOpen ? ' active' : ''}" data-a="toggle-sidebar" aria-label="リスト">${I.menu}</button>
+        <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
+      </div>
     </div>
     <div class="layout">
       ${htmlSidebar()}
       ${htmlMain()}
+    </div>
+    <div class="input-bar-mobile">
+      <form class="input-row" data-a="add">
+        <input id="todo-inp-mobile" class="todo-input" type="text" placeholder="新しいタスクを入力..." autocomplete="off">
+        <button type="submit" class="add-btn">追加</button>
+      </form>
     </div>
     ${htmlModal()}
     ${dropZone}`;
@@ -882,17 +1072,29 @@ function toggleDark() {
   localStorage.setItem('darkMode', String(d));
   render();
 }
-function addTodo() {
-  const inp = document.getElementById('todo-inp');
+function addTodo(form) {
+  const inp = form ? form.querySelector('input[type="text"]')
+            : (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'));
   const text = inp?.value.trim();
   if (!text) return;
   todos.push({ id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId });
   save(); render();
-  document.getElementById('todo-inp')?.focus();
+  (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'))?.focus();
 }
 function toggleTodo(id) {
   const t = todos.find(x => x.id === id);
-  if (t) { t.completed = !t.completed; save(); render(); }
+  if (!t) return;
+  t.completed = !t.completed;
+  save(); render();
+  if (t.completed) {
+    // render後にアニメーションクラスを付与
+    requestAnimationFrame(() => {
+      const cb = document.querySelector(`.cb[data-id="${id}"]`);
+      if (cb) cb.classList.add('animate');
+      const txt = document.querySelector(`.todo-item[data-id="${id}"] .todo-text`);
+      if (txt) txt.classList.add('animate');
+    });
+  }
 }
 function startEdit(id) {
   const t = todos.find(x => x.id === id);
@@ -926,7 +1128,17 @@ function restoreFromTrash(id, asCompleted) {
 function deleteFromTrash(id) { trash = trash.filter(x => x.id !== id); save(); render(); }
 function emptyTrash()        { trash = trash.filter(x => x.listId !== selectedListId); save(); render(); }
 function setFilter(f)        { if (f && filter !== f) { filter = f; render(); } }
-function toggleTrash()       { showTrash = !showTrash; render(); }
+function toggleTrash() {
+  showTrash = !showTrash;
+  render();
+  if (showTrash) {
+    // 開いたときゴミ箱パネルまで自動スクロール
+    requestAnimationFrame(() => {
+      const panel = document.getElementById('trash-panel');
+      if (panel) panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    });
+  }
+}
 function reorder(fromId, toId) {
   const from = todos.findIndex(x => x.id === fromId);
   const to   = todos.findIndex(x => x.id === toId);
@@ -934,7 +1146,6 @@ function reorder(fromId, toId) {
   todos.splice(to, 0, todos.splice(from, 1)[0]);
   save(); render();
 }
-
 function reorderList(fromId, toId) {
   const from = lists.findIndex(x => x.id === fromId);
   const to   = lists.findIndex(x => x.id === toId);
@@ -948,6 +1159,7 @@ function selectList(id) {
   if (selectedListId === id) return;
   selectedListId = id;
   filter = 'all'; showTrash = false; editId = null;
+  if (isMobile()) sidebarOpen = false; // モバイルではリスト選択後サイドバーを閉じる
   render();
 }
 function startRenameList(id) {
@@ -974,6 +1186,7 @@ function commitAddList() {
     lists.push(newList);
     selectedListId = newList.id;
     filter = 'all'; showTrash = false;
+    if (isMobile()) sidebarOpen = false;
     save();
   }
   render();
@@ -982,7 +1195,6 @@ function handleDeleteList(id) {
   if (lists.length <= 1) return;
   const lst = lists.find(l => l.id === id);
   if (!lst) return;
-  // リストとそのTodo/Trashをゴミ箱へ移動
   listTrash.unshift({
     list: lst,
     todos: todos.filter(t => t.listId === id),
@@ -1009,10 +1221,7 @@ function deleteListPermanently(index) {
   listTrash.splice(index, 1);
   save(); render();
 }
-function emptyListTrash() {
-  listTrash = [];
-  save(); render();
-}
+function emptyListTrash() { listTrash = []; save(); render(); }
 function toggleListTrash() { showListTrash = !showListTrash; render(); }
 
 // ── Import / Export ────────────────────────────────────
@@ -1022,10 +1231,8 @@ function closeModal() {
 }
 function renderModal() {
   const checkSvg = I.check;
-  // Update "select all" checkbox
   const allCb = document.querySelector('.select-all .modal-cb');
   if (allCb) { allCb.className = 'modal-cb' + (modalAllChecked ? ' checked' : ''); allCb.innerHTML = checkSvg; }
-  // Update individual checkboxes
   document.querySelectorAll('.modal-check-row[data-a="modal-toggle"]').forEach(row => {
     const id = row.dataset.id;
     const item = modalLists.find(l => l.id === id);
@@ -1033,7 +1240,6 @@ function renderModal() {
     const cb = row.querySelector('.modal-cb');
     if (cb) { cb.className = 'modal-cb' + (item.checked ? ' checked' : ''); cb.innerHTML = checkSvg; }
   });
-  // Update confirm button
   const selectedCount = modalLists.filter(l => l.checked).length;
   const btn = document.querySelector('[data-a="modal-confirm"]');
   if (btn) {
@@ -1159,7 +1365,6 @@ function clearDragOver() { setDragOver(null); }
 
 // ── Event handlers ─────────────────────────────────────
 document.addEventListener('click', e => {
-  // フィルターボタンは data-a を持たないため、早期リターンより先にチェック
   const fb = e.target.closest('.filter-btn[data-filter]');
   if (fb && !dragTrashId) { setFilter(fb.dataset.filter); return; }
 
@@ -1168,6 +1373,7 @@ document.addEventListener('click', e => {
   if (!a) return;
   switch (a) {
     case 'dark':         toggleDark(); break;
+    case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); if (sidebarOpen) window.scrollTo(0, 0); break;
     case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
     case 'to-trash':     e.stopPropagation(); moveToTrash(id); break;
     case 'toggle-trash': toggleTrash(); break;
@@ -1195,18 +1401,18 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('submit', e => {
-  if (e.target.closest('[data-a="add"]')) { e.preventDefault(); addTodo(); }
+  const form = e.target.closest('[data-a="add"]');
+  if (form) { e.preventDefault(); addTodo(form); }
 });
 
 document.addEventListener('dblclick', e => {
-  // Todo 編集
+  if (isMobile()) return; // モバイルではdblclickは使わない（touchで処理）
   const todoItem = e.target.closest('.todo-item');
   if (todoItem) {
     if (e.target.closest('.cb-wrap') || e.target.closest('.item-del')) return;
     if (editId !== todoItem.dataset.id) startEdit(todoItem.dataset.id);
     return;
   }
-  // リスト名リネーム
   const listItem = e.target.closest('.list-nav-item');
   if (listItem && !e.target.closest('button')) {
     const lid = listItem.dataset.id;
@@ -1214,11 +1420,56 @@ document.addEventListener('dblclick', e => {
   }
 });
 
+// モバイル向けダブルタップ検出
+(function() {
+  const DOUBLE_TAP_MS = 300;
+  let lastTap = 0, lastTarget = null;
+  document.addEventListener('touchend', e => {
+    if (!isMobile()) return;
+    const now = Date.now();
+    const target = e.target;
+    const elapsed = now - lastTap;
+    const sameTarget = lastTarget && (
+      target === lastTarget || target.closest('.todo-item') === lastTarget.closest('.todo-item') ||
+      target.closest('.list-nav-item') === lastTarget.closest('.list-nav-item')
+    );
+    if (elapsed < DOUBLE_TAP_MS && sameTarget) {
+      // ダブルタップ確定
+      const todoItem = target.closest('.todo-item');
+      if (todoItem && !target.closest('.cb-wrap') && !target.closest('.item-del') && !target.closest('.drag-handle')) {
+        e.preventDefault();
+        if (editId !== todoItem.dataset.id) startEdit(todoItem.dataset.id);
+        lastTap = 0; lastTarget = null;
+        return;
+      }
+      const listItem = target.closest('.list-nav-item[data-a="select-list"]');
+      if (listItem && !target.closest('button') && !target.closest('input')) {
+        e.preventDefault();
+        if (editingListId !== listItem.dataset.id) startRenameList(listItem.dataset.id);
+        lastTap = 0; lastTarget = null;
+        return;
+      }
+    }
+    lastTap = now;
+    lastTarget = target;
+  });
+})();
+
+// 日付入力：focus時の値を記録
+document.addEventListener('focusin', e => {
+  if (e.target.id === 'ei-date') {
+    e.target.dataset.prev = e.target.value;
+  }
+});
+
 document.addEventListener('input', e => {
   if (e.target.id === 'ei-text')         editText         = e.target.value;
-  if (e.target.id === 'ei-date')         editDue          = e.target.value;
   if (e.target.id === 'list-rename-inp') editingListName  = e.target.value;
   if (e.target.id === 'list-add-inp')    newListName      = e.target.value;
+});
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'ei-date') { editDue = e.target.value; render(); }
 });
 
 document.addEventListener('keydown', e => {
@@ -1237,17 +1488,22 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// focusout（blur は bubbling しないため focusout を使用）
+// focusout：日付確定・リスト名確定をまとめて処理
 document.addEventListener('focusout', e => {
+  if (e.target.id === 'ei-date') {
+    const val = e.target.value;
+    if (val && val !== e.target.dataset.prev) { editDue = val; render(); }
+  }
   if (e.target.id === 'list-rename-inp' && editingListId) commitRenameList();
-  if (e.target.id === 'list-add-inp'    && addingList) {
+  if (e.target.id === 'list-add-inp' && addingList) {
     if (newListName.trim()) commitAddList();
     else { addingList = false; newListName = ''; render(); }
   }
 });
 
-// ── Drag & Drop ────────────────────────────────────────
+// ── Drag & Drop (デスクトップのみ) ─────────────────────
 document.addEventListener('dragstart', e => {
+  if (isMobile()) return;
   const todo  = e.target.closest('.todo-item');
   const trsh  = e.target.closest('.trash-item');
   const lnav  = e.target.closest('.list-nav-item[data-a="select-list"]');
@@ -1264,14 +1520,12 @@ document.addEventListener('dragend', () => {
 
 document.addEventListener('dragover', e => {
   if (!dragTodoId && !dragTrashId && !dragListId) return;
-
   if (dragListId) {
     const overList = e.target.closest('.list-nav-item[data-a="select-list"]');
     if (overList && overList.dataset.id !== dragListId) { e.preventDefault(); setDragOver(overList); }
     else clearDragOver();
     return;
   }
-
   if (dragTodoId) {
     const overTodo   = e.target.closest('.todo-item');
     const overTBtn   = e.target.closest('#trash-btn');
@@ -1285,7 +1539,6 @@ document.addEventListener('dragover', e => {
     else clearDragOver();
     return;
   }
-
   if (dragTrashId) {
     const overFilter = e.target.closest('.filter-btn[data-filter]');
     if (overFilter) { e.preventDefault(); setDragOver(overFilter); }
@@ -1296,13 +1549,11 @@ document.addEventListener('dragover', e => {
 document.addEventListener('drop', e => {
   e.preventDefault();
   clearDragOver();
-
   if (dragListId) {
     const onList = e.target.closest('.list-nav-item[data-a="select-list"]');
     if (onList && onList.dataset.id !== dragListId) reorderList(dragListId, onList.dataset.id);
     dragListId = null; return;
   }
-
   if (dragTodoId) {
     const onTodo  = e.target.closest('.todo-item');
     const onTrash = e.target.closest('#trash-btn, #trash-panel');
@@ -1314,7 +1565,6 @@ document.addEventListener('drop', e => {
     else if (onTrash) moveToTrash(dragTodoId);
     dragTodoId = null; return;
   }
-
   if (dragTrashId) {
     const onFilter = e.target.closest('.filter-btn[data-filter]');
     if (onFilter) {
@@ -1357,6 +1607,131 @@ document.addEventListener('drop', e => {
   reader.onload = ev => processImportFile(ev.target.result);
   reader.readAsText(file);
 }, true);
+
+// ── Mobile Touch Sort ─────────────────────────────────
+(function() {
+  let touchDragId = null, lastOverId = null;
+  let longPressTimer = null, touchStartY = 0, touchStartX = 0;
+  const LONG_PRESS = 400;
+
+  let listTouchDragId = null, lastListOverId = null;
+
+  document.addEventListener('touchstart', e => {
+    if (!isMobile()) return;
+    // タスク並び替え（ドラッグハンドル長押し）
+    const handle = e.target.closest('[data-a="drag-handle"]');
+    if (handle) {
+      const item = handle.closest('.todo-item');
+      if (!item || item.querySelector('.edit-form')) return;
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+      longPressTimer = setTimeout(() => {
+        touchDragId = item.dataset.id;
+
+        item.classList.add('touch-dragging');
+        navigator.vibrate && navigator.vibrate(30);
+      }, LONG_PRESS);
+      return;
+    }
+    // リスト並び替え（リスト名長押し）
+    const listItem = e.target.closest('.list-nav-item[data-a="select-list"]');
+    if (listItem && !e.target.closest('button') && !e.target.closest('input')) {
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+      longPressTimer = setTimeout(() => {
+        listTouchDragId = listItem.dataset.id;
+        listItem.classList.add('list-touch-dragging');
+        navigator.vibrate && navigator.vibrate(30);
+      }, LONG_PRESS);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!isMobile()) return;
+    if (longPressTimer && !touchDragId && !listTouchDragId) {
+      const dy = Math.abs(e.touches[0].clientY - touchStartY);
+      const dx = Math.abs(e.touches[0].clientX - touchStartX);
+      if (dy > 8 || dx > 8) { clearTimeout(longPressTimer); longPressTimer = null; }
+    }
+    const touch = e.touches[0];
+
+    // タスク移動中
+    if (touchDragId) {
+      e.preventDefault();
+      const els = document.elementsFromPoint(touch.clientX, touch.clientY);
+      const overItem = els.find(el => el.classList.contains('todo-item') && el.dataset.id !== touchDragId);
+      if (overItem) {
+        if (lastOverId !== overItem.dataset.id) {
+          document.querySelectorAll('.todo-item.touch-drag-over').forEach(el => el.classList.remove('touch-drag-over'));
+          overItem.classList.add('touch-drag-over');
+          lastOverId = overItem.dataset.id;
+        }
+      } else {
+        document.querySelectorAll('.todo-item.touch-drag-over').forEach(el => el.classList.remove('touch-drag-over'));
+        lastOverId = null;
+      }
+      return;
+    }
+
+    // リスト移動中（リスト編集中は無視）
+    if (listTouchDragId) {
+      e.preventDefault();
+      const els = document.elementsFromPoint(touch.clientX, touch.clientY);
+      const overItem = els.find(el => el.classList.contains('list-nav-item') && el.dataset.id && el.dataset.id !== listTouchDragId);
+      if (overItem) {
+        if (lastListOverId !== overItem.dataset.id) {
+          document.querySelectorAll('.list-nav-item.list-touch-drag-over').forEach(el => el.classList.remove('list-touch-drag-over'));
+          overItem.classList.add('list-touch-drag-over');
+          lastListOverId = overItem.dataset.id;
+        }
+      } else {
+        document.querySelectorAll('.list-nav-item.list-touch-drag-over').forEach(el => el.classList.remove('list-touch-drag-over'));
+        lastListOverId = null;
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', e => {
+    if (!isMobile()) return;
+    clearTimeout(longPressTimer); longPressTimer = null;
+
+    if (touchDragId) {
+      if (lastOverId) {
+        reorder(touchDragId, lastOverId);
+      } else {
+        document.querySelectorAll('.touch-dragging,.touch-drag-over').forEach(el => {
+          el.classList.remove('touch-dragging', 'touch-drag-over');
+        });
+        render();
+      }
+      touchDragId = null; lastOverId = null;
+      return;
+    }
+
+    if (listTouchDragId) {
+      if (lastListOverId) {
+        reorderList(listTouchDragId, lastListOverId);
+      } else {
+        document.querySelectorAll('.list-touch-dragging,.list-touch-drag-over').forEach(el => {
+          el.classList.remove('list-touch-dragging', 'list-touch-drag-over');
+        });
+        render();
+      }
+      listTouchDragId = null; lastListOverId = null;
+    }
+  });
+
+  document.addEventListener('touchcancel', () => {
+    clearTimeout(longPressTimer); longPressTimer = null;
+    touchDragId = null; lastOverId = null;
+    listTouchDragId = null; lastListOverId = null;
+    document.querySelectorAll('.touch-dragging,.touch-drag-over,.list-touch-dragging,.list-touch-drag-over').forEach(el => {
+      el.classList.remove('touch-dragging', 'touch-drag-over', 'list-touch-dragging', 'list-touch-drag-over');
+    });
+  });
+})();
+
+
 
 // ── Init ───────────────────────────────────────────────
 load();

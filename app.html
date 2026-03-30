@@ -655,7 +655,7 @@
       }
 
       body {
-        padding:12px 12px 32px;
+        padding:calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 32px calc(12px + env(safe-area-inset-left));
         align-items:flex-start;
       }
 

@@ -476,8 +476,9 @@
     .memo-popup-label {
       font-size:10px; font-weight:700; color:var(--t3);
       text-transform:uppercase; letter-spacing:.1em;
-      display:block; margin-bottom:8px;
+      display:flex; align-items:center; gap:4px; margin-bottom:8px;
     }
+    .memo-popup-label svg { width:11px; height:11px; flex-shrink:0; }
     .memo-popup-text {
       font-size:13px; color:var(--t1); line-height:1.7;
       white-space:pre-wrap; word-break:break-word;
@@ -888,7 +889,7 @@
 let todos = [], trash = [], lists = [], selectedListId = '';
 let filter = 'all', showTrash = false;
 let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', skipFocusRestore = false;
-let memoPopupId = null;
+let memoPopupId = null, memoPopupPos = null;
 let editingListId = null, editingListName = '';
 let addingList = false, newListName = '';
 let dragTodoId = null, dragTrashId = null, dragListId = null, dragOverEl = null;
@@ -1295,7 +1296,25 @@ function htmlMemoPopup() {
   if (!memoPopupId) return '';
   const t = todos.find(x => x.id === memoPopupId);
   if (!t?.detail) return '';
-  return `<div class="memo-popup" id="memo-popup">
+
+  // ボタン位置に基づいて表示位置を計算
+  let posStyle = '';
+  if (memoPopupPos) {
+    const p = memoPopupPos;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const GAP = 8, POP_W = 280;
+    // 上下：ボタン上に空きがあれば上、なければ下
+    const vert = (p.top > 120)
+      ? `bottom:${vh - p.top + GAP}px; top:auto;`
+      : `top:${p.bottom + GAP}px; bottom:auto;`;
+    // 左右：ボタン左端に合わせ、はみ出しをクランプ
+    let left = p.left;
+    if (left + POP_W > vw - 8) left = vw - POP_W - 8;
+    if (left < 8) left = 8;
+    posStyle = `${vert} left:${left}px; transform:none;`;
+  }
+
+  return `<div class="memo-popup" id="memo-popup"${posStyle ? ` style="${posStyle}"` : ''}>
     <span class="memo-popup-label">${I.memo}メモ</span>
     <div class="memo-popup-text">${esc(t.detail).replace(/\n/g,'<br>')}</div>
   </div>`;
@@ -1389,7 +1408,7 @@ function startEdit(id) {
   const t = todos.find(x => x.id === id);
   if (!t || t.completed) return;
   editId = id; editText = t.text; editDue = t.dueDate || ''; editFolderPath = t.folderPath || ''; editDetail = t.detail || '';
-  memoPopupId = null;
+  memoPopupId = null; memoPopupPos = null;
   render();
 }
 function commitEdit() {
@@ -1679,7 +1698,7 @@ function clearDragOver() { setDragOver(null); }
 document.addEventListener('click', e => {
   // メモポップアップを外クリックで閉じる
   if (memoPopupId && !e.target.closest('#memo-popup') && !e.target.closest('[data-a="memo-show"]')) {
-    memoPopupId = null; render(); return;
+    memoPopupId = null; memoPopupPos = null; render(); return;
   }
 
   const fb = e.target.closest('.filter-btn[data-filter]');
@@ -1706,7 +1725,17 @@ document.addEventListener('click', e => {
     case 'cancel':       cancelEdit(); break;
     case 'clr-date':     editDue = ''; skipFocusRestore = true; render(); break;
     case 'clr-folder':   editFolderPath = ''; skipFocusRestore = true; render(); break;
-    case 'memo-show':    e.stopPropagation(); memoPopupId = (memoPopupId === id) ? null : id; render(); break;
+    case 'memo-show': {
+      e.stopPropagation();
+      if (memoPopupId === id) {
+        memoPopupId = null; memoPopupPos = null;
+      } else {
+        memoPopupId = id;
+        const btn = e.target.closest('[data-a="memo-show"]');
+        if (btn) { const r = btn.getBoundingClientRect(); memoPopupPos = { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; }
+      }
+      render(); break;
+    }
     case 'folder-open': {
       e.stopPropagation();
       const ft = todos.find(x => x.id === id);

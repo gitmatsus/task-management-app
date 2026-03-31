@@ -1090,6 +1090,11 @@ function htmlMain() {
         const body = editing ? `<div class="edit-form">
           <textarea id="ei-text" class="edit-text" rows="1" autocomplete="off">${esc(editText)}</textarea>
           <div class="edit-actions">
+            ${!hasTouch ? `<div class="edit-actions-row3">
+              <span class="edit-folder-label">${I.folder}フォルダ</span>
+              <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="フォルダパス（例: C:\\Users\\...）" value="${esc(editFolderPath)}" autocomplete="off">
+              ${editFolderPath ? `<button class="edit-folder-clr" data-a="clr-folder" title="クリア">${I.x}</button>` : ''}
+            </div>` : ''}
             <div class="edit-actions-row1">
               ${editDue
                 ? `<div class="edit-date-wrap">
@@ -1103,11 +1108,6 @@ function htmlMain() {
                    </div>`
               }
             </div>
-            ${!hasTouch ? `<div class="edit-actions-row3">
-              <span class="edit-folder-label">${I.folder}フォルダ</span>
-              <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="フォルダパス（例: C:\\Users\\...）" value="${esc(editFolderPath)}" autocomplete="off">
-              ${editFolderPath ? `<button class="edit-folder-clr" data-a="clr-folder" title="クリア">${I.x}</button>` : ''}
-            </div>` : ''}
             <div class="edit-actions-row2">
               <button class="edit-cancel" data-a="cancel">キャンセル</button>
               <button class="edit-save" data-a="save">保存</button>
@@ -1122,8 +1122,8 @@ function htmlMain() {
           <div class="drag-handle" data-a="drag-handle" data-id="${t.id}">${I.grip}</div>
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
           <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
-          ${badge}
           ${!hasTouch && t.folderPath && !editing ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${I.folder}</button></div>` : ''}
+          ${badge}
           <div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>
         </li>`;
       }).join('');
@@ -1647,30 +1647,17 @@ document.addEventListener('click', e => {
       e.stopPropagation();
       const ft = todos.find(x => x.id === id);
       if (ft?.folderPath) {
-        // file:// URL でフォルダを開こうと試みる
-        const fileUrl = 'file:///' + ft.folderPath.replace(/\\/g, '/');
-        const win = window.open(fileUrl, '_blank');
-        const openBlocked = (win === null);
-
-        // クリップボードにも常にコピー（フォールバック込み）
-        const copyPath = () => new Promise((res, rej) => {
-          navigator.clipboard.writeText(ft.folderPath).then(res).catch(() => {
+        navigator.clipboard.writeText(ft.folderPath)
+          .then(() => showToast('📋 パスをクリップボードにコピーしました'))
+          .catch(() => {
             const ta = document.createElement('textarea');
             ta.value = ft.folderPath;
             ta.style.cssText = 'position:fixed;left:-9999px;opacity:0;';
             document.body.appendChild(ta); ta.focus(); ta.select();
-            document.execCommand('copy') ? res() : rej();
+            const ok = document.execCommand('copy');
             document.body.removeChild(ta);
+            showToast(ok ? '📋 パスをクリップボードにコピーしました' : 'コピーできませんでした');
           });
-        });
-
-        copyPath()
-          .then(() => showToast(openBlocked
-            ? '📋 パスをクリップボードにコピーしました（フォルダを開けませんでした）'
-            : '📁 フォルダを開こうとしました　📋 パスもコピーしました'))
-          .catch(() => showToast(openBlocked
-            ? 'フォルダを開けませんでした'
-            : '📁 フォルダを開こうとしました'));
       }
       break;
     }

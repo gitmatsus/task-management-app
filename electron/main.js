@@ -12,8 +12,12 @@ function createWindow() {
     },
   });
 
-  // TList.html は一つ上のフォルダにある
-  win.loadFile(path.join(__dirname, '..', 'TList.html'));
+  // パッケージ版: resources/TList.html
+  // 開発版: ../TList.html（electron フォルダの一つ上）
+  const htmlPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'TList.html')
+    : path.join(__dirname, '..', 'TList.html');
+  win.loadFile(htmlPath);
 }
 
 // フォルダを開くIPCハンドラ

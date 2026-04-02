@@ -173,13 +173,31 @@ C:\AI\タスク管理アプリ\
     └── package.json  ← Electron依存定義
 ```
 
-### 起動方法
+### 起動方法（開発）
 ```bash
-# electron フォルダに移動してから実行
 cd electron
 npm install   # 初回のみ（electron/node_modules/ が生成される）
 npm start     # Electronアプリとして起動
 ```
+
+### インストーラービルド（Windows exe）
+```bash
+cd electron
+npm install   # 初回のみ
+npm run build # electron/dist/ に Setup.exe が生成される
+```
+- 生成物: `electron/dist/タスク管理 Setup 1.0.0.exe`
+- インストール先をユーザーが選択可能（Program Files など）
+- インストール後はスタートメニューから起動
+
+### パス解決（開発 vs パッケージ）
+```javascript
+const htmlPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'TList.html')  // インストール後
+  : path.join(__dirname, '..', 'TList.html');         // 開発時
+```
+- `extraResources` で TList.html を `resources/` に同梱
+- `files` で main.js / preload.js を `resources/app/` に同梱
 
 ### Electron/Web の自動判定
 `folder-open` クリックハンドラで `window.electronAPI?.openFolder` の有無を判定：

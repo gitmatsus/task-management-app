@@ -2,10 +2,11 @@
 
 ## プロジェクト概要
 
-- **ファイル**: `C:\AI\タスク管理アプリ\TList.html`（単一ファイル、約2150行）
+- **ファイル**: `C:\AI\タスク管理アプリ\TList.html`（単一ファイル、約2160行）
 - **リポジトリ**: `https://github.com/gitmatsus/task-management-app.git`（ブランチ: `master`）
 - **構成**: バニラJS + localStorage、外部依存なし、単一HTMLファイルで完結
-- **起動**: `npx serve` 等でローカルサーブ、またはファイルを直接ブラウザで開く
+- **Web起動**: `npx serve` 等でローカルサーブ、またはファイルを直接ブラウザで開く
+- **Electron起動**: `npm install` → `npm start`
 
 ---
 
@@ -159,25 +160,64 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 
 ---
 
+## Electron対応
+
+### ファイル構成
+```
+TList.html   ← メインアプリ（Web/Electron共用）
+main.js      ← Electronメインプロセス
+preload.js   ← contextBridge経由でAPIを安全に公開
+package.json ← Electron依存定義
+```
+
+### 起動方法
+```bash
+npm install   # 初回のみ
+npm start     # Electronアプリとして起動
+```
+
+### Electron/Web の自動判定
+`folder-open` クリックハンドラで `window.electronAPI?.openFolder` の有無を判定：
+```javascript
+if (window.electronAPI?.openFolder) {
+  // Electron：shell.openPath() でフォルダを直接開く
+} else {
+  // Web：クリップボードコピー
+}
+```
+
+### preload.js の役割
+`contextIsolation: true`（セキュア設定）のため、レンダラーから Node.js APIを直接呼べない。
+`preload.js` が `contextBridge.exposeInMainWorld('electronAPI', {...})` で安全に橋渡しする。
+
+### shell.openPath の戻り値
+```javascript
+// 成功時: '' (空文字)
+// 失敗時: エラーメッセージ文字列
+const errMsg = await shell.openPath(folderPath);
+return { success: errMsg === '', error: errMsg };
+```
+
+---
+
 ## 未実装・検討事項
 
 - **データ同期**（Firebase Firestore方式Bを検討したが未実装）
-- **フォルダを直接開く**機能（全ブラウザでfile://プロトコルはブロックされるため不可。Electron化か独自プロトコルハンドラが必要）
 - **フォルダピッカーUI**（`webkitdirectory` や `showDirectoryPicker()` はフルパスを返さないため意味なし）
+- **Electronビルド**（`electron-builder` 等でexe化は未設定）
 
 ---
 
 ## 直近コミット履歴
 
 ```
+（最新）Electron対応：フォルダを直接開く機能（main.js / preload.js / package.json）
+10602ad app.html を TList.html にリネーム、HANDOFF.md を追加
 e18ed88 メモポップアップの表示改善
 81182b0 タスクに詳細・メモ機能を追加
 4474fb0 フォルダ機能の整理：コピーのみに戻し表示順を変更
-3f4b49c フォルダボタンの動作改善：開こうと試みてからコピー通知
 1af6c11 タスクにフォルダ登録機能を追加（デスクトップ版限定）
 965d36d Add multi-line task text support with Shift+Enter
 d0cffcd Add sidebar list stats toggle and collapsible list view
 33bc271 Add mobile task move between lists via long-press popup
-c9b7491 Fix iOS PWA safe area insets for notch/Dynamic Island
-8b6804e Fix narrow viewport issues and improve UI consistency
 ```

@@ -1739,19 +1739,29 @@ document.addEventListener('click', e => {
     case 'folder-open': {
       e.stopPropagation();
       const ft = todos.find(x => x.id === id);
-      if (ft?.folderPath) {
-        navigator.clipboard.writeText(ft.folderPath)
-          .then(() => showToast('📋 パスをクリップボードにコピーしました'))
-          .catch(() => {
-            const ta = document.createElement('textarea');
-            ta.value = ft.folderPath;
-            ta.style.cssText = 'position:fixed;left:-9999px;opacity:0;';
-            document.body.appendChild(ta); ta.focus(); ta.select();
-            const ok = document.execCommand('copy');
-            document.body.removeChild(ta);
-            showToast(ok ? '📋 パスをクリップボードにコピーしました' : 'コピーできませんでした');
-          });
+      if (!ft?.folderPath) break;
+
+      // Electron環境：直接フォルダを開く
+      if (window.electronAPI?.openFolder) {
+        window.electronAPI.openFolder(ft.folderPath).then(res => {
+          showToast(res.success ? '📁 フォルダを開きました' : '📋 パスをクリップボードにコピーしました');
+          if (!res.success) navigator.clipboard.writeText(ft.folderPath).catch(() => {});
+        });
+        break;
       }
+
+      // Web環境：クリップボードコピー
+      navigator.clipboard.writeText(ft.folderPath)
+        .then(() => showToast('📋 パスをクリップボードにコピーしました'))
+        .catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = ft.folderPath;
+          ta.style.cssText = 'position:fixed;left:-9999px;opacity:0;';
+          document.body.appendChild(ta); ta.focus(); ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast(ok ? '📋 パスをクリップボードにコピーしました' : 'コピーできませんでした');
+        });
       break;
     }
     case 'restore':      restoreFromTrash(id); break;

@@ -1,0 +1,12 @@
+{
+  "name": "tlist",
+  "version": "1.0.0",
+  "description": "タスク管理アプリ",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}

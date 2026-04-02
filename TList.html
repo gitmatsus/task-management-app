@@ -245,6 +245,16 @@
     html.dark .list-card-icon { background:rgba(99,102,241,.75); }
     .list-card-icon svg { width:14px; height:14px; }
     .list-card-name { font-size:15px; font-weight:700; color:var(--t1); }
+    .sort-btns {
+      margin-left:auto; display:flex; align-items:center; gap:2px;
+    }
+    .sort-btn {
+      border:none; background:transparent; cursor:pointer;
+      color:var(--t2); padding:4px 6px; border-radius:6px; display:flex; align-items:center;
+      transition:all .2s;
+    }
+    .sort-btn:hover { background:var(--filter-hover); color:var(--t1); }
+    .sort-btn svg { width:18px; height:18px; }
 
     /* ── Input ── */
     .input-section { padding:20px; border-bottom:1px solid var(--divider); }
@@ -979,6 +989,8 @@ const I = {
   menu:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>`,
   folder:  `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>`,
   memo:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+  sort:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h8m-4 6h4m-6 6h6m5-12v16m0 0l3-3m-3 3l-3-3"/></svg>`,
+  sortCal: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11v4m0 0l-1.5-1.5M12 15l1.5-1.5"/></svg>`,
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -1203,6 +1215,10 @@ function htmlMain() {
       <div class="list-card-hd">
         <div class="list-card-icon">${I.clip}</div>
         <span class="list-card-name">${listName}</span>
+        <div class="sort-btns">
+          <button class="sort-btn" data-a="sort-tasks" title="整列（未完了↑ 完了↓）">${I.sort}</button>
+          <button class="sort-btn" data-a="sort-by-date" title="日付順に並べる">${I.sortCal}</button>
+        </div>
       </div>
       <div class="input-section">
         <form class="input-row" data-a="add">
@@ -1385,7 +1401,10 @@ function addTodo(form) {
             : (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'));
   const text = inp?.value.trim();
   if (!text) return;
-  todos.push({ id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId });
+  const newTask = { id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId };
+  // 最後の未完了タスクの直後に挿入（未完了が無ければ末尾）
+  const lastActive = todos.reduce((acc, x, i) => (x.listId === selectedListId && !x.completed) ? i : acc, -1);
+  if (lastActive >= 0) { todos.splice(lastActive + 1, 0, newTask); } else { todos.push(newTask); }
   save(); render();
   (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'))?.focus();
 }
@@ -1403,6 +1422,30 @@ function toggleTodo(id) {
       if (txt) txt.classList.add('animate');
     });
   }
+}
+function sortTodos() {
+  const lid = selectedListId;
+  const mine = todos.filter(x => x.listId === lid);
+  const active = mine.filter(x => !x.completed);
+  const done   = mine.filter(x =>  x.completed);
+  const sorted = [...active, ...done];
+  let si = 0;
+  todos = todos.map(t => t.listId === lid ? sorted[si++] : t);
+  save(); render();
+}
+function sortByDate() {
+  const lid = selectedListId;
+  const mine = todos.filter(x => x.listId === lid);
+  const dateCmp = (a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;   // 日付なしは末尾
+    if (!b.dueDate) return -1;
+    return a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
+  };
+  const sorted = [...mine].sort(dateCmp);
+  let si = 0;
+  todos = todos.map(t => t.listId === lid ? sorted[si++] : t);
+  save(); render();
 }
 function startEdit(id) {
   const t = todos.find(x => x.id === id);
@@ -1719,6 +1762,8 @@ document.addEventListener('click', e => {
     case 'dark':         toggleDark(); break;
     case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); break;
     case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
+    case 'sort-tasks':   e.stopPropagation(); sortTodos(); break;
+    case 'sort-by-date': e.stopPropagation(); sortByDate(); break;
     case 'to-trash':     e.stopPropagation(); moveToTrash(id); break;
     case 'toggle-trash': toggleTrash(); break;
     case 'save':         commitEdit(); break;
@@ -1983,21 +2028,14 @@ document.addEventListener('drop', e => {
 });
 
 // ── File Drag & Drop Import ─────────────────────────────
-let fileDragCounter = 0;
+let fileDragTimer = null;
 document.addEventListener('dragover', e => {
   if (dragTodoId || dragTrashId) return;
-  if (e.dataTransfer && e.dataTransfer.types.includes('Files')) e.preventDefault();
-});
-document.addEventListener('dragenter', e => {
-  if (dragTodoId || dragTrashId) return;
   if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
-  fileDragCounter++;
+  e.preventDefault();
   if (!fileDragOver) { fileDragOver = true; render(); }
-});
-document.addEventListener('dragleave', e => {
-  if (dragTodoId || dragTrashId) return;
-  fileDragCounter--;
-  if (fileDragCounter <= 0) { fileDragCounter = 0; if (fileDragOver) { fileDragOver = false; render(); } }
+  clearTimeout(fileDragTimer);
+  fileDragTimer = setTimeout(() => { if (fileDragOver) { fileDragOver = false; render(); } }, 150);
 });
 document.addEventListener('drop', e => {
   if (dragTodoId || dragTrashId) return;

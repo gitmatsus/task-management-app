@@ -19,6 +19,9 @@ function createWindow() {
     ? path.join(process.resourcesPath, 'TList.html')
     : path.join(__dirname, '..', 'TList.html');
   win.loadFile(htmlPath);
+
+  // ファイルのドラッグ＆ドロップによるページ遷移を防止
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
 }
 
 // フォルダを開くIPCハンドラ
@@ -28,12 +31,26 @@ ipcMain.handle('open-folder', async (_event, folderPath) => {
   return { success: errMsg === '', error: errMsg };
 });
 
-app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// 二重起動防止：既に起動中なら既存ウィンドウをフォーカスして終了
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
   });
-});
+
+  app.whenReady().then(() => {
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

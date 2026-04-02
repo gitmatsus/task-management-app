@@ -12,3 +12,9 @@ Desktop.ini
 
 # Claude
 .claude/
+
+# Node
+node_modules/
+electron/node_modules/
+package-lock.json
+electron/package-lock.json

@@ -12,7 +12,8 @@ function createWindow() {
     },
   });
 
-  win.loadFile('TList.html');
+  // TList.html は一つ上のフォルダにある
+  win.loadFile(path.join(__dirname, '..', 'TList.html'));
 }
 
 // フォルダを開くIPCハンドラ

@@ -164,15 +164,20 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 
 ### ファイル構成
 ```
-TList.html   ← メインアプリ（Web/Electron共用）
-main.js      ← Electronメインプロセス
-preload.js   ← contextBridge経由でAPIを安全に公開
-package.json ← Electron依存定義
+C:\AI\タスク管理アプリ\
+├── TList.html        ← メインアプリ（Web/Electron共用）
+├── HANDOFF.md
+└── electron\
+    ├── main.js       ← Electronメインプロセス
+    ├── preload.js    ← contextBridge経由でAPIを安全に公開
+    └── package.json  ← Electron依存定義
 ```
 
 ### 起動方法
 ```bash
-npm install   # 初回のみ
+# electron フォルダに移動してから実行
+cd electron
+npm install   # 初回のみ（electron/node_modules/ が生成される）
 npm start     # Electronアプリとして起動
 ```
 

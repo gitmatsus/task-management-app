@@ -9,7 +9,7 @@
   },
   "build": {
     "appId": "com.tlist.app",
-    "productName": "タスク管理",
+    "productName": "TList",
     "directories": {
       "output": "dist"
     },

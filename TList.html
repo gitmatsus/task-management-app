@@ -193,6 +193,11 @@
     .list-nav-item:hover .list-drag-handle { opacity:1; }
     .list-drag-handle:active { cursor:grabbing; }
     .list-drag-handle svg { width:10px; height:10px; }
+    .list-type-icon { flex-shrink:0; display:flex; align-items:center; color:var(--t3); }
+    .list-type-icon svg { width:12px; height:12px; }
+    .list-type-icon.memo-type { color:rgb(245,158,11); }
+    .list-nav-item.active .list-type-icon { color:var(--sidebar-act-text); opacity:.7; }
+    .list-nav-item.active .list-type-icon.memo-type { color:rgb(245,158,11); opacity:1; }
     .list-item-name {
       flex:1; min-width:0; font-size:14px; font-weight:500; color:var(--t1);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -231,6 +236,15 @@
       background:var(--card); color:var(--t1); font-size:12px; outline:none; font-family:inherit;
     }
     .list-add-input:focus, .list-rename-input:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
+    .list-type-toggle {
+      display:flex; align-items:center; gap:4px; margin-top:4px; cursor:pointer; font-size:11px; color:var(--t2);
+    }
+    .list-type-cb {
+      width:14px; height:14px; border-radius:3px; border:1.5px solid #d1d5db;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s;
+    }
+    .list-type-cb.checked { background:#6366f1; border-color:#6366f1; }
+    .list-type-cb svg { width:10px; height:10px; }
 
     /* ── List card header ── */
     .list-card-hd {
@@ -243,6 +257,8 @@
       box-shadow:0 1px 3px rgba(99,102,241,.3);
     }
     html.dark .list-card-icon { background:rgba(99,102,241,.75); }
+    .list-card-icon.memo-icon { background:rgba(245,158,11,.85); box-shadow:0 1px 3px rgba(245,158,11,.3); }
+    html.dark .list-card-icon.memo-icon { background:rgba(245,158,11,.75); }
     .list-card-icon svg { width:14px; height:14px; }
     .list-card-name { font-size:15px; font-weight:700; color:var(--t1); }
     .sort-btns {
@@ -254,6 +270,9 @@
       transition:all .2s;
     }
     .sort-btn:hover { background:var(--filter-hover); color:var(--t1); }
+    .sort-btn.active { color:#6366f1; background:rgba(99,102,241,.12); }
+    html.dark .sort-btn.active { color:#a5b4fc; background:rgba(99,102,241,.2); }
+    .sort-btn.action-btn { border:1px solid var(--divider); border-radius:8px; padding:3px 5px; }
     .sort-btn svg { width:18px; height:18px; }
 
     /* ── Input ── */
@@ -341,6 +360,8 @@
     .drag-handle:active { cursor:grabbing; }
     .drag-handle svg { width:12px; height:12px; }
     .cb-wrap { display:flex; align-items:center; padding:12px 14px 12px 6px; flex-shrink:0; }
+    .memo-item .cb-wrap { display:none; }
+    .memo-item .text-wrap { padding-left:6px; }
     .cb {
       width:20px; height:20px; border-radius:50%; border:2px solid #d1d5db;
       background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -494,8 +515,14 @@
       white-space:pre-wrap; word-break:break-word;
     }
     .edit-actions-row3 { display:flex; align-items:center; gap:6px; }
-    .edit-folder-label {
-      display:flex; align-items:center; gap:4px; font-size:11px; color:var(--t3); flex-shrink:0; white-space:nowrap;
+    .edit-link-toggle {
+      border:1px solid var(--input-border); background:var(--card); cursor:pointer; color:var(--t2);
+      padding:3px 8px; border-radius:6px; display:flex; align-items:center; gap:4px;
+      transition:all .2s; flex-shrink:0; font-size:11px; font-family:inherit;
+    }
+    .edit-link-toggle:hover { color:var(--t1); background:var(--filter-hover); border-color:var(--t2); }
+    .edit-link-toggle svg { width:12px; height:12px; }
+    .edit-folder-label { display:none; /* ラベルはボタン内に統合 */
     }
     .edit-folder-label svg { width:12px; height:12px; }
     .edit-folder-inp {
@@ -898,9 +925,9 @@
 // ── State ──────────────────────────────────────────────
 let todos = [], trash = [], lists = [], selectedListId = '';
 let filter = 'all', showTrash = false;
-let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', skipFocusRestore = false;
+let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', editLinkType = 'folder', skipFocusRestore = false;
 let memoPopupId = null, memoPopupPos = null;
-let editingListId = null, editingListName = '';
+let editingListId = null, editingListName = '', editingListType = 'todo';
 let addingList = false, newListName = '';
 let dragTodoId = null, dragTrashId = null, dragListId = null, dragOverEl = null;
 let modalMode = null, modalLists = [], modalAllChecked = false, importPayload = null;
@@ -911,6 +938,8 @@ let showListStats = localStorage.getItem('todo-app-show-stats') !== 'false'; // 
 let listExpanded = false; // リスト一覧の展開状態
 const LIST_COLLAPSE_LIMIT = 5; // 折りたたみ時の表示件数
 let movePopupTodoId = null; // リスト移動ポップアップ対象タスクID
+let addToTop = localStorage.getItem('todo-app-add-to-top') === 'true';
+let autoSort = localStorage.getItem('todo-app-auto-sort') === 'true';
 
 // ── Persistence ────────────────────────────────────────
 function load() {
@@ -966,6 +995,8 @@ function listStats(lid) {
 }
 function filtered() {
   const lst = currentTodos();
+  const selList = lists.find(l => l.id === selectedListId);
+  if (selList?.type === 'memo') return lst;
   if (filter === 'active')    return lst.filter(x => !x.completed);
   if (filter === 'completed') return lst.filter(x =>  x.completed);
   return lst;
@@ -991,6 +1022,9 @@ const I = {
   memo:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
   sort:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h8m-4 6h4m-6 6h6m5-12v16m0 0l3-3m-3 3l-3-3"/></svg>`,
   sortCal: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11v4m0 0l-1.5-1.5M12 15l1.5-1.5"/></svg>`,
+  arrowUp: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>`,
+  link:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>`,
+  notepad: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -1010,25 +1044,30 @@ function htmlSidebar() {
     const s         = listStats(lst.id);
     const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.future > 0 || s.noDate > 0 || s.done > 0;
 
-    const dots = (showListStats && hasDots) ? `<div class="dot-badges sidebar-dots">
+    const isMemo = lst.type === 'memo';
+    const dots = (!isMemo && showListStats && hasDots) ? `<div class="dot-badges sidebar-dots">
       ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`   : ''}
       ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>` : ''}
       ${s.future   > 0 ? `<span class="dot dot-fu">${s.future}</span>`   : ''}
       ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`     : ''}
       ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`             : ''}
     </div>` : '';
-
+    const typeIcon = `<span class="list-type-icon${isMemo ? ' memo-type' : ''}">${isMemo ? I.notepad : I.clip}</span>`;
     const nameRow = isEditing
-      ? `<input id="list-rename-inp" class="list-rename-input" type="text" value="${esc(editingListName)}" autocomplete="off">`
-      : `<span class="list-item-name">${esc(lst.name)}</span>
+      ? `<input id="list-rename-inp" class="list-rename-input" type="text" value="${esc(editingListName)}" autocomplete="off">
+         <label class="list-type-toggle" data-a="toggle-list-type" tabindex="-1">
+           <span class="list-type-cb${editingListType === 'memo' ? ' checked' : ''}">${editingListType === 'memo' ? I.check : ''}</span>
+           メモ
+         </label>`
+      : `${typeIcon}<span class="list-item-name">${esc(lst.name)}</span>
          <span class="list-count-pill${isSel ? ' sel' : ''}">${s.total}</span>
          ${lists.length > 1 ? `<div class="tip-wrap list-del-wrap">
            <button class="list-del-btn" data-a="del-list" data-id="${lst.id}">${I.trash}</button>
            <span class="tip">削除</span>
          </div>` : ''}`;
 
-    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}" draggable="${!isEditing && !('ontouchstart' in window)}">
-      <div class="list-drag-handle">${I.grip}</div>
+    return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
+      <div class="list-drag-handle" draggable="${!isEditing && !('ontouchstart' in window)}">${I.grip}</div>
       <div class="list-content">
         <div class="list-item-row">${nameRow}</div>
         ${dots}
@@ -1112,6 +1151,8 @@ function htmlSidebar() {
 
 // ── Main content HTML ──────────────────────────────────
 function htmlMain() {
+  const selList = lists.find(l => l.id === selectedListId) || lists[0];
+  const isMemoList = selList?.type === 'memo';
   const c = listStats(selectedListId);
   const list = filtered();
   const ct = currentTrash();
@@ -1148,8 +1189,8 @@ function htmlMain() {
           <textarea id="ei-detail" class="edit-detail-inp" rows="1" placeholder="詳細・メモを入力（任意）..." autocomplete="off">${esc(editDetail)}</textarea>
           <div class="edit-actions">
             ${!hasTouch ? `<div class="edit-actions-row3">
-              <span class="edit-folder-label">${I.folder}フォルダ</span>
-              <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="フォルダパス（例: C:\\Users\\...）" value="${esc(editFolderPath)}" autocomplete="off">
+              <button class="edit-link-toggle" data-a="toggle-link-type" title="クリックで切替">${editLinkType === 'url' ? I.link : I.folder} ${editLinkType === 'url' ? 'URL' : 'フォルダ'}</button>
+              <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="${editLinkType === 'url' ? 'https://example.com' : 'フォルダパス（例: C:\\\\Users\\\\...）'}" value="${esc(editFolderPath)}" autocomplete="off">
               ${editFolderPath ? `<button class="edit-folder-clr" data-a="clr-folder" title="クリア">${I.x}</button>` : ''}
             </div>` : ''}
             <div class="edit-actions-row1">
@@ -1175,12 +1216,12 @@ function htmlMain() {
         const badge = (t.dueDate && !t.completed && !editing)
           ? `<div class="due-wrap">${dueBadge(t.dueDate)}</div>` : '';
 
-        return `<li class="todo-item" data-id="${t.id}" draggable="${!editing && !hasTouch}">
-          <div class="drag-handle" data-a="drag-handle" data-id="${t.id}">${I.grip}</div>
+        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}" data-id="${t.id}">
+          <div class="drag-handle" data-a="drag-handle" data-id="${t.id}" draggable="${!editing && !hasTouch}">${I.grip}</div>
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
           <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
           ${t.detail && !editing ? `<div class="item-memo"><button data-a="memo-show" data-id="${t.id}"${memoPopupId === t.id ? ' class="active"' : ''}>${I.memo}</button></div>` : ''}
-          ${!hasTouch && t.folderPath && !editing ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${I.folder}</button></div>` : ''}
+          ${!hasTouch && t.folderPath && !editing ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
           ${badge}
           <div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>
         </li>`;
@@ -1207,29 +1248,29 @@ function htmlMain() {
     <ul class="trash-list">${titems}</ul>
   </div>` : '';
 
-  const selList = lists.find(l => l.id === selectedListId) || lists[0];
   const listName = selList ? esc(selList.name) : '';
 
   return `<div class="main-col">
     <div class="card">
       <div class="list-card-hd">
-        <div class="list-card-icon">${I.clip}</div>
+        <div class="list-card-icon${isMemoList ? ' memo-icon' : ''}">${isMemoList ? I.notepad : I.clip}</div>
         <span class="list-card-name">${listName}</span>
         <div class="sort-btns">
-          <button class="sort-btn" data-a="sort-tasks" title="整列（未完了↑ 完了↓）">${I.sort}</button>
-          <button class="sort-btn" data-a="sort-by-date" title="日付順に並べる">${I.sortCal}</button>
+          ${!isMemoList ? `<button class="sort-btn${addToTop?' active':''}" data-a="toggle-add-top" title="先頭に追加">${I.arrowUp}</button>
+          <button class="sort-btn${autoSort?' active':''}" data-a="toggle-auto-sort" title="自動整列（チェックで下へ移動）">${I.sort}</button>` : ''}
+          <button class="sort-btn action-btn" data-a="sort-by-date" title="日付順に並べる">${I.sortCal}</button>
         </div>
       </div>
       <div class="input-section">
         <form class="input-row" data-a="add">
-          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="新しいタスクを入力..." autocomplete="off"></textarea>
+          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="${isMemoList ? '新しいメモを入力...' : '新しいタスクを入力...'}" autocomplete="off"></textarea>
           <button type="submit" class="add-btn">追加</button>
         </form>
       </div>
-      <div class="filters-section"><div class="filters" id="filters">${fbtn}</div></div>
+      ${!isMemoList ? `<div class="filters-section"><div class="filters" id="filters">${fbtn}</div></div>` : ''}
       <ul class="todo-list" id="todo-list">${items}</ul>
       <div class="footer">
-        <span class="remaining">残り <strong>${c.active}</strong> 件</span>
+        <span class="remaining">${isMemoList ? `<strong>${c.total}</strong> 件` : `残り <strong>${c.active}</strong> 件`}</span>
         <button class="trash-btn${showTrash?' open':''}" id="trash-btn" data-a="toggle-trash">
           ${I.trash}ゴミ箱
           ${ct.length > 0 ? `<span class="trash-cnt">${ct.length}</span>` : ''}
@@ -1402,19 +1443,44 @@ function addTodo(form) {
   const text = inp?.value.trim();
   if (!text) return;
   const newTask = { id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId };
-  // 最後の未完了タスクの直後に挿入（未完了が無ければ末尾）
-  const lastActive = todos.reduce((acc, x, i) => (x.listId === selectedListId && !x.completed) ? i : acc, -1);
-  if (lastActive >= 0) { todos.splice(lastActive + 1, 0, newTask); } else { todos.push(newTask); }
+  if (addToTop) {
+    // 先頭追加：現リストの最初の位置に挿入
+    const firstIdx = todos.findIndex(x => x.listId === selectedListId);
+    if (firstIdx >= 0) { todos.splice(firstIdx, 0, newTask); } else { todos.push(newTask); }
+  } else {
+    // 最後の未完了タスクの直後に挿入（未完了が無ければ末尾）
+    const lastActive = todos.reduce((acc, x, i) => (x.listId === selectedListId && !x.completed) ? i : acc, -1);
+    if (lastActive >= 0) { todos.splice(lastActive + 1, 0, newTask); } else { todos.push(newTask); }
+  }
   save(); render();
   (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'))?.focus();
 }
 function toggleTodo(id) {
-  const t = todos.find(x => x.id === id);
-  if (!t) return;
+  const idx = todos.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const t = todos[idx];
+  const selList = lists.find(l => l.id === t.listId);
+  if (selList?.type === 'memo') return;
   t.completed = !t.completed;
+  if (autoSort) {
+    const lid = t.listId;
+    todos.splice(idx, 1); // 一旦取り出す
+    if (t.completed) {
+      // チェックON → 現リスト末尾に移動
+      const lastIdx = todos.reduce((acc, x, i) => x.listId === lid ? i : acc, -1);
+      todos.splice(lastIdx + 1, 0, t);
+    } else {
+      // チェックOFF → 未完了タスクの末尾に移動
+      const lastActive = todos.reduce((acc, x, i) => (x.listId === lid && !x.completed) ? i : acc, -1);
+      if (lastActive >= 0) { todos.splice(lastActive + 1, 0, t); }
+      else {
+        const firstIdx = todos.findIndex(x => x.listId === lid);
+        if (firstIdx >= 0) { todos.splice(firstIdx, 0, t); } else { todos.push(t); }
+      }
+    }
+  }
   save(); render();
   if (t.completed) {
-    // render後にアニメーションクラスを付与
     requestAnimationFrame(() => {
       const cb = document.querySelector(`.cb[data-id="${id}"]`);
       if (cb) cb.classList.add('animate');
@@ -1448,9 +1514,12 @@ function sortByDate() {
   save(); render();
 }
 function startEdit(id) {
+  window.getSelection()?.removeAllRanges();
   const t = todos.find(x => x.id === id);
-  if (!t || t.completed) return;
-  editId = id; editText = t.text; editDue = t.dueDate || ''; editFolderPath = t.folderPath || ''; editDetail = t.detail || '';
+  if (!t) return;
+  const selList = lists.find(l => l.id === t.listId);
+  if (t.completed && selList?.type !== 'memo') return;
+  editId = id; editText = t.text; editDue = t.dueDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || '';
   memoPopupId = null; memoPopupPos = null;
   render();
 }
@@ -1458,12 +1527,12 @@ function commitEdit() {
   const text = editText.trim();
   if (text && editId) {
     const t = todos.find(x => x.id === editId);
-    if (t) { t.text = text; t.dueDate = editDue || undefined; t.folderPath = editFolderPath.trim() || undefined; t.detail = editDetail.trim() || undefined; }
+    if (t) { t.text = text; t.dueDate = editDue || undefined; t.folderPath = editFolderPath.trim() || undefined; t.linkType = editFolderPath.trim() ? editLinkType : undefined; t.detail = editDetail.trim() || undefined; }
     save();
   }
-  editId = null; editText = ''; editDue = ''; editFolderPath = ''; editDetail = ''; render();
+  editId = null; editText = ''; editDue = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; render();
 }
-function cancelEdit() { editId = null; editText = ''; editDue = ''; editFolderPath = ''; editDetail = ''; render(); }
+function cancelEdit() { editId = null; editText = ''; editDue = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; render(); }
 function moveToTrash(id) {
   const i = todos.findIndex(x => x.id === id);
   if (i < 0) return;
@@ -1517,7 +1586,7 @@ function selectList(id) {
 function startRenameList(id) {
   const lst = lists.find(l => l.id === id);
   if (!lst) return;
-  editingListId = id; editingListName = lst.name;
+  editingListId = id; editingListName = lst.name; editingListType = lst.type || 'todo';
   render();
 }
 function commitRenameList() {
@@ -1525,9 +1594,31 @@ function commitRenameList() {
   const name = editingListName.trim();
   if (name) {
     const lst = lists.find(l => l.id === editingListId);
-    if (lst) { lst.name = name; save(); }
+    if (lst) {
+      lst.name = name;
+      const oldType = lst.type || 'todo';
+      const newType = editingListType;
+      // ToDo → メモ変換
+      if (oldType === 'todo' && newType === 'memo') {
+        const doneTasks = todos.filter(x => x.listId === lst.id && x.completed);
+        if (doneTasks.length > 0) {
+          doneTasks.forEach(dt => { dt.completed = false; trash.unshift(dt); });
+          todos = todos.filter(x => !(x.listId === lst.id && doneTasks.includes(x)));
+        }
+        lst.type = 'memo';
+        filter = 'all';
+      }
+      // メモ → ToDo 変換
+      else if (oldType === 'memo' && newType === 'todo') {
+        lst.type = undefined;
+      }
+      // 同じタイプの場合はtype変更なし
+      else if (newType === 'memo') { lst.type = 'memo'; }
+      else { lst.type = undefined; }
+      save();
+    }
   }
-  editingListId = null; render();
+  editingListId = null; editingListType = 'todo'; render();
 }
 function commitAddList() {
   if (!addingList) return;
@@ -1762,7 +1853,8 @@ document.addEventListener('click', e => {
     case 'dark':         toggleDark(); break;
     case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); break;
     case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
-    case 'sort-tasks':   e.stopPropagation(); sortTodos(); break;
+    case 'toggle-add-top': e.stopPropagation(); addToTop = !addToTop; localStorage.setItem('todo-app-add-to-top', String(addToTop)); render(); break;
+    case 'toggle-auto-sort': e.stopPropagation(); autoSort = !autoSort; localStorage.setItem('todo-app-auto-sort', String(autoSort)); if (autoSort) sortTodos(); else render(); break;
     case 'sort-by-date': e.stopPropagation(); sortByDate(); break;
     case 'to-trash':     e.stopPropagation(); moveToTrash(id); break;
     case 'toggle-trash': toggleTrash(); break;
@@ -1781,10 +1873,20 @@ document.addEventListener('click', e => {
       }
       render(); break;
     }
+    case 'toggle-link-type': e.stopPropagation(); editLinkType = editLinkType === 'folder' ? 'url' : 'folder'; render(); break;
     case 'folder-open': {
       e.stopPropagation();
       const ft = todos.find(x => x.id === id);
       if (!ft?.folderPath) break;
+
+      // URL：ブラウザで開く
+      if (ft.linkType === 'url') {
+        let url = ft.folderPath;
+        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+        window.open(url, '_blank');
+        showToast('🔗 URLを開きました');
+        break;
+      }
 
       // Electron環境：直接フォルダを開く
       if (window.electronAPI?.openFolder) {
@@ -1814,6 +1916,7 @@ document.addEventListener('click', e => {
     case 'empty':        emptyTrash(); break;
     case 'select-list':  selectList(id); break;
     case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;
+    case 'toggle-list-type': e.stopPropagation(); editingListType = editingListType === 'todo' ? 'memo' : 'todo'; render(); break;
     case 'start-add-list': addingList = true; newListName = ''; render(); break;
     case 'open-export':     openExportModal(); break;
     case 'open-import':     openImportModal(); break;
@@ -1839,6 +1942,11 @@ document.addEventListener('submit', e => {
   if (form) { e.preventDefault(); addTodo(form); }
 });
 
+// ダブルクリック時のテキスト全選択を防止
+document.addEventListener('mousedown', e => {
+  if (e.detail < 2) return;
+  if (e.target.closest('.text-wrap, .list-nav-item .list-content')) e.preventDefault();
+});
 document.addEventListener('dblclick', e => {
   const todoItem = e.target.closest('.todo-item');
   if (todoItem) {
@@ -1945,7 +2053,12 @@ document.addEventListener('focusout', e => {
       }, 150);
     }
   }
-  if (e.target.id === 'list-rename-inp' && editingListId) commitRenameList();
+  if (e.target.id === 'list-rename-inp' && editingListId) {
+    // メモリスト切替クリック時はコミットしない
+    const related = e.relatedTarget;
+    if (related && related.closest('[data-a="toggle-list-type"]')) return;
+    commitRenameList();
+  }
   if (e.target.id === 'list-add-inp' && addingList) {
     if (newListName.trim()) commitAddList();
     else { addingList = false; newListName = ''; render(); }
@@ -1954,9 +2067,12 @@ document.addEventListener('focusout', e => {
 
 // ── Drag & Drop (デスクトップのみ) ─────────────────────
 document.addEventListener('dragstart', e => {
-  const todo  = e.target.closest('.todo-item');
-  const trsh  = e.target.closest('.trash-item');
-  const lnav  = e.target.closest('.list-nav-item[data-a="select-list"]');
+  // ドラッグハンドルからのみ並び替えを許可
+  const handle = e.target.closest('.drag-handle, .list-drag-handle');
+  if (!handle) { e.preventDefault(); return; }
+  const todo  = handle.closest('.todo-item');
+  const trsh  = handle.closest('.trash-item');
+  const lnav  = handle.closest('.list-nav-item[data-a="select-list"]');
   if (todo)  { dragTodoId  = todo.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => todo.classList.add('dragging'),  0); }
   else if (trsh)  { dragTrashId = trsh.dataset.id;  e.dataTransfer.effectAllowed = 'move'; setTimeout(() => trsh.classList.add('dragging'), 0); }
   else if (lnav) { dragListId = lnav.dataset.id; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => lnav.classList.add('dragging'), 0); }
@@ -2010,7 +2126,14 @@ document.addEventListener('drop', e => {
     const onList  = e.target.closest('.list-nav-item[data-a="select-list"]');
     if (onList && onList.dataset.id !== selectedListId) {
       const t = todos.find(x => x.id === dragTodoId);
-      if (t) { t.listId = onList.dataset.id; save(); render(); }
+      if (t) {
+        const targetList = lists.find(l => l.id === onList.dataset.id);
+        if (targetList && targetList.type === 'memo' && t.completed) {
+          moveToTrash(dragTodoId);
+        } else {
+          t.listId = onList.dataset.id; save(); render();
+        }
+      }
     } else if (onTodo && onTodo.dataset.id !== dragTodoId) reorder(dragTodoId, onTodo.dataset.id);
     else if (onTrash) moveToTrash(dragTodoId);
     dragTodoId = null; return;

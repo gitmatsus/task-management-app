@@ -522,9 +522,6 @@
     }
     .edit-link-toggle:hover { color:var(--t1); background:var(--filter-hover); border-color:var(--t2); }
     .edit-link-toggle svg { width:12px; height:12px; }
-    .edit-folder-label { display:none; /* ラベルはボタン内に統合 */
-    }
-    .edit-folder-label svg { width:12px; height:12px; }
     .edit-folder-inp {
       flex:1; padding:4px 8px; border-radius:8px; border:1px solid var(--input-border);
       background:var(--card); color:var(--t1); font-size:12px; outline:none; font-family:inherit;
@@ -993,10 +990,9 @@ function listStats(lid) {
     noDate:   active.filter(x => !x.dueDate).length,
   };
 }
-function filtered() {
+function filtered(isMemo) {
   const lst = currentTodos();
-  const selList = lists.find(l => l.id === selectedListId);
-  if (selList?.type === 'memo') return lst;
+  if (isMemo) return lst;
   if (filter === 'active')    return lst.filter(x => !x.completed);
   if (filter === 'completed') return lst.filter(x =>  x.completed);
   return lst;
@@ -1154,7 +1150,7 @@ function htmlMain() {
   const selList = lists.find(l => l.id === selectedListId) || lists[0];
   const isMemoList = selList?.type === 'memo';
   const c = listStats(selectedListId);
-  const list = filtered();
+  const list = filtered(isMemoList);
   const ct = currentTrash();
   const mobile = isMobile();
   const hasTouch = 'ontouchstart' in window;
@@ -1437,21 +1433,22 @@ function toggleDark() {
   localStorage.setItem('darkMode', String(d));
   render();
 }
+function insertAtListStart(task, lid) {
+  const i = todos.findIndex(x => x.listId === lid);
+  if (i >= 0) todos.splice(i, 0, task); else todos.push(task);
+}
+function insertAfterLastActive(task, lid) {
+  const i = todos.reduce((acc, x, j) => (x.listId === lid && !x.completed) ? j : acc, -1);
+  if (i >= 0) todos.splice(i + 1, 0, task); else todos.push(task);
+}
 function addTodo(form) {
   const inp = form ? form.querySelector('textarea.todo-input')
             : (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'));
   const text = inp?.value.trim();
   if (!text) return;
   const newTask = { id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId };
-  if (addToTop) {
-    // 先頭追加：現リストの最初の位置に挿入
-    const firstIdx = todos.findIndex(x => x.listId === selectedListId);
-    if (firstIdx >= 0) { todos.splice(firstIdx, 0, newTask); } else { todos.push(newTask); }
-  } else {
-    // 最後の未完了タスクの直後に挿入（未完了が無ければ末尾）
-    const lastActive = todos.reduce((acc, x, i) => (x.listId === selectedListId && !x.completed) ? i : acc, -1);
-    if (lastActive >= 0) { todos.splice(lastActive + 1, 0, newTask); } else { todos.push(newTask); }
-  }
+  if (addToTop) insertAtListStart(newTask, selectedListId);
+  else insertAfterLastActive(newTask, selectedListId);
   save(); render();
   (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'))?.focus();
 }
@@ -1464,19 +1461,13 @@ function toggleTodo(id) {
   t.completed = !t.completed;
   if (autoSort) {
     const lid = t.listId;
-    todos.splice(idx, 1); // 一旦取り出す
+    todos.splice(idx, 1);
     if (t.completed) {
       // チェックON → 現リスト末尾に移動
       const lastIdx = todos.reduce((acc, x, i) => x.listId === lid ? i : acc, -1);
       todos.splice(lastIdx + 1, 0, t);
     } else {
-      // チェックOFF → 未完了タスクの末尾に移動
-      const lastActive = todos.reduce((acc, x, i) => (x.listId === lid && !x.completed) ? i : acc, -1);
-      if (lastActive >= 0) { todos.splice(lastActive + 1, 0, t); }
-      else {
-        const firstIdx = todos.findIndex(x => x.listId === lid);
-        if (firstIdx >= 0) { todos.splice(firstIdx, 0, t); } else { todos.push(t); }
-      }
+      insertAfterLastActive(t, lid);
     }
   }
   save(); render();
@@ -1523,6 +1514,7 @@ function startEdit(id) {
   memoPopupId = null; memoPopupPos = null;
   render();
 }
+function resetEditState() { editId = null; editText = ''; editDue = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; }
 function commitEdit() {
   const text = editText.trim();
   if (text && editId) {
@@ -1530,9 +1522,9 @@ function commitEdit() {
     if (t) { t.text = text; t.dueDate = editDue || undefined; t.folderPath = editFolderPath.trim() || undefined; t.linkType = editFolderPath.trim() ? editLinkType : undefined; t.detail = editDetail.trim() || undefined; }
     save();
   }
-  editId = null; editText = ''; editDue = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; render();
+  resetEditState(); render();
 }
-function cancelEdit() { editId = null; editText = ''; editDue = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; render(); }
+function cancelEdit() { resetEditState(); render(); }
 function moveToTrash(id) {
   const i = todos.findIndex(x => x.id === id);
   if (i < 0) return;
@@ -1598,7 +1590,6 @@ function commitRenameList() {
       lst.name = name;
       const oldType = lst.type || 'todo';
       const newType = editingListType;
-      // ToDo → メモ変換
       if (oldType === 'todo' && newType === 'memo') {
         const doneTasks = todos.filter(x => x.listId === lst.id && x.completed);
         if (doneTasks.length > 0) {
@@ -1607,14 +1598,9 @@ function commitRenameList() {
         }
         lst.type = 'memo';
         filter = 'all';
-      }
-      // メモ → ToDo 変換
-      else if (oldType === 'memo' && newType === 'todo') {
+      } else if (oldType === 'memo' && newType === 'todo') {
         lst.type = undefined;
       }
-      // 同じタイプの場合はtype変更なし
-      else if (newType === 'memo') { lst.type = 'memo'; }
-      else { lst.type = undefined; }
       save();
     }
   }
@@ -2162,7 +2148,6 @@ document.addEventListener('dragover', e => {
 });
 document.addEventListener('drop', e => {
   if (dragTodoId || dragTrashId) return;
-  fileDragCounter = 0;
   if (fileDragOver) { fileDragOver = false; render(); }
   const files = e.dataTransfer?.files;
   if (!files || files.length === 0) return;
@@ -2304,7 +2289,7 @@ document.addEventListener('drop', e => {
 
   document.addEventListener('touchcancel', () => {
     clearTimeout(longPressTimer); longPressTimer = null;
-    touchDragId = null; touchDragEl = null; lastOverId = null;
+    touchDragId = null; lastOverId = null;
     listTouchDragId = null; lastListOverId = null;
     document.querySelectorAll('.touch-dragging,.touch-drag-over,.list-touch-dragging,.list-touch-drag-over').forEach(el => {
       el.classList.remove('touch-dragging', 'touch-drag-over', 'list-touch-dragging', 'list-touch-drag-over');

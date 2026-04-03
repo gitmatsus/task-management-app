@@ -1671,7 +1671,11 @@ function showMovePopup(todoId) { movePopupTodoId = todoId; movePopupOpenedAt = D
 function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; movePopupTodoId = null; render(); }
 function moveToList(todoId, listId) {
   const t = todos.find(x => x.id === todoId);
-  if (t && t.listId !== listId) { t.listId = listId; save(); }
+  if (t && t.listId !== listId) {
+    const targetList = lists.find(l => l.id === listId);
+    if (targetList?.type === 'memo' && t.completed) t.completed = false;
+    t.listId = listId; save();
+  }
   movePopupTodoId = null; render();
 }
 
@@ -1785,7 +1789,9 @@ function executeImport() {
       name = `${l.name} (${n})`;
     }
     existingNames.add(name);
-    lists.push({ id: newId, name, createdAt: l.createdAt || Date.now() });
+    const newList = { id: newId, name, createdAt: l.createdAt || Date.now() };
+    if (l.type) newList.type = l.type;
+    lists.push(newList);
   }
   for (const t of (importPayload.todos || [])) {
     if (!selectedIds.has(t.listId)) continue;
@@ -2114,11 +2120,8 @@ document.addEventListener('drop', e => {
       const t = todos.find(x => x.id === dragTodoId);
       if (t) {
         const targetList = lists.find(l => l.id === onList.dataset.id);
-        if (targetList && targetList.type === 'memo' && t.completed) {
-          moveToTrash(dragTodoId);
-        } else {
-          t.listId = onList.dataset.id; save(); render();
-        }
+        if (targetList?.type === 'memo' && t.completed) t.completed = false;
+        t.listId = onList.dataset.id; save(); render();
       }
     } else if (onTodo && onTodo.dataset.id !== dragTodoId) reorder(dragTodoId, onTodo.dataset.id);
     else if (onTrash) moveToTrash(dragTodoId);

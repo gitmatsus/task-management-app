@@ -498,7 +498,7 @@
       bottom:72px; z-index:95;
       background:var(--card); border:1px solid var(--card-border);
       border-radius:14px; padding:14px 18px;
-      min-width:220px; max-width:min(400px, calc(100vw - 32px));
+      min-width:220px; max-width:min(500px, calc(100vw - 32px));
       max-height:50vh; overflow-y:auto;
       box-shadow:0 12px 40px rgba(0,0,0,.2);
       animation:fadeIn .15s ease;
@@ -1355,16 +1355,26 @@ function htmlMemoPopup() {
   if (memoPopupPos) {
     const p = memoPopupPos;
     const vw = window.innerWidth, vh = window.innerHeight;
-    const GAP = 8, POP_W = 280;
-    // 上下：ボタン上に空きがあれば上、なければ下
-    const vert = (p.top > 120)
-      ? `bottom:${vh - p.top + GAP}px; top:auto;`
-      : `top:${p.bottom + GAP}px; bottom:auto;`;
-    // 左右：ボタン左端に合わせ、はみ出しをクランプ
-    let left = p.left;
-    if (left + POP_W > vw - 8) left = vw - POP_W - 8;
-    if (left < 8) left = 8;
-    posStyle = `${vert} left:${left}px; transform:none;`;
+    const GAP = 8, PAD = 8;
+    const POP_W = Math.min(500, vw - 32);
+
+    // 常にボタンの下側に表示、収まらない場合のみ上側
+    const availDown = vh - p.bottom - GAP - PAD;
+    const availUp = p.top - GAP - PAD;
+    let vert, maxH;
+    if (availDown >= 120 || availDown >= availUp) {
+      maxH = Math.max(100, availDown);
+      vert = `top:${p.bottom + GAP}px; bottom:auto;`;
+    } else {
+      maxH = Math.max(100, availUp);
+      vert = `bottom:${vh - p.top + GAP}px; top:auto;`;
+    }
+
+    // 左右：ボタン位置基準で中央寄せ、はみ出しをクランプ
+    let left = Math.round(p.left + (p.right - p.left) / 2 - POP_W / 2);
+    if (left + POP_W > vw - PAD) left = vw - POP_W - PAD;
+    if (left < PAD) left = PAD;
+    posStyle = `${vert} left:${left}px; width:${POP_W}px; transform:none; max-height:${maxH}px;`;
   }
 
   return `<div class="memo-popup" id="memo-popup"${posStyle ? ` style="${posStyle}"` : ''}>

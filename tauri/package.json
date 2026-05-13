@@ -1,0 +1,17 @@
+{
+  "name": "tlist-tauri",
+  "version": "1.0.0",
+  "description": "TList タスク管理アプリ (Tauri版)",
+  "private": true,
+  "scripts": {
+    "sync-html": "node -e \"require('fs').copyFileSync('../TList.html','dist/index.html');console.log('copied TList.html -> dist/index.html')\"",
+    "predev": "npm run sync-html",
+    "prebuild": "npm run sync-html",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

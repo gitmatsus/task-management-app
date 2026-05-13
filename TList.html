@@ -339,14 +339,54 @@
     html.dark .dot-nd { background:#334155;               color:#94a3b8; }
     html.dark .dot-dn { background:#4f46e5;               color:#fff; }
 
+    /* ── Subtask styles ── */
+    .todo-item.is-sub { padding-left:32px; }
+    .sub-toggle {
+      display:flex; align-items:center; justify-content:center;
+      width:18px; flex-shrink:0; padding:0 2px;
+      background:none; border:none; cursor:pointer; color:var(--t3);
+      transition:color .15s,transform .15s; font-family:inherit;
+    }
+    .sub-toggle:hover { color:#6366f1; }
+    html.dark .sub-toggle:hover { color:#a5b4fc; }
+    .sub-toggle svg { width:10px; height:10px; transition:transform .15s; }
+    .sub-toggle.expanded svg { transform:rotate(90deg); }
+    .sub-toggle-placeholder { width:18px; flex-shrink:0; padding:0 2px; }
+    .todo-item.drop-as-sub { box-shadow:inset 0 0 0 2px #6366f1; background:rgba(99,102,241,.06); }
+    html.dark .todo-item.drop-as-sub { background:rgba(99,102,241,.15); }
+    .due-badge.start-fu { background:#e0e7ff; color:#4338ca; }
+    html.dark .due-badge.start-fu { background:rgba(99,102,241,.25); color:#a5b4fc; }
+    .due-badge.start-td { background:#fef3c7; color:#d97706; }
+    html.dark .due-badge.start-td { background:rgba(245,158,11,.25); color:#fbbf24; }
+    .completed-time { font-size:10px; color:var(--t3); margin-top:2px; display:block; line-height:1; }
+    .text-wrap-inner { display:flex; flex-direction:column; min-width:0; flex:1; }
+    .edit-date-label { font-size:10px; color:var(--t3); margin-right:4px; }
+
     /* ── Todo list ── */
     .todo-list { list-style:none; padding:8px 12px; min-height:96px; }
     .empty-msg { padding:48px 0; text-align:center; color:var(--t3); font-size:14px; user-select:none; }
+
+    /* ── 完了セクション ── */
+    .completed-section { border-top:1px solid var(--b1); margin-top:4px; }
+    .completed-section-hd {
+      width:100%; display:flex; align-items:center; gap:8px;
+      padding:10px 20px; background:transparent; border:none; cursor:pointer;
+      color:var(--t2); font-size:13px; font-weight:600; text-align:left;
+      transition:background .15s;
+    }
+    .completed-section-hd:hover { background:var(--filter-bg); color:var(--t1); }
+    .completed-section-caret { display:inline-flex; width:14px; height:14px; transition:transform .2s; color:var(--t3); }
+    .completed-section-caret.open { transform:rotate(90deg); }
+    .completed-section-caret svg { width:14px; height:14px; }
+    .completed-section-label { flex:1; }
+    .completed-list { padding-top:0; }
     .todo-item {
       display:flex; align-items:stretch; border-bottom:1px solid var(--item-border);
       border-radius:8px; transition:background .15s,opacity .15s; cursor:text; position:relative;
     }
     .todo-item:last-child { border-bottom:none; }
+    /* メインとサブの間、サブとサブの間は線を消す（直後がサブなら線なし） */
+    .todo-item:has(+ .todo-item.is-sub) { border-bottom:none; }
     .todo-item:hover:not(.drag-over) { background:var(--item-hover); }
     .todo-item.drag-over { background:rgba(99,102,241,.07); }
     html.dark .todo-item.drag-over { background:rgba(99,102,241,.15); }
@@ -478,8 +518,9 @@
     .edit-date-wrap .edit-date {
       position:absolute; inset:0; opacity:0; width:100%; pointer-events:none;
     }
-.edit-clr { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; }
+.edit-clr { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; display:flex; align-items:center; flex-shrink:0; padding:2px; }
     .edit-clr:hover { color:#f87171; }
+    .edit-clr svg { width:12px; height:12px; }
     .edit-save { margin-left:auto; padding:6px 16px; background:#6366f1; color:#fff; font-size:12px; font-weight:500; border:none; border-radius:8px; cursor:pointer; transition:background .15s; font-family:inherit; }
     .edit-save:hover { background:#4f46e5; }
     .edit-cancel { font-size:12px; color:var(--t3); background:none; border:none; cursor:pointer; transition:color .15s; font-family:inherit; }
@@ -719,6 +760,83 @@
     html.dark .io-btn:hover { color:#a5b4fc; background:rgba(99,102,241,.15); }
     .io-btn svg { width:12px; height:12px; }
 
+    /* ── Task filter chips ── */
+    .task-filters {
+      display:flex; flex-wrap:wrap; gap:6px;
+      padding:8px 16px 4px;
+    }
+    .task-filter-chip {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:4px 10px; border-radius:14px;
+      background:var(--filter-bg); color:var(--t2);
+      border:1px solid var(--divider); cursor:pointer;
+      font-size:12px; font-family:inherit;
+      transition:background .12s,color .12s,border-color .12s;
+    }
+    .task-filter-chip:hover { background:var(--filter-hover); color:var(--t1); }
+    .task-filter-chip.active {
+      background:#6366f1; color:#fff; border-color:#6366f1;
+    }
+    html.dark .task-filter-chip.active { background:#4f46e5; border-color:#4f46e5; }
+    .task-filter-chip .chip-ic { font-size:11px; line-height:1; }
+    @media (max-width:640px) {
+      .task-filters { padding:6px 12px 2px; gap:4px; }
+      .task-filter-chip { padding:3px 8px; font-size:11px; }
+    }
+
+    /* ── + Add sub-task button on main rows ── */
+    .item-add-sub { display:flex; align-items:center; padding:12px 2px 12px 0; flex-shrink:0; }
+    .item-add-sub button {
+      display:flex; align-items:center; justify-content:center;
+      width:22px; height:22px; padding:0; border:none; border-radius:6px;
+      background:transparent; color:var(--t3); cursor:pointer;
+      transition:background .12s,color .12s,opacity .12s;
+      opacity:0;
+    }
+    .todo-item:hover .item-add-sub button { opacity:.6; }
+    .item-add-sub button:hover { opacity:1 !important; background:rgba(99,102,241,.12); color:#6366f1; }
+    html.dark .item-add-sub button:hover { background:rgba(99,102,241,.2); color:#a5b4fc; }
+    .item-add-sub svg { width:14px; height:14px; }
+
+    /* ── Sub-input mode (cancel × button + visual cue) ── */
+    .input-row.sub-mode .todo-input {
+      background:rgba(99,102,241,.08); border-color:#6366f1;
+    }
+    html.dark .input-row.sub-mode .todo-input {
+      background:rgba(99,102,241,.15); border-color:#a5b4fc;
+    }
+    .cancel-sub-btn {
+      display:flex; align-items:center; justify-content:center;
+      width:32px; height:32px; padding:0; border:none; border-radius:8px;
+      background:transparent; color:var(--t3); cursor:pointer;
+      transition:background .12s,color .12s;
+    }
+    .cancel-sub-btn:hover { background:rgba(220,38,38,.1); color:#dc2626; }
+    html.dark .cancel-sub-btn:hover { background:rgba(248,113,113,.15); color:#f87171; }
+    .cancel-sub-btn svg { width:14px; height:14px; }
+
+    /* ── Context menu (right-click) ── */
+    .ctx-menu-overlay {
+      position:fixed; inset:0; z-index:150; background:transparent;
+    }
+    .ctx-menu {
+      position:fixed; background:var(--card); border:1px solid var(--card-border);
+      border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,.18);
+      list-style:none; padding:4px; margin:0; min-width:140px;
+      font-size:13px; user-select:none; animation:fadeIn .12s ease;
+    }
+    .ctx-menu-item {
+      display:flex; align-items:center; gap:8px;
+      padding:8px 12px; border-radius:6px; cursor:pointer;
+      color:var(--t1); transition:background .12s;
+    }
+    .ctx-menu-item:hover { background:var(--item-hover); }
+    .ctx-menu-item svg { width:14px; height:14px; flex-shrink:0; }
+    .ctx-menu-danger { color:#dc2626; }
+    html.dark .ctx-menu-danger { color:#f87171; }
+    .ctx-menu-danger:hover { background:rgba(220,38,38,.1); }
+    html.dark .ctx-menu-danger:hover { background:rgba(248,113,113,.15); }
+
     /* ── Move-to-list popup ── */
     .move-popup-overlay {
       position:fixed; inset:0; z-index:100;
@@ -921,7 +1039,8 @@
 <script>
 // ── State ──────────────────────────────────────────────
 let todos = [], trash = [], lists = [], selectedListId = '';
-let filter = 'all', showTrash = false;
+let showTrash = false;
+let showCompletedSection = false; // 完了セクションの開閉（セッション単位）
 let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', editLinkType = 'folder', skipFocusRestore = false;
 let memoPopupId = null, memoPopupPos = null;
 let editingListId = null, editingListName = '', editingListType = 'todo';
@@ -935,8 +1054,13 @@ let showListStats = localStorage.getItem('todo-app-show-stats') !== 'false'; // 
 let listExpanded = false; // リスト一覧の展開状態
 const LIST_COLLAPSE_LIMIT = 5; // 折りたたみ時の表示件数
 let movePopupTodoId = null; // リスト移動ポップアップ対象タスクID
+let ctxMenuTodoId = null, ctxMenuPos = null; // 右クリックメニュー対象とポップアップ位置
+let subInputParentId = null; // サブタスク入力モード時の親タスクID
+let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let addToTop = localStorage.getItem('todo-app-add-to-top') === 'true';
-let autoSort = localStorage.getItem('todo-app-auto-sort') === 'true';
+let editStartDate = '';
+let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
+let dragSubZoneTargetId = null; // ドラッグ中のサブ化候補ターゲットID
 
 // ── Persistence ────────────────────────────────────────
 function load() {
@@ -991,12 +1115,106 @@ function listStats(lid) {
     noDate:   active.filter(x => !x.dueDate).length,
   };
 }
-function filtered(isMemo) {
+function subTodosOf(parentId) { return todos.filter(x => x.parentId === parentId); }
+function hasSubs(id) { return todos.some(x => x.parentId === id); }
+function isSubTask(t) { return !!t?.parentId; }
+function getParent(t) { return t?.parentId ? todos.find(x => x.id === t.parentId) : null; }
+
+// メインタスクの完了状態でグループを2つに分ける（active / completed）
+// - メインが未完了のグループ（メイン+サブ全て）→ active
+// - メインが完了のグループ（メイン+サブ全て）→ completed
+// - 親のいない孤児サブは自身の完了状態で振り分け
+function splitGroupsByCompletion() {
   const lst = currentTodos();
-  if (isMemo) return lst;
-  if (filter === 'active')    return lst.filter(x => !x.completed);
-  if (filter === 'completed') return lst.filter(x =>  x.completed);
-  return lst;
+  const activeMainIds = new Set();
+  const completedMainIds = new Set();
+  lst.forEach(t => {
+    if (!t.parentId) (t.completed ? completedMainIds : activeMainIds).add(t.id);
+  });
+  const active = [];
+  const completed = [];
+  lst.forEach(t => {
+    if (!t.parentId) {
+      if (activeMainIds.has(t.id)) active.push(t);
+      else if (completedMainIds.has(t.id)) completed.push(t);
+    } else if (activeMainIds.has(t.parentId)) {
+      active.push(t);
+    } else if (completedMainIds.has(t.parentId)) {
+      completed.push(t);
+    } else {
+      // 孤児サブ
+      (t.completed ? completed : active).push(t);
+    }
+  });
+  return { active, completed };
+}
+
+// ── タスクフィルター判定 ──
+function endOfWeekYmd() {
+  // 今日から 6日後（今日含めて7日）
+  return ymd(new Date(Date.now() + 6 * 86400000));
+}
+function matchFilter(t) {
+  if (taskFilter === 'all') return true;
+  const td = today();
+  if (taskFilter === 'week') {
+    if (!t.dueDate) return false;
+    return t.dueDate <= endOfWeekYmd(); // 超過分も含む
+  }
+  if (taskFilter === 'actionable') {
+    return !t.startDate || t.startDate <= td;
+  }
+  if (taskFilter === 'overdue') {
+    return !!t.dueDate && t.dueDate < td;
+  }
+  if (taskFilter === 'today') {
+    return t.dueDate === td;
+  }
+  return true;
+}
+// グループ単位でフィルター: メインかサブのいずれかが条件一致ならグループ全体を残す
+function applyTaskFilter(list) {
+  if (taskFilter === 'all') return list;
+  const cur = currentTodos();
+  const keepMainIds = new Set();
+  // メインのマッチ
+  cur.forEach(t => { if (!t.parentId && matchFilter(t)) keepMainIds.add(t.id); });
+  // サブがマッチしたら親メインも残す
+  cur.forEach(t => {
+    if (t.parentId && matchFilter(t)) {
+      const p = cur.find(x => x.id === t.parentId && !x.parentId);
+      if (p) keepMainIds.add(p.id);
+    }
+  });
+  return list.filter(t =>
+    (!t.parentId && keepMainIds.has(t.id)) ||
+    (t.parentId && keepMainIds.has(t.parentId))
+  );
+}
+
+// 描画用：表示順を「メイン→そのサブ群」と並べる
+function arrangeForRender(visibleList) {
+  const visibleIds = new Set(visibleList.map(x => x.id));
+  const cur = currentTodos();
+  const result = [];
+  // メインタスクを元順で走査
+  cur.forEach(t => {
+    if (t.parentId) return;
+    if (!visibleIds.has(t.id)) return;
+    result.push(t);
+    if (collapsedIds.has(t.id)) return;
+    // そのメインのサブを元順で
+    cur.forEach(s => {
+      if (s.parentId === t.id && visibleIds.has(s.id)) result.push(s);
+    });
+  });
+  // 親が現在リストに存在しない孤児サブ（保険）
+  cur.forEach(t => {
+    if (t.parentId && !cur.find(p => p.id === t.parentId && !p.parentId) && visibleIds.has(t.id)) {
+      result.push(t);
+    }
+  });
+  return result;
 }
 
 // ── SVG icons ──────────────────────────────────────────
@@ -1008,6 +1226,7 @@ const I = {
   restore: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>`,
   x:       `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>`,
   cal:     `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
+  play:    `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>`,
   sun:     `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71m12.73 0-.71-.71M6.34 6.34l-.71-.71M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7z"/></svg>`,
   moon:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
   grip:    `<svg fill="currentColor" viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>`,
@@ -1017,7 +1236,6 @@ const I = {
   menu:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>`,
   folder:  `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>`,
   memo:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
-  sort:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h8m-4 6h4m-6 6h6m5-12v16m0 0l3-3m-3 3l-3-3"/></svg>`,
   sortCal: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11v4m0 0l-1.5-1.5M12 15l1.5-1.5"/></svg>`,
   arrowUp: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>`,
   link:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>`,
@@ -1030,7 +1248,22 @@ function dueBadge(d) {
   const ov = d < t, td = d === t, tmr = d === tm;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
   const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
-  return `<span class="due-badge ${cls}">${I.cal}${ov ? `期限切れ (${lbl})` : lbl}</span>`;
+  return `<span class="due-badge ${cls}">${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
+}
+function startBadge(d) {
+  const t = today(), tm = tomorrow();
+  const td = d === t, tmr = d === tm;
+  const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
+  const cls = td ? 'start-td' : 'start-fu';
+  return `<span class="due-badge ${cls}">${I.play}${lbl}</span>`;
+}
+function sameDayBadge(d) {
+  // 開始日と終了日が同じ日の場合の統合バッジ（▶📅 両方のアイコン表示）
+  const t = today(), tm = tomorrow();
+  const ov = d < t, td = d === t, tmr = d === tm;
+  const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
+  const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
+  return `<span class="due-badge ${cls}">${I.play}${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
 }
 
 // ── Sidebar HTML ───────────────────────────────────────
@@ -1151,54 +1384,66 @@ function htmlMain() {
   const selList = lists.find(l => l.id === selectedListId) || lists[0];
   const isMemoList = selList?.type === 'memo';
   const c = listStats(selectedListId);
-  const list = filtered(isMemoList);
   const ct = currentTrash();
   const mobile = isMobile();
   const hasTouch = 'ontouchstart' in window;
 
-  const fbtn = [
-    { key:'all',       label:'すべて',   count:c.total,  cp:'' },
-    { key:'active',    label:'未完了',   count:c.active, cp:'' },
-    { key:'completed', label:'完了', count:c.done,   cp:'cp-done' },
-  ].map(f => {
-    const act = filter === f.key;
-    const showDots = (f.key === 'all' || f.key === 'active') &&
-      (c.overdue > 0 || c.dueToday > 0 || c.future > 0 || c.noDate > 0 || (f.key === 'all' && c.done > 0));
-    const dots = showDots ? `<span class="dot-badges">
-      ${c.overdue  > 0 ? `<span class="dot dot-ov">${c.overdue}</span>`   : ''}
-      ${c.dueToday > 0 ? `<span class="dot dot-td">${c.dueToday}</span>` : ''}
-      ${c.future   > 0 ? `<span class="dot dot-fu">${c.future}</span>`   : ''}
-      ${c.noDate   > 0 ? `<span class="dot dot-nd">${c.noDate}</span>`     : ''}
-      ${f.key==='all' && c.done > 0 ? `<span class="dot dot-dn">${c.done}</span>` : ''}
-    </span>` : '';
-    return `<button class="filter-btn${act?' active':''}" data-filter="${f.key}">
-      <span class="filter-label">${f.label}<span class="count-pill ${f.cp}">${f.count}</span></span>
-      ${dots}
-    </button>`;
-  }).join('');
+  // メモリストは分割せず、そのまま表示。それ以外はアクティブ/完了に分割。
+  let activeList, completedList, completedMainCount;
+  if (isMemoList) {
+    activeList = currentTodos();
+    completedList = [];
+    completedMainCount = 0;
+  } else {
+    const split = splitGroupsByCompletion();
+    activeList = arrangeForRender(applyTaskFilter(split.active));
+    // フィルター有効時は完了セクションを非表示
+    if (taskFilter !== 'all') {
+      completedList = [];
+      completedMainCount = 0;
+    } else {
+      completedList = arrangeForRender(split.completed);
+      completedMainCount = split.completed.filter(t => !t.parentId).length;
+    }
+  }
 
-  const items = list.length === 0
-    ? `<li class="empty-msg">${filter==='all'?'🎉 タスクがありません！':'該当するタスクがありません。'}</li>`
-    : list.map(t => {
+  const chevronRight = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`;
+  const renderItem = t => {
         const editing = editId === t.id;
+        const isSub = !!t.parentId;
+        const hasSub = !isSub && !isMemoList && hasSubs(t.id);
+        const expanded = !collapsedIds.has(t.id);
         const body = editing ? `<div class="edit-form">
           <textarea id="ei-text" class="edit-text" rows="1" autocomplete="off">${esc(editText)}</textarea>
           <textarea id="ei-detail" class="edit-detail-inp" rows="1" placeholder="詳細・メモを入力（任意）..." autocomplete="off">${esc(editDetail)}</textarea>
           <div class="edit-actions">
-            ${!hasTouch ? `<div class="edit-actions-row3">
+            <div class="edit-actions-row3">
               <button class="edit-link-toggle" data-a="toggle-link-type" title="クリックで切替">${editLinkType === 'url' ? I.link : I.folder} ${editLinkType === 'url' ? 'URL' : 'フォルダ'}</button>
               <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="${editLinkType === 'url' ? 'https://example.com' : 'フォルダパス（例: C:\\\\Users\\\\...）'}" value="${esc(editFolderPath)}" autocomplete="off">
               ${editFolderPath ? `<button class="edit-folder-clr" data-a="clr-folder" title="クリア">${I.x}</button>` : ''}
-            </div>` : ''}
+            </div>
             <div class="edit-actions-row1">
+              <span class="edit-date-label">開始</span>
+              ${editStartDate
+                ? `<div class="edit-date-wrap">
+                     <label for="ei-start-date" class="edit-date-placeholder" style="color:var(--t2);">📅 ${editStartDate.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3')}</label>
+                     <input id="ei-start-date" class="edit-date" type="date" value="${esc(editStartDate)}">
+                   </div>
+                   <button class="edit-clr" data-a="clr-start-date" title="クリア">${I.x}</button>`
+                : `<div class="edit-date-wrap">
+                     <label for="ei-start-date" class="edit-date-placeholder">📅 開始日</label>
+                     <input id="ei-start-date" class="edit-date" type="date" value="">
+                   </div>`
+              }
+              <span class="edit-date-label">終了</span>
               ${editDue
                 ? `<div class="edit-date-wrap">
                      <label for="ei-date" class="edit-date-placeholder" style="color:var(--t2);">📅 ${editDue.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3')}</label>
                      <input id="ei-date" class="edit-date" type="date" value="${esc(editDue)}">
                    </div>
-                   <button class="edit-clr" data-a="clr-date">クリア</button>`
+                   <button class="edit-clr" data-a="clr-date" title="クリア">${I.x}</button>`
                 : `<div class="edit-date-wrap">
-                     <label for="ei-date" class="edit-date-placeholder">📅 期限日を設定</label>
+                     <label for="ei-date" class="edit-date-placeholder">📅 終了日</label>
                      <input id="ei-date" class="edit-date" type="date" value="">
                    </div>`
               }
@@ -1208,21 +1453,86 @@ function htmlMain() {
               <button class="edit-save" data-a="save">保存</button>
             </div>
           </div>
-        </div>` : `<span class="todo-text${t.completed?' done':''}">${esc(t.text).replace(/\n/g,'<br>')}</span>`;
+        </div>` : (() => {
+          const ctxt = `<span class="todo-text${t.completed?' done':''}">${esc(t.text).replace(/\n/g,'<br>')}</span>`;
+          // 完了日時表示
+          let extra = '';
+          if (t.completed && t.completedAt) {
+            const d = new Date(t.completedAt);
+            const mm = String(d.getMonth()+1).padStart(2,'0');
+            const dd = String(d.getDate()).padStart(2,'0');
+            const hh = String(d.getHours()).padStart(2,'0');
+            const mi = String(d.getMinutes()).padStart(2,'0');
+            extra = `<span class="completed-time">✓ ${mm}/${dd} ${hh}:${mi} 完了</span>`;
+          }
+          return `<div class="text-wrap-inner">${ctxt}${extra}</div>`;
+        })();
 
-        const badge = (t.dueDate && !t.completed && !editing)
-          ? `<div class="due-wrap">${dueBadge(t.dueDate)}</div>` : '';
+        // 開始日と終了日が同日の場合は統合バッジ、それ以外は個別表示
+        const sameDay = t.startDate && t.dueDate && t.startDate === t.dueDate;
+        let badge = '';
+        let startBadgeHtml = '';
+        if (!t.completed && !editing) {
+          if (sameDay) {
+            badge = `<div class="due-wrap">${sameDayBadge(t.dueDate)}</div>`;
+          } else {
+            if (t.dueDate) badge = `<div class="due-wrap">${dueBadge(t.dueDate)}</div>`;
+            if (t.startDate) {
+              const td = today();
+              if (t.startDate >= td) {
+                startBadgeHtml = `<div class="due-wrap">${startBadge(t.startDate)}</div>`;
+              }
+            }
+          }
+        }
 
-        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}" data-id="${t.id}">
+        const togglePart = !isMemoList ? (hasSub
+          ? `<button class="sub-toggle${expanded ? ' expanded' : ''}" data-a="toggle-collapse" data-id="${t.id}" title="${expanded ? '折りたたむ' : '展開する'}">${chevronRight}</button>`
+          : `<span class="sub-toggle-placeholder"></span>`) : '';
+
+        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}${isSub ? ' is-sub' : ''}" data-id="${t.id}"${isSub ? ' data-sub="1"' : ''}>
           <div class="drag-handle" data-a="drag-handle" data-id="${t.id}" draggable="${!editing && !hasTouch}">${I.grip}</div>
+          ${togglePart}
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
           <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
           ${t.detail && !editing ? `<div class="item-memo"><button data-a="memo-show" data-id="${t.id}"${memoPopupId === t.id ? ' class="active"' : ''}>${I.memo}</button></div>` : ''}
-          ${!hasTouch && t.folderPath && !editing ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
+          ${t.folderPath && !editing && (t.linkType === 'url' || !hasTouch) ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
+          ${!isSub && !isMemoList && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
+          ${startBadgeHtml}
           ${badge}
-          <div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>
+          ${t.completed ? `<div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>` : ''}
         </li>`;
-      }).join('');
+      };
+
+  const items = activeList.length === 0
+    ? `<li class="empty-msg">🎉 タスクがありません！</li>`
+    : activeList.map(renderItem).join('');
+
+  // 完了セクション（メモリストでは出さない／完了メインが0件のときは非表示）
+  // フィルターチップ（メモリストでは出さない）
+  const filterChips = !isMemoList ? `
+    <div class="task-filters">
+      ${[
+        { k:'all',        l:'すべて',     ic:'' },
+        { k:'week',       l:'今週中',     ic:'📅' },
+        { k:'actionable', l:'着手可能',   ic:'▶️' },
+        { k:'overdue',    l:'超過',       ic:'🔥' },
+        { k:'today',      l:'今日',       ic:'⚡' },
+      ].map(f => `<button class="task-filter-chip${taskFilter===f.k?' active':''}" data-a="set-task-filter" data-filter="${f.k}">${f.ic?`<span class="chip-ic">${f.ic}</span>`:''}${f.l}</button>`).join('')}
+    </div>` : '';
+
+  const completedSection = (!isMemoList && completedMainCount > 0) ? `
+    <div class="completed-section">
+      <button class="completed-section-hd" data-a="toggle-completed-section">
+        <span class="completed-section-caret${showCompletedSection ? ' open' : ''}">${chevronRight}</span>
+        <span class="completed-section-label">完了 (${completedMainCount}件)</span>
+      </button>
+      ${showCompletedSection ? `<ul class="todo-list completed-list">${
+        completedList.length === 0
+          ? `<li class="empty-msg">完了タスクなし</li>`
+          : completedList.map(renderItem).join('')
+      }</ul>` : ''}
+    </div>` : '';
 
   const titems = ct.length === 0
     ? `<li class="trash-empty">ゴミ箱は空です</li>`
@@ -1253,19 +1563,20 @@ function htmlMain() {
         <div class="list-card-icon${isMemoList ? ' memo-icon' : ''}">${isMemoList ? I.notepad : I.clip}</div>
         <span class="list-card-name">${listName}</span>
         <div class="sort-btns">
-          ${!isMemoList ? `<button class="sort-btn${addToTop?' active':''}" data-a="toggle-add-top" title="先頭に追加">${I.arrowUp}</button>
-          <button class="sort-btn${autoSort?' active':''}" data-a="toggle-auto-sort" title="自動整列（チェックで下へ移動）">${I.sort}</button>` : ''}
+          ${!isMemoList ? `<button class="sort-btn${addToTop?' active':''}" data-a="toggle-add-top" title="先頭に追加">${I.arrowUp}</button>` : ''}
           <button class="sort-btn action-btn" data-a="sort-by-date" title="日付順に並べる">${I.sortCal}</button>
         </div>
       </div>
       <div class="input-section">
-        <form class="input-row" data-a="add">
-          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="${isMemoList ? '新しいメモを入力...' : '新しいタスクを入力...'}" autocomplete="off"></textarea>
+        <form class="input-row${subInputParentId ? ' sub-mode' : ''}" data-a="add">
+          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="${subInputParentId && !isMemoList ? `「${esc((todos.find(x=>x.id===subInputParentId)||{}).text||'')}」のサブタスクを入力...` : (isMemoList ? '新しいメモを入力...' : '新しいタスクを入力...')}" autocomplete="off"></textarea>
+          ${subInputParentId && !isMemoList ? `<button type="button" class="cancel-sub-btn" data-a="cancel-sub-input" title="キャンセル">${I.x}</button>` : ''}
           <button type="submit" class="add-btn">追加</button>
         </form>
       </div>
-      ${!isMemoList ? `<div class="filters-section"><div class="filters" id="filters">${fbtn}</div></div>` : ''}
+      ${filterChips}
       <ul class="todo-list" id="todo-list">${items}</ul>
+      ${completedSection}
       <div class="footer">
         <span class="remaining">${isMemoList ? `<strong>${c.total}</strong> 件` : `残り <strong>${c.active}</strong> 件`}</span>
         <button class="trash-btn${showTrash?' open':''}" id="trash-btn" data-a="toggle-trash">
@@ -1323,8 +1634,14 @@ function htmlMovePopup() {
   const t = todos.find(x => x.id === movePopupTodoId);
   if (!t) return '';
   const otherLists = lists.filter(l => l.id !== t.listId);
-  if (!otherLists.length) return '';
   const arrowSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>`;
+  const upSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>`;
+  const promoteItem = t.parentId
+    ? `<li class="move-popup-item" data-a="promote-to-main" data-id="${t.id}">
+        <span class="move-popup-item-icon">${upSvg}</span>
+        <span class="move-popup-item-name">⬆️ メインに昇格</span>
+      </li>` : '';
+  if (!otherLists.length && !promoteItem) return '';
   const items = otherLists.map(l => {
     const s = listStats(l.id);
     return `<li class="move-popup-item" data-a="move-to-list" data-list-id="${l.id}" data-todo-id="${t.id}">
@@ -1332,7 +1649,7 @@ function htmlMovePopup() {
       <span class="move-popup-item-name">${esc(l.name)}</span>
       <span class="move-popup-item-count">${s.total}件</span>
     </li>`;
-  }).join('');
+  }).join('') + promoteItem;
   return `<div class="move-popup-overlay" data-a="close-move-popup">
     <div class="move-popup" data-a="move-popup-body">
       <div class="move-popup-header">
@@ -1342,6 +1659,23 @@ function htmlMovePopup() {
       <div class="move-popup-task">${esc(t.text)}</div>
       <ul class="move-popup-list">${items}</ul>
     </div>
+  </div>`;
+}
+
+// ── Context menu HTML ─────────────────────────────────
+const editIconSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`;
+function htmlCtxMenu() {
+  if (!ctxMenuTodoId || !ctxMenuPos) return '';
+  const t = todos.find(x => x.id === ctxMenuTodoId);
+  if (!t) return '';
+  // 画面外はみ出し防止: 簡易クランプ
+  const x = Math.min(ctxMenuPos.x, window.innerWidth - 180);
+  const y = Math.min(ctxMenuPos.y, window.innerHeight - 100);
+  return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
+    <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
+      <li class="ctx-menu-item" data-a="ctx-edit" data-id="${t.id}">${editIconSvg}<span>編集</span></li>
+      <li class="ctx-menu-item ctx-menu-danger" data-a="ctx-delete" data-id="${t.id}">${I.trash}<span>削除</span></li>
+    </ul>
   </div>`;
 }
 
@@ -1407,14 +1741,16 @@ function html() {
       ${htmlMain()}
     </div>
     <div class="input-bar-mobile">
-      <form class="input-row" data-a="add">
-        <textarea id="todo-inp-mobile" class="todo-input" rows="1" placeholder="新しいタスクを入力..." autocomplete="off"></textarea>
+      <form class="input-row${subInputParentId ? ' sub-mode' : ''}" data-a="add">
+        <textarea id="todo-inp-mobile" class="todo-input" rows="1" placeholder="${subInputParentId ? `「${esc((todos.find(x=>x.id===subInputParentId)||{}).text||'')}」のサブタスクを入力...` : '新しいタスクを入力...'}" autocomplete="off"></textarea>
+        ${subInputParentId ? `<button type="button" class="cancel-sub-btn" data-a="cancel-sub-input" title="キャンセル">${I.x}</button>` : ''}
         <button type="submit" class="add-btn">追加</button>
       </form>
     </div>
     ${htmlModal()}
     ${htmlMovePopup()}
     ${htmlMemoPopup()}
+    ${htmlCtxMenu()}
     ${dropZone}`;
 }
 
@@ -1458,6 +1794,21 @@ function addTodo(form) {
   const text = inp?.value.trim();
   if (!text) return;
   const newTask = { id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId };
+  // サブタスク入力モード：親IDを設定し、親直下に挿入。モードは継続（連続追加可能）
+  if (subInputParentId && lists.find(l => l.id === selectedListId)?.type !== 'memo') {
+    const parent = todos.find(x => x.id === subInputParentId);
+    if (parent && !parent.parentId) {
+      newTask.parentId = subInputParentId;
+      // 親の既存サブの末尾に挿入
+      const lastSubIdx = todos.reduce((acc, x, i) => x.parentId === subInputParentId ? i : acc, -1);
+      const parentIdx = todos.findIndex(x => x.id === subInputParentId);
+      const insertAt = (lastSubIdx >= 0 ? lastSubIdx : parentIdx) + 1;
+      todos.splice(insertAt, 0, newTask);
+      save(); render();
+      (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'))?.focus();
+      return;
+    }
+  }
   if (addToTop) insertAtListStart(newTask, selectedListId);
   else insertAfterLastActive(newTask, selectedListId);
   save(); render();
@@ -1470,17 +1821,8 @@ function toggleTodo(id) {
   const selList = lists.find(l => l.id === t.listId);
   if (selList?.type === 'memo') return;
   t.completed = !t.completed;
-  if (autoSort) {
-    const lid = t.listId;
-    todos.splice(idx, 1);
-    if (t.completed) {
-      // チェックON → 現リスト末尾に移動
-      const lastIdx = todos.reduce((acc, x, i) => x.listId === lid ? i : acc, -1);
-      todos.splice(lastIdx + 1, 0, t);
-    } else {
-      insertAfterLastActive(t, lid);
-    }
-  }
+  if (t.completed) t.completedAt = Date.now();
+  else t.completedAt = undefined;
   save(); render();
   if (t.completed) {
     requestAnimationFrame(() => {
@@ -1490,16 +1832,6 @@ function toggleTodo(id) {
       if (txt) txt.classList.add('animate');
     });
   }
-}
-function sortTodos() {
-  const lid = selectedListId;
-  const mine = todos.filter(x => x.listId === lid);
-  const active = mine.filter(x => !x.completed);
-  const done   = mine.filter(x =>  x.completed);
-  const sorted = [...active, ...done];
-  let si = 0;
-  todos = todos.map(t => t.listId === lid ? sorted[si++] : t);
-  save(); render();
 }
 function sortByDate() {
   const lid = selectedListId;
@@ -1521,16 +1853,16 @@ function startEdit(id) {
   if (!t) return;
   const selList = lists.find(l => l.id === t.listId);
   if (t.completed && selList?.type !== 'memo') return;
-  editId = id; editText = t.text; editDue = t.dueDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || '';
+  editId = id; editText = t.text; editDue = t.dueDate || ''; editStartDate = t.startDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || '';
   memoPopupId = null; memoPopupPos = null;
   render();
 }
-function resetEditState() { editId = null; editText = ''; editDue = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; }
+function resetEditState() { editId = null; editText = ''; editDue = ''; editStartDate = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; }
 function commitEdit() {
   const text = editText.trim();
   if (text && editId) {
     const t = todos.find(x => x.id === editId);
-    if (t) { t.text = text; t.dueDate = editDue || undefined; t.folderPath = editFolderPath.trim() || undefined; t.linkType = editFolderPath.trim() ? editLinkType : undefined; t.detail = editDetail.trim() || undefined; }
+    if (t) { t.text = text; t.dueDate = editDue || undefined; t.startDate = editStartDate || undefined; t.folderPath = editFolderPath.trim() || undefined; t.linkType = editFolderPath.trim() ? editLinkType : undefined; t.detail = editDetail.trim() || undefined; }
     save();
   }
   resetEditState(); render();
@@ -1539,7 +1871,15 @@ function cancelEdit() { resetEditState(); render(); }
 function moveToTrash(id) {
   const i = todos.findIndex(x => x.id === id);
   if (i < 0) return;
-  trash.unshift(todos.splice(i, 1)[0]);
+  const t = todos[i];
+  // メイン削除時はサブも一緒に
+  if (!t.parentId) {
+    const subs = todos.filter(x => x.parentId === id);
+    subs.forEach(s => { s._trashedWithParent = id; trash.unshift(s); });
+    todos = todos.filter(x => x.parentId !== id);
+  }
+  const idx2 = todos.findIndex(x => x.id === id);
+  if (idx2 >= 0) trash.unshift(todos.splice(idx2, 1)[0]);
   save(); render();
 }
 function restoreFromTrash(id, asCompleted) {
@@ -1547,11 +1887,25 @@ function restoreFromTrash(id, asCompleted) {
   if (i < 0) return;
   const item = trash.splice(i, 1)[0];
   if (asCompleted !== undefined) item.completed = asCompleted;
+  // メインなら、_trashedWithParent でペアにされたサブも復元
+  if (!item.parentId) {
+    const pairedSubs = trash.filter(x => x._trashedWithParent === item.id);
+    pairedSubs.forEach(s => { delete s._trashedWithParent; todos.push(s); });
+    trash = trash.filter(x => x._trashedWithParent !== item.id);
+  }
+  delete item._trashedWithParent;
   todos.push(item); save(); render();
 }
-function deleteFromTrash(id) { trash = trash.filter(x => x.id !== id); save(); render(); }
+function deleteFromTrash(id) {
+  const item = trash.find(x => x.id === id);
+  if (item && !item.parentId) {
+    // ペアにされたサブも完全削除
+    trash = trash.filter(x => x._trashedWithParent !== id);
+  }
+  trash = trash.filter(x => x.id !== id);
+  save(); render();
+}
 function emptyTrash()        { trash = trash.filter(x => x.listId !== selectedListId); save(); render(); }
-function setFilter(f)        { if (f && filter !== f) { filter = f; render(); } }
 function toggleTrash() {
   showTrash = !showTrash;
   render();
@@ -1582,7 +1936,7 @@ function reorderList(fromId, toId) {
 function selectList(id) {
   if (selectedListId === id) return;
   selectedListId = id;
-  filter = 'all'; showTrash = false; editId = null;
+  showTrash = false; editId = null; subInputParentId = null; taskFilter = 'all';
   if (isMobile()) sidebarOpen = false; // モバイルではリスト選択後サイドバーを閉じる
   render();
 }
@@ -1608,7 +1962,6 @@ function commitRenameList() {
           todos = todos.filter(x => !(x.listId === lst.id && doneTasks.includes(x)));
         }
         lst.type = 'memo';
-        filter = 'all';
       } else if (oldType === 'memo' && newType === 'todo') {
         lst.type = undefined;
       }
@@ -1625,7 +1978,7 @@ function commitAddList() {
     const newList = { id: crypto.randomUUID(), name, createdAt: Date.now() };
     lists.push(newList);
     selectedListId = newList.id;
-    filter = 'all'; showTrash = false;
+    showTrash = false;
     if (isMobile()) sidebarOpen = false;
     save();
   }
@@ -1644,7 +1997,7 @@ function handleDeleteList(id) {
   lists = lists.filter(l => l.id !== id);
   todos = todos.filter(t => t.listId !== id);
   trash = trash.filter(t => t.listId !== id);
-  if (selectedListId === id) { selectedListId = lists[0].id; filter = 'all'; showTrash = false; }
+  if (selectedListId === id) { selectedListId = lists[0].id; showTrash = false; }
   save(); render();
 }
 function restoreList(index) {
@@ -1654,7 +2007,7 @@ function restoreList(index) {
   lists.push(entry.list);
   todos.push(...entry.todos);
   trash.push(...entry.trash);
-  selectedListId = entry.list.id; filter = 'all'; showTrash = false;
+  selectedListId = entry.list.id; showTrash = false;
   save(); render();
 }
 function deleteListPermanently(index) {
@@ -1684,10 +2037,29 @@ function moveToList(todoId, listId) {
   const t = todos.find(x => x.id === todoId);
   if (t && t.listId !== listId) {
     const targetList = lists.find(l => l.id === listId);
-    if (targetList?.type === 'memo' && t.completed) t.completed = false;
-    t.listId = listId; save();
+    const isMemoTarget = targetList?.type === 'memo';
+    if (isMemoTarget && t.completed) t.completed = false;
+    t.listId = listId;
+    // メインタスクの場合はサブもまとめて移動
+    if (!t.parentId) {
+      todos.filter(x => x.parentId === t.id).forEach(s => {
+        if (isMemoTarget && s.completed) s.completed = false;
+        s.listId = listId;
+        // 移動先がメモリストなら親子関係を解除（メモにサブはない）
+        if (isMemoTarget) s.parentId = undefined;
+      });
+    }
+    save();
   }
   movePopupTodoId = null; render();
+}
+function promoteSubToMain(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t || !t.parentId) return;
+  t.parentId = undefined;
+  save();
+  movePopupTodoId = null;
+  render();
 }
 
 // ── Import / Export ────────────────────────────────────
@@ -1733,12 +2105,13 @@ function openExportModal() {
 function executeExport() {
   const selectedIds = new Set(modalLists.filter(l => l.checked).map(l => l.id));
   if (selectedIds.size === 0) return;
+  const stripInternal = t => { const { _trashedWithParent, ...rest } = t; return rest; };
   const payload = {
     version: 1,
     exportedAt: new Date().toISOString(),
     lists: lists.filter(l => selectedIds.has(l.id)),
-    todos: todos.filter(t => selectedIds.has(t.listId)),
-    trash: trash.filter(t => selectedIds.has(t.listId)),
+    todos: todos.filter(t => selectedIds.has(t.listId)).map(stripInternal),
+    trash: trash.filter(t => selectedIds.has(t.listId)).map(stripInternal),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1804,21 +2177,42 @@ function executeImport() {
     if (l.type) newList.type = l.type;
     lists.push(newList);
   }
-  for (const t of (importPayload.todos || [])) {
-    if (!selectedIds.has(t.listId)) continue;
+  // 旧ID → 新ID のタスクマップ（parentId 解決用）
+  const todoIdMap = new Map();
+  let orphanCount = 0;
+  // 先に全タスクの新ID生成（parentId 解決のため）
+  const importTodos = (importPayload.todos || []).filter(t => selectedIds.has(t.listId) && idMap.get(t.listId));
+  importTodos.forEach(t => todoIdMap.set(t.id, crypto.randomUUID()));
+  const importTodoIdSet = new Set(importTodos.map(t => t.id));
+  for (const t of importTodos) {
     const newListId = idMap.get(t.listId);
-    if (!newListId) continue;
-    todos.push({ ...t, id: crypto.randomUUID(), listId: newListId });
+    let newParentId = undefined;
+    if (t.parentId) {
+      if (importTodoIdSet.has(t.parentId)) {
+        newParentId = todoIdMap.get(t.parentId);
+      } else {
+        // 親が import 内に存在しない → 孤児化（メインに変換）
+        orphanCount++;
+      }
+    }
+    const newTask = { ...t, id: todoIdMap.get(t.id), listId: newListId };
+    if (newParentId) newTask.parentId = newParentId;
+    else delete newTask.parentId;
+    todos.push(newTask);
   }
   for (const t of (importPayload.trash || [])) {
     if (!selectedIds.has(t.listId)) continue;
     const newListId = idMap.get(t.listId);
     if (!newListId) continue;
-    trash.push({ ...t, id: crypto.randomUUID(), listId: newListId });
+    const newItem = { ...t, id: crypto.randomUUID(), listId: newListId };
+    delete newItem.parentId;
+    delete newItem._trashedWithParent;
+    trash.push(newItem);
   }
+  if (orphanCount > 0) showToast(`⚠️ 親が見つからないサブタスク ${orphanCount} 件をメインに変換しました`);
   save();
   const firstImported = idMap.values().next().value;
-  if (firstImported) { selectedListId = firstImported; filter = 'all'; showTrash = false; }
+  if (firstImported) { selectedListId = firstImported; showTrash = false; }
   closeModal();
 }
 
@@ -1838,14 +2232,14 @@ document.addEventListener('click', e => {
     memoPopupId = null; memoPopupPos = null; render(); return;
   }
 
-  const fb = e.target.closest('.filter-btn[data-filter]');
-  if (fb && !dragTrashId) { setFilter(fb.dataset.filter); return; }
-
   // デスクトップ: 日付入力エリアクリック時にfocusしてピッカーを開く（focusinで処理）
-  if (!isMobile() && e.target.closest('.edit-date-wrap')) {
-    const dateInput = document.getElementById('ei-date');
-    if (dateInput) dateInput.focus();
-    return;
+  if (!isMobile()) {
+    const wrap = e.target.closest('.edit-date-wrap');
+    if (wrap) {
+      const dateInput = wrap.querySelector('input[type="date"]');
+      if (dateInput) dateInput.focus();
+      return;
+    }
   }
 
   const el = e.target.closest('[data-a]');
@@ -1857,14 +2251,21 @@ document.addEventListener('click', e => {
     case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); break;
     case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
     case 'toggle-add-top': e.stopPropagation(); addToTop = !addToTop; localStorage.setItem('todo-app-add-to-top', String(addToTop)); render(); break;
-    case 'toggle-auto-sort': e.stopPropagation(); autoSort = !autoSort; localStorage.setItem('todo-app-auto-sort', String(autoSort)); if (autoSort) sortTodos(); else render(); break;
     case 'sort-by-date': e.stopPropagation(); sortByDate(); break;
     case 'to-trash':     e.stopPropagation(); moveToTrash(id); break;
     case 'toggle-trash': toggleTrash(); break;
+    case 'toggle-completed-section': showCompletedSection = !showCompletedSection; render(); break;
     case 'save':         commitEdit(); break;
     case 'cancel':       cancelEdit(); break;
     case 'clr-date':     editDue = ''; skipFocusRestore = true; render(); break;
+    case 'clr-start-date': editStartDate = ''; skipFocusRestore = true; render(); break;
     case 'clr-folder':   editFolderPath = ''; skipFocusRestore = true; render(); break;
+    case 'toggle-collapse': {
+      e.stopPropagation();
+      if (collapsedIds.has(id)) collapsedIds.delete(id); else collapsedIds.add(id);
+      render(); break;
+    }
+    case 'promote-to-main': promoteSubToMain(id); break;
     case 'memo-show': {
       e.stopPropagation();
       if (memoPopupId === id) {
@@ -1886,8 +2287,37 @@ document.addEventListener('click', e => {
       if (ft.linkType === 'url') {
         let url = ft.folderPath;
         if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+        // Tauri環境：既定ブラウザで開く
+        if (window.__TAURI__?.core?.invoke) {
+          window.__TAURI__.core.invoke('open_folder', { path: url })
+            .then(() => showToast('🔗 URLを開きました'))
+            .catch(() => showToast('⚠️ URLを開けませんでした'));
+          break;
+        }
+        // Photino環境：既定ブラウザで開く
+        if (window.external?.sendMessage) {
+          window.external.sendMessage('open-url:' + url);
+          break;
+        }
         window.open(url, '_blank');
         showToast('🔗 URLを開きました');
+        break;
+      }
+
+      // Tauri環境：invoke経由でフォルダを開く
+      if (window.__TAURI__?.core?.invoke) {
+        window.__TAURI__.core.invoke('open_folder', { path: ft.folderPath })
+          .then(() => showToast('📁 フォルダを開きました'))
+          .catch(() => {
+            showToast('📋 パスをクリップボードにコピーしました');
+            navigator.clipboard.writeText(ft.folderPath).catch(() => {});
+          });
+        break;
+      }
+
+      // Photino環境：sendMessage経由でフォルダを開く
+      if (window.external?.sendMessage) {
+        window.external.sendMessage('open-folder:' + ft.folderPath);
         break;
       }
 
@@ -1932,6 +2362,31 @@ document.addEventListener('click', e => {
     case 'toggle-stats': toggleListStats(); break;
     case 'toggle-list-expand': toggleListExpand(); break;
     case 'close-move-popup': closeMovePopup(); break;
+    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuPos = null; render(); break;
+    case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; startEdit(tid); break; }
+    case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; moveToTrash(tid); break; }
+    case 'add-sub-init': {
+      e.stopPropagation();
+      subInputParentId = id;
+      render();
+      requestAnimationFrame(() => {
+        const inp = document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile');
+        if (inp) inp.focus();
+      });
+      break;
+    }
+    case 'cancel-sub-input': {
+      e.stopPropagation();
+      subInputParentId = null;
+      render();
+      break;
+    }
+    case 'set-task-filter': {
+      const f = el.dataset.filter;
+      taskFilter = (taskFilter === f && f !== 'all') ? 'all' : f;
+      render();
+      break;
+    }
     case 'move-popup-body': break; // ポップアップ内クリックは何もしない（オーバーレイへの伝播防止）
     case 'move-to-list': moveToList(el.dataset.todoId, el.dataset.listId); break;
     case 'restore-list':      { const idx = e.target.closest('[data-idx]')?.dataset.idx; if (idx != null) restoreList(+idx); break; }
@@ -2001,7 +2456,7 @@ document.addEventListener('dblclick', e => {
 
 // 日付入力：focus時の値を記録
 document.addEventListener('focusin', e => {
-  if (e.target.id === 'ei-date') {
+  if (e.target.id === 'ei-date' || e.target.id === 'ei-start-date') {
     e.target.dataset.prev = e.target.value;
     if (!isMobile() && e.target.showPicker) { try { e.target.showPicker(); } catch(_){} }
   }
@@ -2012,7 +2467,11 @@ document.addEventListener('change', e => {
   if (e.target.id === 'ei-date') {
     const val = e.target.value;
     editDue = val;
-    // iOS Safari: ホイール回転でchangeが発火するため非空値は描画しない（focusoutで処理）
+    if (!val || !isIOS) { skipFocusRestore = true; render(); }
+  }
+  if (e.target.id === 'ei-start-date') {
+    const val = e.target.value;
+    editStartDate = val;
     if (!val || !isIOS) { skipFocusRestore = true; render(); }
   }
 });
@@ -2039,9 +2498,10 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Enter')  { e.preventDefault(); commitAddList(); }
     if (e.key === 'Escape') { addingList = false; newListName = ''; render(); }
   }
-  // textarea追加欄: Enter=追加, Shift+Enter=改行
+  // textarea追加欄: Enter=追加, Shift+Enter=改行, Escape=サブモード解除
   if (e.target.id === 'todo-inp' || e.target.id === 'todo-inp-mobile') {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTodo(e.target.closest('form')); }
+    if (e.key === 'Escape' && subInputParentId) { e.preventDefault(); subInputParentId = null; render(); }
   }
 });
 
@@ -2053,6 +2513,15 @@ document.addEventListener('focusout', e => {
       const dueBefore = editDue;
       setTimeout(() => {
         if (editId && editDue === dueBefore) { editDue = val; render(); }
+      }, 150);
+    }
+  }
+  if (e.target.id === 'ei-start-date') {
+    const val = e.target.value;
+    if (val && val !== e.target.dataset.prev) {
+      const before = editStartDate;
+      setTimeout(() => {
+        if (editId && editStartDate === before) { editStartDate = val; render(); }
       }, 150);
     }
   }
@@ -2082,7 +2551,7 @@ document.addEventListener('dragstart', e => {
 });
 
 document.addEventListener('dragend', () => {
-  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.dragging,.drop-as-sub').forEach(el => el.classList.remove('dragging', 'drop-as-sub'));
   clearDragOver();
   dragTodoId = null; dragTrashId = null; dragListId = null;
 });
@@ -2101,7 +2570,18 @@ document.addEventListener('dragover', e => {
     const overTPanel = e.target.closest('#trash-panel');
     const overList   = e.target.closest('.list-nav-item[data-a="select-list"]');
     if (overTodo || overTBtn || overTPanel || overList) e.preventDefault();
-    if      (overTodo && overTodo.dataset.id !== dragTodoId) setDragOver(overTodo);
+    // サブ化候補ハイライトの管理
+    document.querySelectorAll('.drop-as-sub').forEach(el => el.classList.remove('drop-as-sub'));
+    if      (overTodo && overTodo.dataset.id !== dragTodoId) {
+      setDragOver(overTodo);
+      const rect = overTodo.getBoundingClientRect();
+      const isSubZone = (e.clientY - rect.top) > rect.height * 0.6;
+      const tId = overTodo.dataset.id;
+      const tTodo = todos.find(x => x.id === tId);
+      if (isSubZone && tTodo && !tTodo.parentId && !hasSubs(dragTodoId)) {
+        overTodo.classList.add('drop-as-sub');
+      }
+    }
     else if (overList && overList.dataset.id !== selectedListId) setDragOver(overList);
     else if (overTBtn)   setDragOver(overTBtn);
     else if (overTPanel) setDragOver(overTPanel);
@@ -2109,9 +2589,8 @@ document.addEventListener('dragover', e => {
     return;
   }
   if (dragTrashId) {
-    const overFilter = e.target.closest('.filter-btn[data-filter]');
-    if (overFilter) { e.preventDefault(); setDragOver(overFilter); }
-    else clearDragOver();
+    // ゴミ箱ドラッグ中の特別なドロップターゲットは廃止（個別の復元ボタンで対応）
+    clearDragOver();
   }
 });
 
@@ -2128,24 +2607,35 @@ document.addEventListener('drop', e => {
     const onTrash = e.target.closest('#trash-btn, #trash-panel');
     const onList  = e.target.closest('.list-nav-item[data-a="select-list"]');
     if (onList && onList.dataset.id !== selectedListId) {
-      const t = todos.find(x => x.id === dragTodoId);
-      if (t) {
-        const targetList = lists.find(l => l.id === onList.dataset.id);
-        if (targetList?.type === 'memo' && t.completed) t.completed = false;
-        t.listId = onList.dataset.id; save(); render();
+      moveToList(dragTodoId, onList.dataset.id);
+    } else if (onTodo && onTodo.dataset.id !== dragTodoId) {
+      // ドロップ位置でメイン化/サブ化を判定
+      const rect = onTodo.getBoundingClientRect();
+      const isSubZone = (e.clientY - rect.top) > rect.height * 0.6;
+      const targetId = onTodo.dataset.id;
+      const targetTodo = todos.find(x => x.id === targetId);
+      const dragTodo = todos.find(x => x.id === dragTodoId);
+      if (isSubZone && targetTodo && dragTodo && !targetTodo.parentId && !hasSubs(dragTodoId)) {
+        // ターゲットのサブにする（サブ有りメインはサブ化拒否）
+        dragTodo.parentId = targetId;
+        if (collapsedIds.has(targetId)) collapsedIds.delete(targetId); // 展開
+        save(); render();
+      } else {
+        // 並び替え or メイン化（サブをメイン領域へ）
+        if (dragTodo?.parentId && !isSubZone && !targetTodo?.parentId) {
+          // ターゲットがメインで、上半分にドロップされた場合はメイン化
+          dragTodo.parentId = undefined;
+        }
+        reorder(dragTodoId, targetId);
       }
-    } else if (onTodo && onTodo.dataset.id !== dragTodoId) reorder(dragTodoId, onTodo.dataset.id);
+    }
     else if (onTrash) moveToTrash(dragTodoId);
+    dragSubZoneTargetId = null;
+    document.querySelectorAll('.drop-as-sub').forEach(el => el.classList.remove('drop-as-sub'));
     dragTodoId = null; return;
   }
   if (dragTrashId) {
-    const onFilter = e.target.closest('.filter-btn[data-filter]');
-    if (onFilter) {
-      const f = onFilter.dataset.filter;
-      const asC = f === 'active' ? false : f === 'completed' ? true : undefined;
-      restoreFromTrash(dragTrashId, asC);
-      setFilter(f);
-    }
+    // フィルターボタンへのドロップ復元は廃止（個別の復元ボタンで対応）
     dragTrashId = null;
   }
 });
@@ -2312,6 +2802,33 @@ document.addEventListener('drop', e => {
 })();
 
 
+
+// ── Photino メッセージ受信 ─────────────────────────────
+if (window.external?.receiveMessage) {
+  window.external.receiveMessage((msg) => {
+    if (msg === 'folder-result:success') showToast('📁 フォルダを開きました');
+    else if (msg === 'url-result:success') showToast('🔗 URLを開きました');
+    else if (msg.startsWith('folder-result:error:')) showToast('📋 パスをクリップボードにコピーしました');
+    else if (msg.startsWith('url-result:error:')) showToast('⚠️ URLを開けませんでした');
+  });
+}
+
+// ── 右クリックメニュー ─────────────────────────────────
+document.addEventListener('contextmenu', e => {
+  // 入力欄（textarea/input）ではブラウザ標準メニューを維持
+  if (e.target.matches('textarea, input')) return;
+  e.preventDefault();
+  // タスク行で右クリック → カスタムメニュー表示
+  const item = e.target.closest('.todo-item');
+  if (item && !e.target.closest('.edit-form')) {
+    ctxMenuTodoId = item.dataset.id;
+    ctxMenuPos = { x: e.clientX, y: e.clientY };
+    render();
+  } else {
+    // 別の場所でメニューが開いている場合は閉じる
+    if (ctxMenuTodoId) { ctxMenuTodoId = null; ctxMenuPos = null; render(); }
+  }
+});
 
 // ── Init ───────────────────────────────────────────────
 load();

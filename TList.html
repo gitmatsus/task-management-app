@@ -677,6 +677,10 @@
     }
     html.dark .tip { background:#374151; }
     .tip-wrap:hover .tip { opacity:1; }
+    /* ソートボタン群はカード上端にあり overflow:hidden で隠れるので下に表示 */
+    .sort-btns .tip {
+      bottom:auto; top:100%; margin-bottom:0; margin-top:6px;
+    }
 
     /* ── Modal overlay ── */
     .modal-overlay {

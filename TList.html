@@ -1512,7 +1512,7 @@ function htmlMain() {
           ${!isSub && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
           ${startBadgeHtml}
           ${badge}
-          ${t.completed ? `<div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>` : ''}
+          ${(t.completed || isMemoList) ? `<div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>` : ''}
         </li>`;
       };
 

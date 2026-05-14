@@ -797,6 +797,10 @@
     .item-add-sub button:hover { opacity:1 !important; background:rgba(99,102,241,.12); color:#6366f1; }
     html.dark .item-add-sub button:hover { background:rgba(99,102,241,.2); color:#a5b4fc; }
     .item-add-sub svg { width:14px; height:14px; }
+    /* タッチ環境ではホバーが無いので常に表示 */
+    @media (hover: none) {
+      .item-add-sub button { opacity:.7; }
+    }
 
     /* ── Sub-input mode (cancel × button + visual cue) ── */
     .input-row.sub-mode .todo-input {
@@ -1411,7 +1415,7 @@ function htmlMain() {
   const renderItem = t => {
         const editing = editId === t.id;
         const isSub = !!t.parentId;
-        const hasSub = !isSub && !isMemoList && hasSubs(t.id);
+        const hasSub = !isSub && hasSubs(t.id);
         const expanded = !collapsedIds.has(t.id);
         const body = editing ? `<div class="edit-form">
           <textarea id="ei-text" class="edit-text" rows="1" autocomplete="off">${esc(editText)}</textarea>
@@ -1486,9 +1490,9 @@ function htmlMain() {
           }
         }
 
-        const togglePart = !isMemoList ? (hasSub
+        const togglePart = hasSub
           ? `<button class="sub-toggle${expanded ? ' expanded' : ''}" data-a="toggle-collapse" data-id="${t.id}" title="${expanded ? '折りたたむ' : '展開する'}">${chevronRight}</button>`
-          : `<span class="sub-toggle-placeholder"></span>`) : '';
+          : `<span class="sub-toggle-placeholder"></span>`;
 
         return `<li class="todo-item${isMemoList ? ' memo-item' : ''}${isSub ? ' is-sub' : ''}" data-id="${t.id}"${isSub ? ' data-sub="1"' : ''}>
           <div class="drag-handle" data-a="drag-handle" data-id="${t.id}" draggable="${!editing && !hasTouch}">${I.grip}</div>
@@ -1497,7 +1501,7 @@ function htmlMain() {
           <div class="text-wrap" data-a="edit" data-id="${t.id}">${body}</div>
           ${t.detail && !editing ? `<div class="item-memo"><button data-a="memo-show" data-id="${t.id}"${memoPopupId === t.id ? ' class="active"' : ''}>${I.memo}</button></div>` : ''}
           ${t.folderPath && !editing && (t.linkType === 'url' || !hasTouch) ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
-          ${!isSub && !isMemoList && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
+          ${!isSub && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
           ${startBadgeHtml}
           ${badge}
           ${t.completed ? `<div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>` : ''}
@@ -1569,8 +1573,8 @@ function htmlMain() {
       </div>
       <div class="input-section">
         <form class="input-row${subInputParentId ? ' sub-mode' : ''}" data-a="add">
-          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="${subInputParentId && !isMemoList ? `「${esc((todos.find(x=>x.id===subInputParentId)||{}).text||'')}」のサブタスクを入力...` : (isMemoList ? '新しいメモを入力...' : '新しいタスクを入力...')}" autocomplete="off"></textarea>
-          ${subInputParentId && !isMemoList ? `<button type="button" class="cancel-sub-btn" data-a="cancel-sub-input" title="キャンセル">${I.x}</button>` : ''}
+          <textarea id="todo-inp" class="todo-input" rows="1" placeholder="${subInputParentId ? `「${esc((todos.find(x=>x.id===subInputParentId)||{}).text||'')}」の${isMemoList ? 'サブメモ' : 'サブタスク'}を入力...` : (isMemoList ? '新しいメモを入力...' : '新しいタスクを入力...')}" autocomplete="off"></textarea>
+          ${subInputParentId ? `<button type="button" class="cancel-sub-btn" data-a="cancel-sub-input" title="キャンセル">${I.x}</button>` : ''}
           <button type="submit" class="add-btn">追加</button>
         </form>
       </div>
@@ -1795,7 +1799,7 @@ function addTodo(form) {
   if (!text) return;
   const newTask = { id: crypto.randomUUID(), text, completed: false, createdAt: Date.now(), listId: selectedListId };
   // サブタスク入力モード：親IDを設定し、親直下に挿入。モードは継続（連続追加可能）
-  if (subInputParentId && lists.find(l => l.id === selectedListId)?.type !== 'memo') {
+  if (subInputParentId) {
     const parent = todos.find(x => x.id === subInputParentId);
     if (parent && !parent.parentId) {
       newTask.parentId = subInputParentId;
@@ -2040,13 +2044,11 @@ function moveToList(todoId, listId) {
     const isMemoTarget = targetList?.type === 'memo';
     if (isMemoTarget && t.completed) t.completed = false;
     t.listId = listId;
-    // メインタスクの場合はサブもまとめて移動
+    // メインタスクの場合はサブもまとめて移動（親子関係は保持）
     if (!t.parentId) {
       todos.filter(x => x.parentId === t.id).forEach(s => {
         if (isMemoTarget && s.completed) s.completed = false;
         s.listId = listId;
-        // 移動先がメモリストなら親子関係を解除（メモにサブはない）
-        if (isMemoTarget) s.parentId = undefined;
       });
     }
     save();
@@ -2618,6 +2620,15 @@ document.addEventListener('drop', e => {
       if (isSubZone && targetTodo && dragTodo && !targetTodo.parentId && !hasSubs(dragTodoId)) {
         // ターゲットのサブにする（サブ有りメインはサブ化拒否）
         dragTodo.parentId = targetId;
+        // 配列内で「親の最後のサブの直後」に移動して、表示順が常に末尾になるよう固定
+        const dragIdx = todos.findIndex(x => x.id === dragTodoId);
+        if (dragIdx >= 0) {
+          todos.splice(dragIdx, 1);
+          const lastSubIdx = todos.reduce((acc, x, i) => x.parentId === targetId ? i : acc, -1);
+          const parentIdx = todos.findIndex(x => x.id === targetId);
+          const insertAt = (lastSubIdx >= 0 ? lastSubIdx : parentIdx) + 1;
+          todos.splice(insertAt, 0, dragTodo);
+        }
         if (collapsedIds.has(targetId)) collapsedIds.delete(targetId); // 展開
         save(); render();
       } else {

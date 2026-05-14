@@ -1559,20 +1559,23 @@ function htmlMain() {
       }</ul>` : ''}
     </div>` : '';
 
-  // ゴミ箱内も「メイン → そのpaired サブ群」の順に並べ替えて表示
+  // ゴミ箱内も「メイン → 関連サブ群」の順に並べ替えて表示
+  // 関連サブ: _trashedWithParent === parent.id または parentId === parent.id
   const arrangedTrash = (() => {
     if (ct.length === 0) return [];
     const result = [];
     const used = new Set();
-    // ペアの親（メイン）を見つけてそのサブを直下にまとめる
     ct.forEach(t => {
       if (t._trashedWithParent || t.parentId) return; // サブ系は後で処理
       result.push(t); used.add(t.id);
       ct.forEach(s => {
-        if (s._trashedWithParent === t.id) { result.push(s); used.add(s.id); }
+        if (used.has(s.id)) return;
+        if (s._trashedWithParent === t.id || s.parentId === t.id) {
+          result.push(s); used.add(s.id);
+        }
       });
     });
-    // 親不在の単体サブ（_trashedWithParentなし or 親が ゴミ箱外）も末尾に
+    // 親不在の単体サブも末尾に
     ct.forEach(t => { if (!used.has(t.id)) { result.push(t); used.add(t.id); } });
     return result;
   })();
@@ -1951,12 +1954,11 @@ function restoreFromTrash(id, asCompleted) {
   if (i < 0) return;
   const item = trash.splice(i, 1)[0];
   if (asCompleted !== undefined) item.completed = asCompleted;
-  // メインなら、_trashedWithParent でペアにされたサブも復元
+  // メインなら関連サブ（_trashedWithParent一致 or parentId一致）を全て復元
   if (!item.parentId) {
-    // ★ 先にフィルターでサブをゴミ箱から取り出してから property を削除（順序重要）
-    const pairedSubs = trash.filter(x => x._trashedWithParent === item.id);
-    trash = trash.filter(x => x._trashedWithParent !== item.id);
-    pairedSubs.forEach(s => { delete s._trashedWithParent; todos.push(s); });
+    const relatedSubs = trash.filter(x => x._trashedWithParent === item.id || x.parentId === item.id);
+    trash = trash.filter(x => !(x._trashedWithParent === item.id || x.parentId === item.id));
+    relatedSubs.forEach(s => { delete s._trashedWithParent; todos.push(s); });
   } else {
     // サブ単体を復元する場合、元の親が todos に存在しなければメイン化して戻す
     const parentExists = todos.some(x => x.id === item.parentId && !x.parentId && x.listId === item.listId);
@@ -1968,8 +1970,8 @@ function restoreFromTrash(id, asCompleted) {
 function deleteFromTrash(id) {
   const item = trash.find(x => x.id === id);
   if (item && !item.parentId) {
-    // ペアにされたサブも完全削除
-    trash = trash.filter(x => x._trashedWithParent !== id);
+    // 関連サブ（_trashedWithParent一致 or parentId一致）も完全削除
+    trash = trash.filter(x => x._trashedWithParent !== id && x.parentId !== id);
   }
   trash = trash.filter(x => x.id !== id);
   save(); render();

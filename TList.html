@@ -843,6 +843,25 @@
     .ctx-menu-danger:hover { background:rgba(220,38,38,.1); }
     html.dark .ctx-menu-danger:hover { background:rgba(248,113,113,.15); }
 
+    /* サブメニュー（サブに登録）の表示 */
+    .ctx-has-sub { position:relative; padding-right:24px; }
+    .ctx-arrow { margin-left:auto; font-size:10px; color:var(--t3); }
+    .ctx-submenu {
+      position:absolute; left:100%; top:-4px; min-width:180px;
+      background:var(--card); border:1px solid var(--card-border);
+      border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,.18);
+      list-style:none; padding:4px; margin:0;
+      display:none; max-height:240px; overflow-y:auto;
+    }
+    .ctx-has-sub:hover > .ctx-submenu,
+    .ctx-has-sub.open > .ctx-submenu { display:block; }
+    .ctx-submenu .ctx-menu-item {
+      font-size:12px; padding:6px 10px;
+    }
+    @media (max-width:640px) {
+      .ctx-submenu { left:0; top:100%; }
+    }
+
     /* ── Move-to-list popup ── */
     .move-popup-overlay {
       position:fixed; inset:0; z-index:100;
@@ -1062,6 +1081,7 @@ const LIST_COLLAPSE_LIMIT = 5; // 折りたたみ時の表示件数
 let movePopupTodoId = null; // リスト移動ポップアップ対象タスクID
 let ctxMenuTodoId = null, ctxMenuPos = null; // 右クリックメニュー対象とポップアップ位置
 let ctxMenuListId = null; // リスト用右クリックメニュー対象
+let ctxSubmenuOpen = false; // 「サブに登録」サブメニューの展開状態（モバイル用、デスクトップはhover）
 let subInputParentId = null; // サブタスク入力モード時の親タスクID
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let addToTop = localStorage.getItem('todo-app-add-to-top') === 'true';
@@ -1719,11 +1739,29 @@ function htmlCtxMenu() {
   if (ctxMenuTodoId) {
     const t = todos.find(x => x.id === ctxMenuTodoId);
     if (!t) return '';
-    const x = Math.min(ctxMenuPos.x, window.innerWidth - 180);
+    const x = Math.min(ctxMenuPos.x, window.innerWidth - 200);
     const y = Math.min(ctxMenuPos.y, window.innerHeight - 100);
+    // サブに登録できる条件: 自身にサブが無い（2階層制限）
+    const canBeSub = !hasSubs(t.id);
+    // 候補となる親 = 同じリストのメイン（自身と現在の親を除外）
+    const candidateParents = todos.filter(p =>
+      p.listId === t.listId && !p.parentId && p.id !== t.id && p.id !== t.parentId && !p.completed
+    );
+    const submenuHtml = (canBeSub && candidateParents.length > 0) ? `
+      <li class="ctx-menu-item ctx-has-sub${ctxSubmenuOpen ? ' open' : ''}" data-a="ctx-toggle-submenu">
+        ${editIconSvg}<span>サブに登録</span>
+        <span class="ctx-arrow">▶</span>
+        <ul class="ctx-submenu" data-a="ctx-submenu-body">
+          ${candidateParents.map(p => `<li class="ctx-menu-item" data-a="ctx-set-parent" data-id="${t.id}" data-parent-id="${p.id}">${esc(p.text.split('\n')[0]).slice(0, 30)}</li>`).join('')}
+        </ul>
+      </li>` : '';
+    // サブをメインに昇格（現在サブの場合）
+    const promoteItem = t.parentId ? `<li class="ctx-menu-item" data-a="ctx-promote" data-id="${t.id}">⬆️<span>メインに昇格</span></li>` : '';
     return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
       <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
         <li class="ctx-menu-item" data-a="ctx-edit" data-id="${t.id}">${editIconSvg}<span>編集</span></li>
+        ${submenuHtml}
+        ${promoteItem}
         <li class="ctx-menu-item ctx-menu-danger" data-a="ctx-delete" data-id="${t.id}">${I.trash}<span>削除</span></li>
       </ul>
     </div>`;
@@ -2434,11 +2472,42 @@ document.addEventListener('click', e => {
     case 'toggle-stats': toggleListStats(); break;
     case 'toggle-list-expand': toggleListExpand(); break;
     case 'close-move-popup': closeMovePopup(); break;
-    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; render(); break;
-    case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; startEdit(tid); break; }
-    case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; moveToTrash(tid); break; }
+    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; ctxSubmenuOpen = false; render(); break;
+    case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; startEdit(tid); break; }
+    case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; moveToTrash(tid); break; }
     case 'ctx-rename-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; startRenameList(lid); break; }
     case 'ctx-delete-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; handleDeleteList(lid); break; }
+    case 'ctx-toggle-submenu': { e.stopPropagation(); ctxSubmenuOpen = !ctxSubmenuOpen; render(); break; }
+    case 'ctx-submenu-body': { e.stopPropagation(); break; }
+    case 'ctx-set-parent': {
+      e.stopPropagation();
+      const tid = el.dataset.id;
+      const pid = el.dataset.parentId;
+      const t = todos.find(x => x.id === tid);
+      if (t && pid && pid !== t.parentId) {
+        t.parentId = pid;
+        // 配列内で「親の最後のサブの直後」に移動
+        const dragIdx = todos.findIndex(x => x.id === tid);
+        if (dragIdx >= 0) {
+          const moved = todos.splice(dragIdx, 1)[0];
+          const lastSubIdx = todos.reduce((acc, x, i) => x.parentId === pid ? i : acc, -1);
+          const parentIdx = todos.findIndex(x => x.id === pid);
+          const insertAt = (lastSubIdx >= 0 ? lastSubIdx : parentIdx) + 1;
+          todos.splice(insertAt, 0, moved);
+        }
+        if (collapsedIds.has(pid)) collapsedIds.delete(pid);
+        save();
+      }
+      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
+      render();
+      break;
+    }
+    case 'ctx-promote': {
+      const tid = id;
+      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
+      promoteSubToMain(tid);
+      break;
+    }
     case 'add-sub-init': {
       e.stopPropagation();
       subInputParentId = id;

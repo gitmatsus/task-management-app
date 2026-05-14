@@ -1059,6 +1059,7 @@ let listExpanded = false; // リスト一覧の展開状態
 const LIST_COLLAPSE_LIMIT = 5; // 折りたたみ時の表示件数
 let movePopupTodoId = null; // リスト移動ポップアップ対象タスクID
 let ctxMenuTodoId = null, ctxMenuPos = null; // 右クリックメニュー対象とポップアップ位置
+let ctxMenuListId = null; // リスト用右クリックメニュー対象
 let subInputParentId = null; // サブタスク入力モード時の親タスクID
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let addToTop = localStorage.getItem('todo-app-add-to-top') === 'true';
@@ -1302,11 +1303,7 @@ function htmlSidebar() {
            メモ
          </label>`
       : `${typeIcon}<span class="list-item-name">${esc(lst.name)}</span>
-         <span class="list-count-pill${isSel ? ' sel' : ''}">${s.total}</span>
-         ${lists.length > 1 ? `<div class="tip-wrap list-del-wrap">
-           <button class="list-del-btn" data-a="del-list" data-id="${lst.id}">${I.trash}</button>
-           <span class="tip">削除</span>
-         </div>` : ''}`;
+         <span class="list-count-pill${isSel ? ' sel' : ''}">${s.total}</span>`;
 
     return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
       <div class="list-drag-handle" draggable="${!isEditing && !('ontouchstart' in window)}">${I.grip}</div>
@@ -1677,18 +1674,36 @@ function htmlMovePopup() {
 // ── Context menu HTML ─────────────────────────────────
 const editIconSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`;
 function htmlCtxMenu() {
-  if (!ctxMenuTodoId || !ctxMenuPos) return '';
-  const t = todos.find(x => x.id === ctxMenuTodoId);
-  if (!t) return '';
-  // 画面外はみ出し防止: 簡易クランプ
-  const x = Math.min(ctxMenuPos.x, window.innerWidth - 180);
-  const y = Math.min(ctxMenuPos.y, window.innerHeight - 100);
-  return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
-    <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
-      <li class="ctx-menu-item" data-a="ctx-edit" data-id="${t.id}">${editIconSvg}<span>編集</span></li>
-      <li class="ctx-menu-item ctx-menu-danger" data-a="ctx-delete" data-id="${t.id}">${I.trash}<span>削除</span></li>
-    </ul>
-  </div>`;
+  if (!ctxMenuPos) return '';
+  // タスク用メニュー
+  if (ctxMenuTodoId) {
+    const t = todos.find(x => x.id === ctxMenuTodoId);
+    if (!t) return '';
+    const x = Math.min(ctxMenuPos.x, window.innerWidth - 180);
+    const y = Math.min(ctxMenuPos.y, window.innerHeight - 100);
+    return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
+      <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
+        <li class="ctx-menu-item" data-a="ctx-edit" data-id="${t.id}">${editIconSvg}<span>編集</span></li>
+        <li class="ctx-menu-item ctx-menu-danger" data-a="ctx-delete" data-id="${t.id}">${I.trash}<span>削除</span></li>
+      </ul>
+    </div>`;
+  }
+  // リスト用メニュー
+  if (ctxMenuListId) {
+    const l = lists.find(x => x.id === ctxMenuListId);
+    if (!l) return '';
+    const x = Math.min(ctxMenuPos.x, window.innerWidth - 200);
+    const y = Math.min(ctxMenuPos.y, window.innerHeight - 100);
+    // 最後の1リストは削除不可
+    const canDelete = lists.length > 1;
+    return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
+      <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
+        <li class="ctx-menu-item" data-a="ctx-rename-list" data-id="${l.id}">${editIconSvg}<span>名前を変更</span></li>
+        ${canDelete ? `<li class="ctx-menu-item ctx-menu-danger" data-a="ctx-delete-list" data-id="${l.id}">${I.trash}<span>リストを削除</span></li>` : ''}
+      </ul>
+    </div>`;
+  }
+  return '';
 }
 
 // ── Memo popup HTML ───────────────────────────────────
@@ -2375,9 +2390,11 @@ document.addEventListener('click', e => {
     case 'toggle-stats': toggleListStats(); break;
     case 'toggle-list-expand': toggleListExpand(); break;
     case 'close-move-popup': closeMovePopup(); break;
-    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuPos = null; render(); break;
+    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; render(); break;
     case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; startEdit(tid); break; }
     case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; moveToTrash(tid); break; }
+    case 'ctx-rename-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; startRenameList(lid); break; }
+    case 'ctx-delete-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; handleDeleteList(lid); break; }
     case 'add-sub-init': {
       e.stopPropagation();
       subInputParentId = id;
@@ -2725,15 +2742,27 @@ document.addEventListener('drop', e => {
         return;
       }
     }
-    // リスト並び替え（リスト名長押し）
+    // リスト操作: ドラッグハンドル長押し=並び替え / それ以外の長押し=コンテキストメニュー
     const listItem = e.target.closest('.list-nav-item[data-a="select-list"]');
     if (listItem && !e.target.closest('button') && !e.target.closest('input')) {
+      const onHandle = !!e.target.closest('.list-drag-handle');
       touchStartY = e.touches[0].clientY;
       touchStartX = e.touches[0].clientX;
+      const touchX = e.touches[0].clientX;
+      const touchY = e.touches[0].clientY;
       longPressTimer = setTimeout(() => {
-        listTouchDragId = listItem.dataset.id;
-        listItem.classList.add('list-touch-dragging');
-        navigator.vibrate && navigator.vibrate(30);
+        if (onHandle) {
+          listTouchDragId = listItem.dataset.id;
+          listItem.classList.add('list-touch-dragging');
+          navigator.vibrate && navigator.vibrate(30);
+        } else {
+          // 名前/カウント部分の長押し → リスト用コンテキストメニュー表示
+          ctxMenuListId = listItem.dataset.id;
+          ctxMenuTodoId = null;
+          ctxMenuPos = { x: touchX, y: touchY };
+          navigator.vibrate && navigator.vibrate(30);
+          render();
+        }
       }, LONG_PRESS);
     }
   }, { passive: true });
@@ -2840,15 +2869,27 @@ document.addEventListener('contextmenu', e => {
   // 入力欄（textarea/input）ではブラウザ標準メニューを維持
   if (e.target.matches('textarea, input')) return;
   e.preventDefault();
-  // タスク行で右クリック → カスタムメニュー表示
+  // タスク行で右クリック → タスク用メニュー
   const item = e.target.closest('.todo-item');
   if (item && !e.target.closest('.edit-form')) {
     ctxMenuTodoId = item.dataset.id;
+    ctxMenuListId = null;
     ctxMenuPos = { x: e.clientX, y: e.clientY };
     render();
-  } else {
-    // 別の場所でメニューが開いている場合は閉じる
-    if (ctxMenuTodoId) { ctxMenuTodoId = null; ctxMenuPos = null; render(); }
+    return;
+  }
+  // サイドバーのリスト行で右クリック → リスト用メニュー
+  const listItem = e.target.closest('.list-nav-item[data-a="select-list"]');
+  if (listItem && !e.target.closest('input')) {
+    ctxMenuListId = listItem.dataset.id;
+    ctxMenuTodoId = null;
+    ctxMenuPos = { x: e.clientX, y: e.clientY };
+    render();
+    return;
+  }
+  // 別の場所でメニューが開いている場合は閉じる
+  if (ctxMenuTodoId || ctxMenuListId) {
+    ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; render();
   }
 });
 

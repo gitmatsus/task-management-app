@@ -1078,6 +1078,14 @@ function load() {
   const defId = lists[0].id;
   todos = todos.map(t => t.listId ? t : { ...t, listId: defId });
   trash = trash.map(t => t.listId ? t : { ...t, listId: defId });
+  // 孤児サブの修復: 親が存在しない／親が別リストにある／親自身がサブ の場合は parentId をクリア
+  todos.forEach(t => {
+    if (!t.parentId) return;
+    const p = todos.find(x => x.id === t.parentId);
+    if (!p || p.listId !== t.listId || p.parentId) {
+      t.parentId = undefined;
+    }
+  });
   // 全データ読み込み後に選択リストを復元
   const savedListId = localStorage.getItem('todo-app-selected-list');
   selectedListId = (savedListId && lists.find(l => l.id === savedListId))
@@ -2044,12 +2052,15 @@ function moveToList(todoId, listId) {
     const isMemoTarget = targetList?.type === 'memo';
     if (isMemoTarget && t.completed) t.completed = false;
     t.listId = listId;
-    // メインタスクの場合はサブもまとめて移動（親子関係は保持）
     if (!t.parentId) {
+      // メインタスク：サブもまとめて移動（親子関係は保持）
       todos.filter(x => x.parentId === t.id).forEach(s => {
         if (isMemoTarget && s.completed) s.completed = false;
         s.listId = listId;
       });
+    } else {
+      // サブタスク単体を移動：親は元リストに残るため、親子関係を解除（メイン化）
+      t.parentId = undefined;
     }
     save();
   }

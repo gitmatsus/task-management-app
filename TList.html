@@ -210,6 +210,11 @@
       cursor:default;
     }
     .list-count-pill.sel { background:var(--sidebar-act-pill-bg); color:var(--sidebar-act-pill-text); }
+    /* 緊急度カラー: 超過は赤、今日のみは橙（選択中も上書き） */
+    .list-count-pill.urgent-ov, .list-count-pill.urgent-ov.sel { background:#fecaca; color:#b91c1c; }
+    html.dark .list-count-pill.urgent-ov, html.dark .list-count-pill.urgent-ov.sel { background:rgba(239,68,68,.4); color:#fca5a5; }
+    .list-count-pill.urgent-td, .list-count-pill.urgent-td.sel { background:#fef3c7; color:#b45309; }
+    html.dark .list-count-pill.urgent-td, html.dark .list-count-pill.urgent-td.sel { background:rgba(245,158,11,.25); color:#fbbf24; }
     .list-del-wrap { flex-shrink:0; position:relative; display:inline-flex; }
     .list-del-btn {
       width:20px; height:20px; display:flex; align-items:center; justify-content:center;
@@ -1346,7 +1351,7 @@ function htmlSidebar() {
            メモ
          </label>`
       : `${typeIcon}<span class="list-item-name">${esc(lst.name)}</span>
-         <span class="list-count-pill${isSel ? ' sel' : ''}" title="${isMemo ? '件数' : '未完了件数'}">${isMemo ? s.total : s.active}</span>`;
+         <span class="list-count-pill${isSel ? ' sel' : ''}${!isMemo && s.overdue > 0 ? ' urgent-ov' : (!isMemo && s.dueToday > 0 ? ' urgent-td' : '')}" title="${isMemo ? '件数' : `未完了件数${!isMemo && s.overdue > 0 ? ` (超過${s.overdue}件)` : (!isMemo && s.dueToday > 0 ? ` (今日${s.dueToday}件)` : '')}`}">${isMemo ? s.total : s.active}</span>`;
 
     return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
       <div class="list-drag-handle" draggable="${!isEditing && !('ontouchstart' in window)}">${I.grip}</div>

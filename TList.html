@@ -1209,6 +1209,8 @@ function endOfWeekYmd() {
 }
 function matchFilter(t) {
   if (taskFilter === 'all') return true;
+  // 完了済みタスクはフィルター対象外（既に対応済み）
+  if (t.completed) return false;
   const td = today();
   if (taskFilter === 'week') {
     if (!t.dueDate) return false;
@@ -1239,10 +1241,12 @@ function applyTaskFilter(list) {
       if (p) keepMainIds.add(p.id);
     }
   });
-  return list.filter(t =>
-    (!t.parentId && keepMainIds.has(t.id)) ||
-    (t.parentId && keepMainIds.has(t.parentId))
-  );
+  // フィルター中は完了済みタスクを非表示にする（メイン/サブ問わず）
+  return list.filter(t => {
+    if (t.completed) return false;
+    return (!t.parentId && keepMainIds.has(t.id)) ||
+      (t.parentId && keepMainIds.has(t.parentId));
+  });
 }
 
 // 描画用：表示順を「メイン→そのサブ群」と並べる

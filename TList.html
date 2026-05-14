@@ -638,6 +638,8 @@
       transition:background .15s,opacity .15s; cursor:grab;
     }
     .trash-item:last-child { border-bottom:none; }
+    .trash-item.is-sub { padding-left:28px; }
+    .trash-item:has(+ .trash-item.is-sub) { border-bottom:none; }
     .trash-item:hover { background:var(--item-hover); }
     .trash-item.dragging { opacity:.4; }
     .trash-item-text {
@@ -1557,9 +1559,26 @@ function htmlMain() {
       }</ul>` : ''}
     </div>` : '';
 
-  const titems = ct.length === 0
-    ? `<li class="trash-empty">ゴミ箱は空です</li>`
-    : ct.map(t => `<li class="trash-item" data-id="${t.id}" draggable="${!hasTouch}">
+  // ゴミ箱内も「メイン → そのpaired サブ群」の順に並べ替えて表示
+  const arrangedTrash = (() => {
+    if (ct.length === 0) return [];
+    const result = [];
+    const used = new Set();
+    // ペアの親（メイン）を見つけてそのサブを直下にまとめる
+    ct.forEach(t => {
+      if (t._trashedWithParent || t.parentId) return; // サブ系は後で処理
+      result.push(t); used.add(t.id);
+      ct.forEach(s => {
+        if (s._trashedWithParent === t.id) { result.push(s); used.add(s.id); }
+      });
+    });
+    // 親不在の単体サブ（_trashedWithParentなし or 親が ゴミ箱外）も末尾に
+    ct.forEach(t => { if (!used.has(t.id)) { result.push(t); used.add(t.id); } });
+    return result;
+  })();
+  const trashRenderItem = t => {
+    const isSubLike = !!(t._trashedWithParent || t.parentId);
+    return `<li class="trash-item${isSubLike ? ' is-sub' : ''}" data-id="${t.id}" draggable="${!hasTouch}">
         <span class="trash-item-text${t.completed?' was-done':''}">${esc(t.text).replace(/\n/g,'<br>')}</span>
         <div class="trash-actions">
           <button class="restore-btn" data-a="restore" data-id="${t.id}">${I.restore}復元</button>
@@ -1568,7 +1587,11 @@ function htmlMain() {
             <span class="tip">削除</span>
           </div>
         </div>
-      </li>`).join('');
+      </li>`;
+  };
+  const titems = ct.length === 0
+    ? `<li class="trash-empty">ゴミ箱は空です</li>`
+    : arrangedTrash.map(trashRenderItem).join('');
 
   const trashPanel = showTrash ? `<div class="trash-panel" id="trash-panel">
     <div class="trash-header">
@@ -1934,6 +1957,10 @@ function restoreFromTrash(id, asCompleted) {
     const pairedSubs = trash.filter(x => x._trashedWithParent === item.id);
     trash = trash.filter(x => x._trashedWithParent !== item.id);
     pairedSubs.forEach(s => { delete s._trashedWithParent; todos.push(s); });
+  } else {
+    // サブ単体を復元する場合、元の親が todos に存在しなければメイン化して戻す
+    const parentExists = todos.some(x => x.id === item.parentId && !x.parentId && x.listId === item.listId);
+    if (!parentExists) item.parentId = undefined;
   }
   delete item._trashedWithParent;
   todos.push(item); save(); render();

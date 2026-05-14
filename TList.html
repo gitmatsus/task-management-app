@@ -1400,7 +1400,8 @@ function htmlMain() {
   // メモリストは分割せず、そのまま表示。それ以外はアクティブ/完了に分割。
   let activeList, completedList, completedMainCount;
   if (isMemoList) {
-    activeList = currentTodos();
+    // arrangeForRender でサブを親の下にグループ化 + 折りたたみ反映
+    activeList = arrangeForRender(currentTodos());
     completedList = [];
     completedMainCount = 0;
   } else {

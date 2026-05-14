@@ -1087,6 +1087,19 @@ function load() {
       t.parentId = undefined;
     }
   });
+  // 過去の復元バグで todos に重複した可能性のあるエントリを排除（id 重複は最初の1件のみ残す）
+  {
+    const seen = new Set();
+    todos = todos.filter(t => seen.has(t.id) ? false : (seen.add(t.id), true));
+  }
+  // 過去の復元バグで ゴミ箱に残った "親不在の paired サブ" を除去
+  {
+    const trashIds = new Set(trash.map(t => t.id));
+    trash = trash.filter(t => {
+      if (!t._trashedWithParent) return true;
+      return trashIds.has(t._trashedWithParent);
+    });
+  }
   // 全データ読み込み後に選択リストを復元
   const savedListId = localStorage.getItem('todo-app-selected-list');
   selectedListId = (savedListId && lists.find(l => l.id === savedListId))
@@ -1917,9 +1930,10 @@ function restoreFromTrash(id, asCompleted) {
   if (asCompleted !== undefined) item.completed = asCompleted;
   // メインなら、_trashedWithParent でペアにされたサブも復元
   if (!item.parentId) {
+    // ★ 先にフィルターでサブをゴミ箱から取り出してから property を削除（順序重要）
     const pairedSubs = trash.filter(x => x._trashedWithParent === item.id);
-    pairedSubs.forEach(s => { delete s._trashedWithParent; todos.push(s); });
     trash = trash.filter(x => x._trashedWithParent !== item.id);
+    pairedSubs.forEach(s => { delete s._trashedWithParent; todos.push(s); });
   }
   delete item._trashedWithParent;
   todos.push(item); save(); render();

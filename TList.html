@@ -210,13 +210,15 @@
       cursor:default;
     }
     .list-count-pill.sel { background:var(--sidebar-act-pill-bg); color:var(--sidebar-act-pill-text); }
-    /* 緊急度カラー: 超過=赤、今日=黄、今週中=緑（選択中も上書き） */
+    /* 緊急度カラー: 超過=赤、今日=黄、今週中=緑、来週以降=水色（選択中も上書き） */
     .list-count-pill.urgent-ov, .list-count-pill.urgent-ov.sel { background:#fecaca; color:#b91c1c; }
     html.dark .list-count-pill.urgent-ov, html.dark .list-count-pill.urgent-ov.sel { background:rgba(239,68,68,.4); color:#fca5a5; }
     .list-count-pill.urgent-td, .list-count-pill.urgent-td.sel { background:#fef3c7; color:#b45309; }
     html.dark .list-count-pill.urgent-td, html.dark .list-count-pill.urgent-td.sel { background:rgba(245,158,11,.25); color:#fbbf24; }
     .list-count-pill.urgent-fu, .list-count-pill.urgent-fu.sel { background:#d1fae5; color:#059669; }
     html.dark .list-count-pill.urgent-fu, html.dark .list-count-pill.urgent-fu.sel { background:rgba(16,185,129,.25); color:#34d399; }
+    .list-count-pill.urgent-far, .list-count-pill.urgent-far.sel { background:#e0f2fe; color:#0369a1; }
+    html.dark .list-count-pill.urgent-far, html.dark .list-count-pill.urgent-far.sel { background:rgba(14,165,233,.22); color:#7dd3fc; }
     .list-del-wrap { flex-shrink:0; position:relative; display:inline-flex; }
     .list-del-btn {
       width:20px; height:20px; display:flex; align-items:center; justify-content:center;
@@ -338,11 +340,13 @@
     .dot-ov  { background:#fecaca; color:#b91c1c; }
     .dot-td  { background:#fef3c7; color:#d97706; }
     .dot-fu  { background:#d1fae5; color:#059669; }
+    .dot-far { background:#e0f2fe; color:#0369a1; }
     .dot-nd  { background:#e2e8f0; color:#64748b; }
     .dot-dn  { background:#6366f1; color:#fff; }
     html.dark .dot-ov { background:rgba(239,68,68,.4);   color:#fca5a5; }
     html.dark .dot-td { background:rgba(245,158,11,.25);  color:#fbbf24; }
     html.dark .dot-fu { background:rgba(16,185,129,.25);  color:#34d399; }
+    html.dark .dot-far{ background:rgba(14,165,233,.22); color:#7dd3fc; }
     html.dark .dot-nd { background:#334155;               color:#94a3b8; }
     html.dark .dot-dn { background:#4f46e5;               color:#fff; }
 
@@ -363,10 +367,12 @@
     .sub-toggle-placeholder { width:18px; flex-shrink:0; padding:0 2px; }
     .todo-item.drop-as-sub { box-shadow:inset 0 0 0 2px #6366f1; background:rgba(99,102,241,.06); }
     html.dark .todo-item.drop-as-sub { background:rgba(99,102,241,.15); }
-    .due-badge.start-fu { background:#e0e7ff; color:#4338ca; }
-    html.dark .due-badge.start-fu { background:rgba(99,102,241,.25); color:#a5b4fc; }
+    .due-badge.start-fu { background:#e0f2fe; color:#0369a1; }
+    html.dark .due-badge.start-fu { background:rgba(14,165,233,.22); color:#7dd3fc; }
     .due-badge.start-td { background:#fef3c7; color:#d97706; }
     html.dark .due-badge.start-td { background:rgba(245,158,11,.25); color:#fbbf24; }
+    .due-badge.start-past { background:#f1f5f9; color:#64748b; }
+    html.dark .due-badge.start-past { background:#334155; color:#94a3b8; }
     .completed-time { font-size:10px; color:var(--t3); margin-top:2px; display:block; line-height:1; }
     .text-wrap-inner { display:flex; flex-direction:column; min-width:0; flex:1; }
     .edit-date-label { font-size:10px; color:var(--t3); margin-right:4px; }
@@ -461,12 +467,14 @@
       padding:2px 6px; border-radius:6px; font-size:10px; font-weight:600; white-space:nowrap;
     }
     .due-badge svg { width:10px; height:10px; flex-shrink:0; }
-    .due-ov { background:#fecaca; color:#b91c1c; }
-    .due-td { background:#fef3c7; color:#f59e0b; }
-    .due-fu { background:#d1fae5; color:#10b981; }
-    html.dark .due-ov { background:rgba(239,68,68,.4);   color:#fca5a5; }
-    html.dark .due-td { background:rgba(245,158,11,.25);  color:#f59e0b; }
-    html.dark .due-fu { background:rgba(16,185,129,.25);  color:#10b981; }
+    .due-ov  { background:#fecaca; color:#b91c1c; }
+    .due-td  { background:#fef3c7; color:#f59e0b; }
+    .due-fu  { background:#d1fae5; color:#10b981; }
+    .due-far { background:#e0f2fe; color:#0369a1; }
+    html.dark .due-ov  { background:rgba(239,68,68,.4);   color:#fca5a5; }
+    html.dark .due-td  { background:rgba(245,158,11,.25); color:#f59e0b; }
+    html.dark .due-fu  { background:rgba(16,185,129,.25); color:#10b981; }
+    html.dark .due-far { background:rgba(14,165,233,.22); color:#7dd3fc; }
     .item-del { display:flex; align-items:center; padding:12px 8px 12px 0; flex-shrink:0; }
     .item-del button {
       width:28px; height:28px; display:flex; align-items:center; justify-content:center;
@@ -1173,7 +1181,7 @@ function listStats(lid) {
     overdue:  active.filter(x => x.dueDate && x.dueDate < t).length,
     dueToday: active.filter(x => x.dueDate === t).length,
     dueWeek:  active.filter(x => x.dueDate && x.dueDate > t && x.dueDate <= weekEnd).length,
-    future:   active.filter(x => x.dueDate && x.dueDate > t).length,
+    weekPlus: active.filter(x => x.dueDate && x.dueDate > weekEnd).length,
     noDate:   active.filter(x => !x.dueDate).length,
   };
 }
@@ -1309,25 +1317,25 @@ const I = {
 
 // ── Due badge HTML ─────────────────────────────────────
 function dueBadge(d) {
-  const t = today(), tm = tomorrow();
-  const ov = d < t, td = d === t, tmr = d === tm;
+  const t = today(), tm = tomorrow(), we = endOfWeekYmd();
+  const ov = d < t, td = d === t, tmr = d === tm, far = d > we;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
-  const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
+  const cls = ov ? 'due-ov' : td ? 'due-td' : far ? 'due-far' : 'due-fu';
   return `<span class="due-badge ${cls}">${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
 }
 function startBadge(d) {
   const t = today(), tm = tomorrow();
-  const td = d === t, tmr = d === tm;
+  const past = d < t, td = d === t, tmr = d === tm;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
-  const cls = td ? 'start-td' : 'start-fu';
+  const cls = past ? 'start-past' : td ? 'start-td' : 'start-fu';
   return `<span class="due-badge ${cls}">${I.play}${lbl}</span>`;
 }
 function sameDayBadge(d) {
   // 開始日と終了日が同じ日の場合の統合バッジ（▶📅 両方のアイコン表示）
-  const t = today(), tm = tomorrow();
-  const ov = d < t, td = d === t, tmr = d === tm;
+  const t = today(), tm = tomorrow(), we = endOfWeekYmd();
+  const ov = d < t, td = d === t, tmr = d === tm, far = d > we;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
-  const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
+  const cls = ov ? 'due-ov' : td ? 'due-td' : far ? 'due-far' : 'due-fu';
   return `<span class="due-badge ${cls}">${I.play}${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
 }
 
@@ -1337,22 +1345,24 @@ function htmlSidebar() {
     const isSel     = lst.id === selectedListId;
     const isEditing = editingListId === lst.id;
     const s         = listStats(lst.id);
-    const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.future > 0 || s.noDate > 0 || s.done > 0;
+    const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.dueWeek > 0 || s.weekPlus > 0 || s.noDate > 0 || s.done > 0;
 
     const isMemo = lst.type === 'memo';
     const dots = (!isMemo && showListStats && hasDots) ? `<div class="dot-badges sidebar-dots">
-      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`   : ''}
-      ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>` : ''}
-      ${s.future   > 0 ? `<span class="dot dot-fu">${s.future}</span>`   : ''}
-      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`     : ''}
-      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`             : ''}
+      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`     : ''}
+      ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>`   : ''}
+      ${s.dueWeek  > 0 ? `<span class="dot dot-fu">${s.dueWeek}</span>`     : ''}
+      ${s.weekPlus > 0 ? `<span class="dot dot-far">${s.weekPlus}</span>`   : ''}
+      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`       : ''}
+      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`               : ''}
     </div>` : '';
     const tier = isMemo
       ? { cls:'', n:s.total,    title:'件数' }
-      : s.overdue  > 0 ? { cls:'urgent-ov', n:s.overdue,  title:`超過${s.overdue}件` }
-      : s.dueToday > 0 ? { cls:'urgent-td', n:s.dueToday, title:`今日${s.dueToday}件` }
-      : s.dueWeek  > 0 ? { cls:'urgent-fu', n:s.dueWeek,  title:`今週中${s.dueWeek}件` }
-      :                  { cls:'',          n:s.active,   title:`未完了${s.active}件` };
+      : s.overdue  > 0 ? { cls:'urgent-ov',  n:s.overdue,  title:`超過${s.overdue}件` }
+      : s.dueToday > 0 ? { cls:'urgent-td',  n:s.dueToday, title:`今日${s.dueToday}件` }
+      : s.dueWeek  > 0 ? { cls:'urgent-fu',  n:s.dueWeek,  title:`今週中${s.dueWeek}件` }
+      : s.weekPlus > 0 ? { cls:'urgent-far', n:s.weekPlus, title:`来週以降${s.weekPlus}件` }
+      :                  { cls:'',           n:s.active,   title:`未完了${s.active}件` };
     const pillCls = `list-count-pill${isSel ? ' sel' : ''}${tier.cls ? ' ' + tier.cls : ''}`;
     const typeIcon = `<span class="list-type-icon${isMemo ? ' memo-type' : ''}">${isMemo ? I.notepad : I.clip}</span>`;
     const nameRow = isEditing
@@ -1551,10 +1561,7 @@ function htmlMain() {
           } else {
             if (t.dueDate) badge = `<div class="due-wrap">${dueBadge(t.dueDate)}</div>`;
             if (t.startDate) {
-              const td = today();
-              if (t.startDate >= td) {
-                startBadgeHtml = `<div class="due-wrap">${startBadge(t.startDate)}</div>`;
-              }
+              startBadgeHtml = `<div class="due-wrap">${startBadge(t.startDate)}</div>`;
             }
           }
         }

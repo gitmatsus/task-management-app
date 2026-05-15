@@ -395,13 +395,37 @@
     .completed-section-caret svg { width:14px; height:14px; }
     .completed-section-label { flex:1; }
     .completed-list { padding-top:0; }
+
+    /* ── サブ完了トグル（親のサブグループ内） ── */
+    .sub-done-header {
+      display:flex; align-items:center; gap:6px;
+      padding:6px 20px 6px 32px;
+      cursor:pointer;
+      color:var(--t3);
+      font-size:12px;
+      font-weight:600;
+      background:transparent;
+      transition:background .15s;
+      list-style:none;
+      user-select:none;
+      border-bottom:1px solid var(--item-border);
+    }
+    /* 展開時（直下が完了サブ）と末尾は下線を消す */
+    .sub-done-header:has(+ .todo-item.is-sub),
+    .sub-done-header:last-child { border-bottom:none; }
+    .sub-done-header:hover { background:var(--filter-bg); color:var(--t1); }
+    .sub-done-caret { display:inline-flex; width:12px; height:12px; transition:transform .2s; color:var(--t3); }
+    .sub-done-caret.open { transform:rotate(90deg); }
+    .sub-done-caret svg { width:12px; height:12px; }
+    .sub-done-label { flex:1; }
     .todo-item {
       display:flex; align-items:stretch; border-bottom:1px solid var(--item-border);
       border-radius:8px; transition:background .15s,opacity .15s; cursor:text; position:relative;
     }
     .todo-item:last-child { border-bottom:none; }
-    /* メインとサブの間、サブとサブの間は線を消す（直後がサブなら線なし） */
-    .todo-item:has(+ .todo-item.is-sub) { border-bottom:none; }
+    /* メインとサブの間、サブとサブの間、サブと完了トグルの間は線を消す */
+    .todo-item:has(+ .todo-item.is-sub),
+    .todo-item:has(+ .sub-done-header) { border-bottom:none; }
     .todo-item:hover:not(.drag-over) { background:var(--item-hover); }
     .todo-item.drag-over { background:rgba(99,102,241,.07); }
     html.dark .todo-item.drag-over { background:rgba(99,102,241,.15); }
@@ -1107,6 +1131,7 @@ let subInputParentId = null; // サブタスク入力モード時の親タスク
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let editStartDate = '';
 let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
+let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
 let dragSubZoneTargetId = null; // ドラッグ中のサブ化候補ターゲットID
 
 // ── Persistence ────────────────────────────────────────
@@ -1276,6 +1301,7 @@ function applyTaskFilter(list) {
 }
 
 // 描画用：表示順を「メイン→そのサブ群」と並べる
+// active セクション内では「未完了サブ → 完了トグル → 完了サブ（展開時のみ）」の順
 function arrangeForRender(visibleList) {
   const visibleIds = new Set(visibleList.map(x => x.id));
   const cur = currentTodos();
@@ -1286,10 +1312,26 @@ function arrangeForRender(visibleList) {
     if (!visibleIds.has(t.id)) return;
     result.push(t);
     if (collapsedIds.has(t.id)) return;
-    // そのメインのサブを元順で
+    // この親の可視サブを元順で抽出
+    const visibleSubs = [];
     cur.forEach(s => {
-      if (s.parentId === t.id && visibleIds.has(s.id)) result.push(s);
+      if (s.parentId === t.id && visibleIds.has(s.id)) visibleSubs.push(s);
     });
+    // 完了セクション側（親完了 AND 全サブ完了）はそのまま並べる
+    const isActiveContext = !t.completed || visibleSubs.some(s => !s.completed);
+    if (!isActiveContext) {
+      visibleSubs.forEach(s => result.push(s));
+    } else {
+      // 未完了サブを先に、完了サブはトグルの下にまとめる
+      const activeSubs = visibleSubs.filter(s => !s.completed);
+      const doneSubs   = visibleSubs.filter(s => s.completed);
+      activeSubs.forEach(s => result.push(s));
+      if (doneSubs.length > 0) {
+        const expanded = expandedDoneSubs.has(t.id);
+        result.push({ _doneSubsHeader: true, parentId: t.id, doneCount: doneSubs.length, expanded });
+        if (expanded) doneSubs.forEach(s => result.push(s));
+      }
+    }
   });
   // 親が現在リストに存在しない孤児サブ（保険）
   cur.forEach(t => {
@@ -1501,6 +1543,13 @@ function htmlMain() {
 
   const chevronRight = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`;
   const renderItem = t => {
+        // 完了サブのトグル行マーカー
+        if (t._doneSubsHeader) {
+          return `<li class="sub-done-header${t.expanded ? ' expanded' : ''}" data-a="toggle-done-subs" data-id="${t.parentId}">
+            <span class="sub-done-caret${t.expanded ? ' open' : ''}">${chevronRight}</span>
+            <span class="sub-done-label">完了 (${t.doneCount}件)</span>
+          </li>`;
+        }
         const editing = editId === t.id;
         const isSub = !!t.parentId;
         const hasSub = !isSub && hasSubs(t.id);
@@ -2433,6 +2482,11 @@ document.addEventListener('click', e => {
     case 'toggle-collapse': {
       e.stopPropagation();
       if (collapsedIds.has(id)) collapsedIds.delete(id); else collapsedIds.add(id);
+      render(); break;
+    }
+    case 'toggle-done-subs': {
+      e.stopPropagation();
+      if (expandedDoneSubs.has(id)) expandedDoneSubs.delete(id); else expandedDoneSubs.add(id);
       render(); break;
     }
     case 'promote-to-main': promoteSubToMain(id); break;

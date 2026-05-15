@@ -1199,7 +1199,15 @@ function splitGroupsByCompletion() {
   const activeMainIds = new Set();
   const completedMainIds = new Set();
   lst.forEach(t => {
-    if (!t.parentId) (t.completed ? completedMainIds : activeMainIds).add(t.id);
+    if (!t.parentId) {
+      // 親が完了でも未完了サブが残っていれば active グループに留める
+      const hasIncompleteSubs = lst.some(s => s.parentId === t.id && !s.completed);
+      if (t.completed && !hasIncompleteSubs) {
+        completedMainIds.add(t.id);
+      } else {
+        activeMainIds.add(t.id);
+      }
+    }
   });
   const active = [];
   const completed = [];
@@ -1259,10 +1267,11 @@ function applyTaskFilter(list) {
     }
   });
   // フィルター中は完了済みタスクを非表示にする（メイン/サブ問わず）
+  // サブは「親が残る」だけでなく「サブ自身もマッチする」ことを必須にする
   return list.filter(t => {
     if (t.completed) return false;
-    return (!t.parentId && keepMainIds.has(t.id)) ||
-      (t.parentId && keepMainIds.has(t.parentId));
+    if (!t.parentId) return keepMainIds.has(t.id);
+    return keepMainIds.has(t.parentId) && matchFilter(t);
   });
 }
 

@@ -373,6 +373,14 @@
     html.dark .due-badge.start-td { background:rgba(245,158,11,.25); color:#fbbf24; }
     .due-badge.start-past { background:#f1f5f9; color:#64748b; }
     html.dark .due-badge.start-past { background:#334155; color:#94a3b8; }
+    .due-badge.recurrence-badge { background:#f1f5f9; color:#64748b; }
+    html.dark .due-badge.recurrence-badge { background:#334155; color:#94a3b8; }
+    .edit-recurrence {
+      font-size:12px; padding:3px 8px; border-radius:8px;
+      border:1px solid var(--input-border); background:var(--card); color:var(--t1);
+      cursor:pointer; outline:none; font-family:inherit;
+    }
+    .edit-recurrence:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
     .completed-time { font-size:10px; color:var(--t3); margin-top:2px; display:block; line-height:1; }
     .text-wrap-inner { display:flex; flex-direction:column; min-width:0; flex:1; }
     .edit-date-label { font-size:10px; color:var(--t3); margin-right:4px; }
@@ -1111,7 +1119,7 @@
 let todos = [], trash = [], lists = [], selectedListId = '';
 let showTrash = false;
 let showCompletedSection = false; // 完了セクションの開閉（セッション単位）
-let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', editLinkType = 'folder', skipFocusRestore = false;
+let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', editLinkType = 'folder', editRecurrence = {}, skipFocusRestore = false;
 let memoPopupId = null, memoPopupPos = null;
 let editingListId = null, editingListName = '', editingListType = 'todo';
 let addingList = false, newListName = '';
@@ -1159,6 +1167,10 @@ function load() {
     const seen = new Set();
     todos = todos.filter(t => seen.has(t.id) ? false : (seen.add(t.id), true));
   }
+  // 旧形式の繰り返しフィールド（文字列）はクリア（新形式はオブジェクト）
+  todos.forEach(t => {
+    if (t.recurrence && typeof t.recurrence !== 'object') t.recurrence = undefined;
+  });
   // 過去の復元バグで ゴミ箱に残った "親不在の paired サブ" を除去
   {
     const trashIds = new Set(trash.map(t => t.id));
@@ -1184,6 +1196,89 @@ function save() {
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const today    = () => ymd(new Date());
 const tomorrow = () => ymd(new Date(Date.now() + 86400000));
+
+// ── 繰り返し関連ヘルパー ─────────────────────────────────
+function addDaysYmd(yyyymmdd, n) {
+  const [y, m, d] = yyyymmdd.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + n);
+  return ymd(date);
+}
+// 指定の年月（1-12）と日（1-31 or 'last'）から YMD 文字列を作る。
+// 月オーバーフローは年に繰り上げ、'last' および月末超過は当月末に丸める。
+function monthlyDateFor(year, month, day) {
+  let y = year, m = month;
+  while (m > 12) { y += 1; m -= 12; }
+  while (m < 1)  { y -= 1; m += 12; }
+  const lastDay = new Date(y, m, 0).getDate();
+  const d = (day === 'last' || day > lastDay) ? lastDay : day;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+// 繰り返し設定から「今日以降の最初の発生日」を返す
+function computeFirstDueDate(recurrence, now) {
+  now = now || new Date();
+  const todayStr = ymd(now);
+  if (recurrence.type === 'daily')  return todayStr;
+  if (recurrence.type === 'weekly') {
+    const diff = ((recurrence.weekday ?? 1) - now.getDay() + 7) % 7;
+    return addDaysYmd(todayStr, diff);
+  }
+  if (recurrence.type === 'monthly') {
+    const thisMonth = monthlyDateFor(now.getFullYear(), now.getMonth() + 1, recurrence.day);
+    if (thisMonth >= todayStr) return thisMonth;
+    return monthlyDateFor(now.getFullYear(), now.getMonth() + 2, recurrence.day);
+  }
+  return todayStr;
+}
+// 既存の dueDate から「次の発生日（今日以降まで進める）」を返す
+function advanceRecurrenceDate(recurrence, fromYmd, now) {
+  now = now || new Date();
+  const todayStr = ymd(now);
+  let d = fromYmd;
+  let safety = 1000;
+  do {
+    if (recurrence.type === 'daily')       d = addDaysYmd(d, 1);
+    else if (recurrence.type === 'weekly') d = addDaysYmd(d, 7);
+    else if (recurrence.type === 'monthly') {
+      const [y, m] = d.split('-').map(Number);
+      d = monthlyDateFor(y, m + 1, recurrence.day);
+    } else break;
+    if (--safety <= 0) break;
+  } while (d < todayStr);
+  return d;
+}
+function isoWeekKey(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+}
+function getPeriodKey(date, recurrence) {
+  if (recurrence.type === 'daily')   return ymd(date);
+  if (recurrence.type === 'monthly') return ymd(date).slice(0, 7);
+  if (recurrence.type === 'weekly')  return isoWeekKey(date);
+  return null;
+}
+// 繰り返しタスクの周期境界をまたいだものを未完了に戻し、dueDate を次回発生日に進める
+function applyRecurringResets() {
+  const now = new Date();
+  let changed = false;
+  todos.forEach(t => {
+    if (!t.recurrence?.type || !t.completed || !t.completedAt) return;
+    const cKey = getPeriodKey(new Date(t.completedAt), t.recurrence);
+    const nKey = getPeriodKey(now, t.recurrence);
+    if (cKey && nKey && cKey !== nKey) {
+      t.completed = false;
+      t.completedAt = undefined;
+      if (t.dueDate) t.dueDate = advanceRecurrenceDate(t.recurrence, t.dueDate, now);
+      changed = true;
+    }
+  });
+  if (changed) save();
+  return changed;
+}
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function isMobile() {
@@ -1563,7 +1658,7 @@ function htmlMain() {
               <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="${editLinkType === 'url' ? 'https://example.com' : 'フォルダパス（例: C:\\\\Users\\\\...）'}" value="${esc(editFolderPath)}" autocomplete="off">
               ${editFolderPath ? `<button class="edit-folder-clr" data-a="clr-folder" title="クリア">${I.x}</button>` : ''}
             </div>
-            <div class="edit-actions-row1">
+            ${!editRecurrence?.type ? `<div class="edit-actions-row1">
               <span class="edit-date-label">開始</span>
               ${editStartDate
                 ? `<div class="edit-date-wrap">
@@ -1588,6 +1683,29 @@ function htmlMain() {
                      <input id="ei-date" class="edit-date" type="date" value="">
                    </div>`
               }
+            </div>` : ''}
+            <div class="edit-actions-row1">
+              <span class="edit-date-label">繰り返し</span>
+              <select id="ei-recurrence-type" class="edit-recurrence">
+                <option value=""        ${!editRecurrence?.type            ? 'selected' : ''}>なし</option>
+                <option value="daily"   ${editRecurrence?.type === 'daily'   ? 'selected' : ''}>毎日</option>
+                <option value="weekly"  ${editRecurrence?.type === 'weekly'  ? 'selected' : ''}>毎週</option>
+                <option value="monthly" ${editRecurrence?.type === 'monthly' ? 'selected' : ''}>毎月</option>
+              </select>
+              ${editRecurrence?.type === 'weekly' ? `
+                <select id="ei-recurrence-weekday" class="edit-recurrence">
+                  ${[0,1,2,3,4,5,6].map(d => {
+                    const lbl = ['日','月','火','水','木','金','土'][d];
+                    return `<option value="${d}" ${editRecurrence.weekday === d ? 'selected' : ''}>${lbl}曜</option>`;
+                  }).join('')}
+                </select>` : ''}
+              ${editRecurrence?.type === 'monthly' ? `
+                <select id="ei-recurrence-day" class="edit-recurrence">
+                  ${Array.from({length:30}, (_, i) => i + 1).map(d =>
+                    `<option value="${d}" ${editRecurrence.day === d ? 'selected' : ''}>${d}日</option>`
+                  ).join('')}
+                  <option value="last" ${editRecurrence.day === 'last' ? 'selected' : ''}>末日</option>
+                </select>` : ''}
             </div>
             <div class="edit-actions-row2">
               <button class="edit-cancel" data-a="cancel">キャンセル</button>
@@ -1623,6 +1741,16 @@ function htmlMain() {
             }
           }
         }
+        const recLbl = (() => {
+          if (!t.recurrence?.type) return '';
+          if (t.recurrence.type === 'daily')   return '毎日';
+          if (t.recurrence.type === 'weekly')  return '毎週' + ['日','月','火','水','木','金','土'][t.recurrence.weekday ?? 1];
+          if (t.recurrence.type === 'monthly') return '毎月' + (t.recurrence.day === 'last' ? '末日' : (t.recurrence.day ?? 1) + '日');
+          return '';
+        })();
+        const recurrenceBadgeHtml = (recLbl && !editing)
+          ? `<div class="due-wrap"><span class="due-badge recurrence-badge" title="繰り返し: ${recLbl}">🔁 ${recLbl}</span></div>`
+          : '';
 
         const togglePart = hasSub
           ? `<button class="sub-toggle${expanded ? ' expanded' : ''}" data-a="toggle-collapse" data-id="${t.id}" title="${expanded ? '折りたたむ' : '展開する'}">${chevronRight}</button>`
@@ -1637,6 +1765,7 @@ function htmlMain() {
           ${t.folderPath && !editing && (t.linkType === 'url' || !hasTouch) ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
           ${!isSub && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
           ${startBadgeHtml}
+          ${recurrenceBadgeHtml}
           ${badge}
           ${(t.completed || isMemoList) ? `<div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>` : ''}
         </li>`;
@@ -1961,6 +2090,7 @@ function html() {
 
 // ── Render ─────────────────────────────────────────────
 function render() {
+  applyRecurringResets();
   const sy = window.scrollY;
   document.getElementById('app').innerHTML = html();
   window.scrollTo(0, sy);
@@ -2054,16 +2184,35 @@ function startEdit(id) {
   if (!t) return;
   const selList = lists.find(l => l.id === t.listId);
   if (t.completed && selList?.type !== 'memo') return;
-  editId = id; editText = t.text; editDue = t.dueDate || ''; editStartDate = t.startDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || '';
+  editId = id; editText = t.text; editDue = t.dueDate || ''; editStartDate = t.startDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || ''; editRecurrence = (t.recurrence && typeof t.recurrence === 'object') ? { ...t.recurrence } : {};
   memoPopupId = null; memoPopupPos = null;
   render();
 }
-function resetEditState() { editId = null; editText = ''; editDue = ''; editStartDate = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; }
+function resetEditState() { editId = null; editText = ''; editDue = ''; editStartDate = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; editRecurrence = {}; }
 function commitEdit() {
   const text = editText.trim();
   if (text && editId) {
     const t = todos.find(x => x.id === editId);
-    if (t) { t.text = text; t.dueDate = editDue || undefined; t.startDate = editStartDate || undefined; t.folderPath = editFolderPath.trim() || undefined; t.linkType = editFolderPath.trim() ? editLinkType : undefined; t.detail = editDetail.trim() || undefined; }
+    if (t) {
+      t.text = text;
+      t.folderPath = editFolderPath.trim() || undefined;
+      t.linkType = editFolderPath.trim() ? editLinkType : undefined;
+      t.detail = editDetail.trim() || undefined;
+      if (editRecurrence?.type) {
+        // 繰り返し ON: dueDate を自動計算、startDate はクリア
+        const rec = { type: editRecurrence.type };
+        if (rec.type === 'weekly')  rec.weekday = editRecurrence.weekday ?? 1;
+        if (rec.type === 'monthly') rec.day     = editRecurrence.day     ?? 1;
+        t.recurrence = rec;
+        t.dueDate = computeFirstDueDate(rec);
+        t.startDate = undefined;
+      } else {
+        // 繰り返し OFF: 通常の編集
+        t.recurrence = undefined;
+        t.dueDate    = editDue       || undefined;
+        t.startDate  = editStartDate || undefined;
+      }
+    }
     save();
   }
   resetEditState(); render();
@@ -2730,6 +2879,25 @@ document.addEventListener('change', e => {
     const val = e.target.value;
     editStartDate = val;
     if (!val || !isIOS) { skipFocusRestore = true; render(); }
+  }
+  if (e.target.id === 'ei-recurrence-type') {
+    const v = e.target.value;
+    if (v) {
+      editRecurrence = { type: v };
+      if (v === 'weekly')  editRecurrence.weekday = 1; // デフォルト月曜
+      if (v === 'monthly') editRecurrence.day     = 1; // デフォルト1日
+    } else {
+      editRecurrence = {};
+    }
+    skipFocusRestore = true;
+    render();
+  }
+  if (e.target.id === 'ei-recurrence-weekday') {
+    editRecurrence.weekday = parseInt(e.target.value, 10);
+  }
+  if (e.target.id === 'ei-recurrence-day') {
+    const v = e.target.value;
+    editRecurrence.day = v === 'last' ? 'last' : parseInt(v, 10);
   }
 });
 

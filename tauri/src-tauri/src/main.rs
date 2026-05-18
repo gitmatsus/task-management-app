@@ -51,7 +51,7 @@ fn set_taskbar_badge(window: tauri::WebviewWindow, count: u32) -> Result<(), Str
     let hwnd = HWND(hwnd_raw.0 as *mut std::ffi::c_void);
 
     unsafe {
-        // COM 初期化（既に初期化済みなら無害なエラー）
+        // COM 初期化（既に別モードで初期化済みなら S_FALSE が返るが問題なし）
         let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
 
         let taskbar: ITaskbarList3 = CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
@@ -71,8 +71,7 @@ fn set_taskbar_badge(window: tauri::WebviewWindow, count: u32) -> Result<(), Str
             taskbar
                 .SetOverlayIcon(hwnd, hicon, PCWSTR::from_raw(desc.as_ptr()))
                 .map_err(|e| format!("SetOverlayIcon failed: {}", e))?;
-            // SetOverlayIcon は内部でアイコンを参照保持するので、ここでは破棄しない
-            // （次回 SetOverlayIcon で置き換わるか、ウインドウ破棄時に OS が解放）
+            // SetOverlayIcon は内部でアイコンの参照を保持するため、ここでは破棄しない
         }
     }
     Ok(())
@@ -86,8 +85,10 @@ fn set_taskbar_badge(_count: u32) -> Result<(), String> {
 }
 
 // ── HICON 動的生成 ────────────────────────────────────────────
-// 32x32 の赤い背景に白い数字を描いたアイコンを返す。
-// 表示テキスト: count <=9 で1桁、<=99 で2桁、それ以上は "99+"。
+// 32x32 BGRA DIB を直接作り、赤背景に白い数字を描いたアイコンを返す。
+// ポイント: GDI の DrawText はアルファチャンネルを 0 にしてしまうため、
+// CreateCompatibleBitmap だとアイコンが完全透明になって見えない問題が起きる。
+// CreateDIBSection で生のピクセルにアクセスし、描画後にアルファ=0xFF を強制。
 #[cfg(target_os = "windows")]
 unsafe fn create_count_overlay_icon(
     count: u32,
@@ -95,11 +96,11 @@ unsafe fn create_count_overlay_icon(
     use windows::core::PCWSTR;
     use windows::Win32::Foundation::{COLORREF, RECT};
     use windows::Win32::Graphics::Gdi::{
-        CreateBitmap, CreateCompatibleBitmap, CreateCompatibleDC, CreateFontW, CreateSolidBrush,
-        DeleteDC, DeleteObject, DrawTextW, FillRect, GetDC, ReleaseDC, SelectObject, SetBkMode,
-        SetTextColor, CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET, DEFAULT_PITCH, DEFAULT_QUALITY,
-        DT_CENTER, DT_SINGLELINE, DT_VCENTER, FF_DONTCARE, FW_BOLD, OUT_DEFAULT_PRECIS,
-        TRANSPARENT,
+        CreateBitmap, CreateCompatibleDC, CreateDIBSection, CreateFontW, DeleteDC, DeleteObject,
+        DrawTextW, GetDC, ReleaseDC, SelectObject, SetBkMode, SetTextColor, BITMAPINFO,
+        BITMAPINFOHEADER, BI_RGB, CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET, DEFAULT_PITCH,
+        DEFAULT_QUALITY, DIB_RGB_COLORS, DT_CENTER, DT_SINGLELINE, DT_VCENTER, FF_DONTCARE,
+        FW_BOLD, OUT_DEFAULT_PRECIS, RGBQUAD, TRANSPARENT,
     };
     use windows::Win32::UI::WindowsAndMessaging::{CreateIconIndirect, HICON, ICONINFO};
 
@@ -110,17 +111,67 @@ unsafe fn create_count_overlay_icon(
     } else {
         count.to_string()
     };
-    // DrawTextW は &mut [u16] を取る。null 終端は不要（slice 長で渡る）
     let mut text_w: Vec<u16> = text_str.encode_utf16().collect();
 
     let hdc_screen = GetDC(None);
     let hdc_mem = CreateCompatibleDC(Some(hdc_screen));
 
-    // カラー画像（32x32, スクリーン互換 24/32bpp）
-    let hbm_color = CreateCompatibleBitmap(hdc_screen, SIZE, SIZE);
+    // 32bpp top-down BGRA DIB section（biHeight が負 = 上から下へのスキャンライン）
+    let bmi = BITMAPINFO {
+        bmiHeader: BITMAPINFOHEADER {
+            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+            biWidth: SIZE,
+            biHeight: -SIZE,
+            biPlanes: 1,
+            biBitCount: 32,
+            biCompression: BI_RGB.0,
+            biSizeImage: 0,
+            biXPelsPerMeter: 0,
+            biYPelsPerMeter: 0,
+            biClrUsed: 0,
+            biClrImportant: 0,
+        },
+        bmiColors: [RGBQUAD::default()],
+    };
+    let mut bits_ptr: *mut std::ffi::c_void = std::ptr::null_mut();
+    let hbm_color = CreateDIBSection(
+        Some(hdc_screen),
+        &bmi,
+        DIB_RGB_COLORS,
+        &mut bits_ptr,
+        None,
+        0,
+    )
+    .map_err(|e| format!("CreateDIBSection: {}", e))?;
 
-    // 1bpp マスク。全 0 = どこも不透明（背景の赤がそのまま出る）
-    // バイト数 = ((SIZE + 31) / 32) * 4 * SIZE = 4 * 32 = 128 (32x32 の場合)
+    // ピクセル配列に直接アクセス（4 byte/pixel, BGRA メモリ順）
+    // 32bit little-endian の u32 表現: 0xAARRGGBB
+    // 赤不透明 = A=0xFF, R=0xFF, G=0x00, B=0x00 = 0xFFFF0000
+    let pixel_count = (SIZE * SIZE) as usize;
+    let pixels: &mut [u32] = std::slice::from_raw_parts_mut(bits_ptr as *mut u32, pixel_count);
+
+    // 円内の判定（中心 (SIZE/2, SIZE/2), 半径 SIZE/2）
+    let r = SIZE as f32 / 2.0;
+    let r_sq = r * r;
+    let is_inside_circle = |x: i32, y: i32| -> bool {
+        let dx = x as f32 - r + 0.5;
+        let dy = y as f32 - r + 0.5;
+        dx * dx + dy * dy <= r_sq
+    };
+
+    // 初期化: 円の内側 = 赤不透明、外側 = 完全透明
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let idx = (y * SIZE + x) as usize;
+            pixels[idx] = if is_inside_circle(x, y) {
+                0xFFFF0000u32
+            } else {
+                0u32
+            };
+        }
+    }
+
+    // 1bpp マスク、全 0 = どこも不透明（カラーアルファを尊重させるため）
     let mask_stride = ((SIZE + 31) / 32) * 4;
     let mask_bytes = vec![0u8; (mask_stride * SIZE) as usize];
     let hbm_mask = CreateBitmap(
@@ -133,16 +184,11 @@ unsafe fn create_count_overlay_icon(
 
     let old_bmp = SelectObject(hdc_mem, hbm_color.into());
 
-    // 背景を赤（BGR: 0x0000FF = 純赤）で塗りつぶし
-    let red_brush = CreateSolidBrush(COLORREF(0x000000FFu32));
-    let full_rect = RECT { left: 0, top: 0, right: SIZE, bottom: SIZE };
-    FillRect(hdc_mem, &full_rect, red_brush);
-
     // フォント（数字桁数に応じてサイズ調整、太字）
     let font_h: i32 = match text_str.chars().count() {
-        1 => -24, // 1桁: 大きめ
-        2 => -18, // 2桁: 中
-        _ => -14, // "99+": 小
+        1 => -24,
+        2 => -18,
+        _ => -14,
     };
     let face_name: Vec<u16> = "Segoe UI\0".encode_utf16().collect();
     let hfont = CreateFontW(
@@ -166,7 +212,12 @@ unsafe fn create_count_overlay_icon(
     SetBkMode(hdc_mem, TRANSPARENT);
     SetTextColor(hdc_mem, COLORREF(0x00FFFFFFu32)); // 白
 
-    let mut rect = RECT { left: 0, top: 0, right: SIZE, bottom: SIZE };
+    let mut rect = RECT {
+        left: 0,
+        top: 0,
+        right: SIZE,
+        bottom: SIZE,
+    };
     DrawTextW(
         hdc_mem,
         &mut text_w,
@@ -174,15 +225,27 @@ unsafe fn create_count_overlay_icon(
         DT_CENTER | DT_VCENTER | DT_SINGLELINE,
     );
 
-    // GDI オブジェクト解放（SelectObject で戻してから DeleteObject）
+    // GDI 後始末
     SelectObject(hdc_mem, old_font);
     SelectObject(hdc_mem, old_bmp);
     let _ = DeleteObject(hfont.into());
-    let _ = DeleteObject(red_brush.into());
     let _ = DeleteDC(hdc_mem);
     ReleaseDC(None, hdc_screen);
 
-    // ICONINFO に組み立てて HICON を生成
+    // GDI 描画後の後処理:
+    // - 円の内側: アルファ 0xFF を強制（描画されたテキスト含めて不透明化）
+    // - 円の外側: 完全透明にクリア（GDI が円外にテキストを描いた場合の保険）
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let idx = (y * SIZE + x) as usize;
+            if is_inside_circle(x, y) {
+                pixels[idx] |= 0xFF000000u32;
+            } else {
+                pixels[idx] = 0u32;
+            }
+        }
+    }
+
     let icon_info = ICONINFO {
         fIcon: true.into(),
         xHotspot: 0,

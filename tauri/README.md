@@ -61,4 +61,5 @@ npm run build
 
 ## 既知の制約
 
-- **データはElectron版と別管理**: localStorageの保存先が異なるため、Electron版のデータは自動引き継ぎされない。必要なら既存の JSON エクスポート機能で移行する。
+- **データはブラウザ版と別管理**: localStorage の保存先が異なる（Tauri 側は `%APPDATA%\com.tlist.app\EBWebView\` 配下の WebView2 領域）ため、ブラウザ版のデータは自動引き継ぎされない。必要なら既存の JSON エクスポート機能で移行する。
+- 旧 Electron / Photino 対応は撤廃済み（Tauri 一本化）。

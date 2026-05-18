@@ -2667,11 +2667,7 @@ document.addEventListener('click', e => {
             .catch(() => showToast('⚠️ URLを開けませんでした'));
           break;
         }
-        // Photino環境：既定ブラウザで開く
-        if (window.external?.sendMessage) {
-          window.external.sendMessage('open-url:' + url);
-          break;
-        }
+        // Web環境：window.open で開く
         window.open(url, '_blank');
         showToast('🔗 URLを開きました');
         break;
@@ -2685,21 +2681,6 @@ document.addEventListener('click', e => {
             showToast('📋 パスをクリップボードにコピーしました');
             navigator.clipboard.writeText(ft.folderPath).catch(() => {});
           });
-        break;
-      }
-
-      // Photino環境：sendMessage経由でフォルダを開く
-      if (window.external?.sendMessage) {
-        window.external.sendMessage('open-folder:' + ft.folderPath);
-        break;
-      }
-
-      // Electron環境：直接フォルダを開く
-      if (window.electronAPI?.openFolder) {
-        window.electronAPI.openFolder(ft.folderPath).then(res => {
-          showToast(res.success ? '📁 フォルダを開きました' : '📋 パスをクリップボードにコピーしました');
-          if (!res.success) navigator.clipboard.writeText(ft.folderPath).catch(() => {});
-        });
         break;
       }
 
@@ -3248,16 +3229,6 @@ document.addEventListener('drop', e => {
 })();
 
 
-
-// ── Photino メッセージ受信 ─────────────────────────────
-if (window.external?.receiveMessage) {
-  window.external.receiveMessage((msg) => {
-    if (msg === 'folder-result:success') showToast('📁 フォルダを開きました');
-    else if (msg === 'url-result:success') showToast('🔗 URLを開きました');
-    else if (msg.startsWith('folder-result:error:')) showToast('📋 パスをクリップボードにコピーしました');
-    else if (msg.startsWith('url-result:error:')) showToast('⚠️ URLを開けませんでした');
-  });
-}
 
 // ── 右クリックメニュー ─────────────────────────────────
 document.addEventListener('contextmenu', e => {

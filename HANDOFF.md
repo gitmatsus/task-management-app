@@ -7,9 +7,9 @@
 - **公開URL**: https://gitmatsus.github.io/task-management-app/ （GitHub Pages、master 自動デプロイ）
 - **構成**: バニラJS + localStorage、外部依存なし、単一HTMLファイルで完結
 - **Web起動**: `npx serve` 等でローカルサーブ、またはファイルを直接ブラウザで開く
-- **Electron起動**: `cd electron && npm install && npm start`
 - **Tauri起動**: `cd tauri && npm install && npm run dev`（Rust要インストール）
-- **Photino起動**: `cd photino && dotnet run`（.NET 9.0 SDK要）
+
+> 旧 Electron / Photino 対応は撤廃済み（Tauri 一本化）。コミット履歴に Electron 関連が残るのは過去の経緯。
 
 ---
 
@@ -24,6 +24,7 @@ let listTrash = [], showTrash = false, showListTrash = false;
 // 編集状態
 let editId = null, editText = '', editDue = '', editStartDate = '';
 let editFolderPath = '', editLinkType = 'folder', editDetail = '', skipFocusRestore = false;
+let editRecurrence = null;                     // 編集中の繰り返し設定 or null
 let editingListId = null, editingListName = '', editingListType = 'todo';
 let addingList = false, newListName = '';
 
@@ -46,6 +47,7 @@ let showListStats = localStorage.getItem('todo-app-show-stats') !== 'false';
 let listExpanded = false;
 const LIST_COLLAPSE_LIMIT = 5;
 let collapsedIds = new Set();        // 折りたたみ中の親ID（セッション単位、非永続）
+let expandedDoneSubs = new Set();    // 「▷ 完了 (N件)」トグル展開中の親ID（セッション単位）
 let subInputParentId = null;         // サブタスク連続追加モードの親ID
 let taskFilter = 'all';              // all / week / actionable / overdue / today
 let showCompletedSection = false;    // 完了セクションの開閉
@@ -67,6 +69,11 @@ let showCompletedSection = false;    // 完了セクションの開閉
   detail?: string,        // 詳細・メモ（複数行可）
   parentId?: string,      // 値があればサブタスク。親はメイン（parentId 無し）のみ。
                           // 2階層固定（サブのサブは禁止）
+  recurrence?: {          // 繰り返し設定（あればこのタスクは繰り返しタスク）
+    type: 'daily' | 'weekly' | 'monthly',
+    weekday?: 0-6,        // type:'weekly' のとき、0=日〜6=土
+    day?: 1-31 | 'last',  // type:'monthly' のとき、'last' は月末
+  },
   _trashedWithParent?: string,  // ゴミ箱内部用: 親と一緒にゴミ箱化された際のペアID
                                  // エクスポート時は除外
 }
@@ -108,6 +115,7 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 1. 孤児サブの修復: 親が存在しない／親が別リストにある／親自身がサブの場合は `parentId` をクリア
 2. `todos` の id 重複を除去（過去の復元バグで重複した場合に最初の1件のみ残す）
 3. ゴミ箱に残った「親不在の paired サブ」を除去（過去の `_trashedWithParent` バグの残骸）
+4. `recurrence` 型チェック: `typeof t.recurrence !== 'object'` ならクリア（旧データ互換）
 
 ---
 
@@ -118,6 +126,8 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 | 機能 | 説明 |
 |------|------|
 | タスクCRUD | 追加・編集・削除・完了チェック |
+| 繰り返しタスク | 毎日/毎週X曜/毎月X日 or 月末日。完了後に周期境界を超えたら自動で未完了化＋次回 `dueDate` へ進める。`startDate` とは併用不可 |
+| サブ完了トグル | 親メイン配下に完了サブが残るとき「▷ 完了 (N件)」で折り畳み展開。親IDごとに `expandedDoneSubs` で管理（セッション単位） |
 | 2階層サブタスク | parentId による親子関係。メイン⇔サブ変換（ドラッグor右クリック）、メイン昇格、グループ単位の削除/復元 |
 | リスト管理 | 複数リスト、名前変更、削除（ゴミ箱付き）、ドラッグ並び替え |
 | タスクフィルター | 4種チップ（今週中/着手可能/超過/今日）+ すべて |
@@ -132,7 +142,7 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 | タッチ並び替え | ドラッグハンドル長押しで並び替え（モバイル） |
 | リスト間移動 | タスク長押しでポップアップ選択（モバイル）・サブの場合は「⬆️ メインに昇格」も |
 | 全て折り畳み/展開 | リストヘッダーの▶/▽トグルボタン（hover ツールチップ） |
-| 緊急度カラー | サイドバー件数バッジ: 超過あり=赤、今日あり=橙 |
+| 緊急度カラー | サイドバー件数バッジ 5段階: 超過=赤 > 今日=橙 > 今週中=緑 > 来週以降=水 > 既定 |
 | ダークモード | トグル、localStorage永続化 |
 | インポート/エクスポート | JSON形式、リスト単位で選択可、サブの parentId をIDマップでリマップ |
 | ファイルD&D | JSONファイルをドロップしてインポート |
@@ -166,7 +176,8 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 ### 振り分けルール（splitGroupsByCompletion）
 - メインの完了状態でグループ単位に active / completed に振り分け
 - メインが未完了 → そのサブも全て active 側
-- メインが完了 → そのサブも全て completed 側
+- メインが完了 **かつ未完了サブが残っていない** → そのサブも全て completed 側
+- メインが完了 **だが未完了サブが残っている** → グループ全体を active 側に留める（a3eab13）
 
 ### 配置順序
 - 配列内: 親メインの直下に各サブ。新規サブは「親の最後のサブの直後」に挿入
@@ -190,6 +201,51 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 
 ---
 
+## 繰り返しタスク仕様
+
+### データ構造
+```javascript
+recurrence?: {
+  type: 'daily' | 'weekly' | 'monthly',
+  weekday?: 0-6,          // type:'weekly' のとき。0=日〜6=土
+  day?: 1-31 | 'last',    // type:'monthly' のとき。'last' は月末日
+}
+```
+
+### 主要ヘルパー（TList.html 内）
+| 関数 | 役割 |
+|---|---|
+| `addDaysYmd(ymd, n)` | YMD 文字列に日数を加算 |
+| `monthlyDateFor(year, month, day)` | 月末対応の月日付算出（`day === 'last'` 含む） |
+| `computeFirstDueDate(recurrence, baseYmd)` | 繰り返し設定から最初の発生日を算出 |
+| `advanceRecurrenceDate(currentYmd, recurrence)` | 既存 `dueDate` から次回発生日を進める |
+| `isoWeekKey(ymd)` | ISO週キー生成（毎週判定用） |
+| `getPeriodKey(ymd, type)` | 日/週/月の周期キーを統一フォーマットで返す |
+| `applyRecurringResets()` | 周期境界をまたいだ完了タスクを未完了に戻し `dueDate` を次回へ進める |
+
+### 周期境界リセット
+- `render()` の冒頭で `applyRecurringResets()` を呼ぶ
+- 完了済み（`completed === true`）で `recurrence` がある todo が対象
+- 「最後に完了した周期キー」と「今日の周期キー」が異なれば未完了化＋次回日付へ
+- 結果として、毎日タスクは翌日0時以降に開くと自動復活、毎週タスクは次の週、毎月タスクは次の月
+
+### 編集 UI の挙動
+- 編集画面に「繰り返し」セレクト（なし／毎日／毎週／毎月）
+- 毎週選択 → 曜日セレクト表示（`WEEKDAY_LABELS` 参照）
+- 毎月選択 → 日付セレクト（1〜31 + 末日）
+- `editRecurrence?.type` が真のとき、`startDate` 入力＋終了日入力は非表示
+- `commitEdit()` で `editRecurrence` がセットされていれば `computeFirstDueDate()` で `dueDate` を自動設定し、`startDate` はクリア
+
+### 表示バッジ
+- `recurrence-badge` クラス（グレー配色）
+- ラベル例: `🔁 毎日` / `🔁 毎週月` / `🔁 毎月末日`
+
+### localStorage 互換性
+- 旧データに `recurrence` がない場合は何もしない
+- 値の型が object でない場合は load() で消去（マイグレーション §4）
+
+---
+
 ## タスクフィルターチップ
 
 入力欄の下に5つのチップ:
@@ -206,6 +262,7 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 フィルター中は完了セクションも非表示。
 フィルター中の表示結果からも完了済みは除外。
 グループ単位でフィルター: メインまたはサブのいずれかが条件一致ならグループ全体を残す。
+**サブの表示判定（a3eab13）**: 親が残るだけではサブは表示されない。サブ自身もフィルター条件を満たすことが必須。
 
 ---
 
@@ -213,16 +270,22 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 
 ### 日付バッジ
 - **終了バッジ** (`dueBadge`): 📅 今日／明日／M/D。超過時「超過 (M/D)」赤色
-- **開始バッジ** (`startBadge`): ▶ 今日／明日／M/D。今日=黄、未来=青。完了済みは非表示
+- **開始バッジ** (`startBadge`): ▶ 今日／明日／M/D。**完了済みも含めて常時表示**（b034381 で変更）
+  - 今日=黄、未来=水色、過去=グレー
 - **同日統合バッジ** (`sameDayBadge`): 開始日 === 終了日の場合「▶📅 今日」のように両アイコン併記
-- 期間表示クラス: `start-fu`（未来=青）、`start-td`（今日=黄）、`due-ov`（超過=赤）、`due-td`（今日=橙）、`due-fu`（未来=緑）
+- **繰り返しバッジ** (`recurrenceBadge`): 繰り返し設定があるとき「🔁 毎日 / 毎週月 / 毎月末日」など。グレー
+- 期間表示クラス:
+  - 開始日: `start-fu`（未来=水）、`start-td`（今日=黄）、`start-past`（過去=灰）
+  - 終了日: `due-ov`（超過=赤）、`due-td`（今日=黄）、`due-fu`（今週中＝緑）、`due-far`（来週以降=水）
 
 ### サイドバー件数バッジ（list-count-pill）
 通常リスト: **未完了件数**（s.active）を表示
 メモリスト: 全件（s.total）を表示
-緊急度カラー:
+緊急度カラー（5 段階、`listStats()` の `overdue / dueToday / dueWeek / weekPlus` を参照）:
 - `urgent-ov`（超過あり）: 赤系。最優先
 - `urgent-td`（今日が期限あり）: 橙系
+- `urgent-fu`（今週中に期限あり）: 緑系
+- `urgent-far`（来週以降に期限あり）: 水系
 - それ以外: 既定色
 
 ### 完了タスクの完了日時
@@ -275,51 +338,22 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 `folder-open` ハンドラ内で環境を自動判定し分岐：
 
 ```
-URL → Tauri → Photino → window.open()
-フォルダ → Tauri → Photino → Electron → クリップボードコピー（Web）
+URL    → Tauri → window.open()
+フォルダ → Tauri → クリップボードコピー（Web）
 ```
 
 ### 判定方法
 ```javascript
-// Tauri
-if (window.__TAURI__?.core?.invoke) { ... }
-
-// Photino
-if (window.external?.sendMessage) { ... }
-
-// Electron
-if (window.electronAPI?.openFolder) { ... }
+// Tauri（ネイティブ環境）
+if (window.__TAURI__?.core?.invoke) {
+  window.__TAURI__.core.invoke('open_folder', { path });
+}
+// それ以外（ブラウザ）
+// URL: window.open(url, '_blank')
+// フォルダ: navigator.clipboard.writeText(path)
 ```
 
-### Photinoメッセージ受信
-Init セクション前に `window.external.receiveMessage()` でC#側からの応答を受信し、トースト表示。
-
----
-
-## Electron対応
-
-### ファイル構成
-```
-electron\
-├── main.js       ← Electronメインプロセス（shell.openPath）
-├── preload.js    ← contextBridge経由でAPIを安全に公開
-└── package.json  ← electron v35, electron-builder v25
-```
-
-### 起動・ビルド
-```bash
-cd electron
-npm install   # 初回のみ
-npm start     # 開発起動
-npm run build # dist/ にインストーラ生成（150MB+）
-```
-
-### パス解決（開発 vs パッケージ）
-```javascript
-const htmlPath = app.isPackaged
-  ? path.join(process.resourcesPath, 'TList.html')
-  : path.join(__dirname, '..', 'TList.html');
-```
+旧 Electron / Photino 対応は撤廃済み（Tauri 一本化）。
 
 ---
 
@@ -377,67 +411,6 @@ std::env::set_var(
 
 ---
 
-## Photino対応（.NET）
-
-### ファイル構成
-```
-photino\
-├── TList.csproj    ← Photino.NET 4.x, net9.0, PublishSingleFile, SelfContained
-├── Program.cs      ← PhotinoWindow + メッセージハンドラ + WebView2引数設定
-└── icon.ico        ← アプリアイコン
-```
-
-### 起動・ビルド
-```bash
-cd photino
-dotnet run         # 開発起動
-dotnet publish     # 配布用ビルド
-```
-
-### 前提条件
-- **.NET 9.0 SDK** ← インストール済み
-
-### Program.cs の主要部分
-```csharp
-// WebView2のEdgeミニメニューを抑制（PhotinoWindow 構築前）
-Environment.SetEnvironmentVariable(
-    "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-    "--disable-features=msEdgeMiniMenu,msEdgeAskMeAnything,TextSuggestionsForMiniMenu");
-
-// アイコンは2箇所で設定:
-// 1. csproj の <ApplicationIcon>icon.ico</ApplicationIcon> → exeリソース埋め込み
-// 2. .SetIconFile(iconPath) → 実行時のタイトルバー・タスクバーアイコン
-var window = new PhotinoWindow()
-    .SetTitle("TList")
-    .SetIconFile(iconPath)
-    .SetSize(new Size(1000, 860))
-    ...
-```
-
-### csproj の重要設定
-```xml
-<ItemGroup>
-  <!-- icoファイルを出力先にもコピー（SetIconFile用） -->
-  <None Update="icon.ico">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
-```
-
-### 名前空間の注意
-- ✅ `using Photino.NET;`（正しい）
-- ❌ `using PhotinoNET;`（古い情報で間違い）
-
----
-
-## 3方式のサイズ比較（見込み）
-
-| 方式 | 配布サイズ | 状態 |
-|------|-----------|------|
-| Electron | 150〜200MB | 既存・動作確認済み |
-| Tauri | 3〜10MB | dev起動確認済み、配布ビルド未実施 |
-| Photino | 15〜30MB | dev起動確認済み |
-
 ---
 
 ## 重要な実装パターン・注意事項
@@ -445,6 +418,10 @@ var window = new PhotinoWindow()
 ### SVGアイコン
 `const I = { ... }` オブジェクトに全アイコンを定義。`I.folder`, `I.memo`, `I.play`, `I.cal` など。
 撤廃: `I.arrowUp`, `I.sort`
+
+### 曜日ラベル定数
+`const WEEKDAY_LABELS = ['日','月','火','水','木','金','土']` を全体で共通参照（437bfb5 で集約）。
+繰り返し設定 UI の曜日セレクトや、毎週繰り返しバッジ表示に使用。個別配列定義は重複排除済み。
 
 ### chevronRight アイコン
 `htmlMain()` 内で定義し、以下で使い回し:
@@ -503,10 +480,9 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 ```
 
 ### localStorage の保存先
-- **Electron**: Electron独自のパス
+- **Web (ブラウザ)**: 各ブラウザの localStorage 領域（ドメイン単位）
 - **Tauri**: `%APPDATA%\com.tlist.app\EBWebView\` 配下（WebView2）
-- **Photino**: WebView2のデフォルトパス
-- 3方式間でデータは**共有されない**。移行はJSONエクスポート/インポートで対応。
+- ブラウザ版と Tauri 版でデータは**共有されない**。移行はJSONエクスポート/インポートで対応。
 
 ### localStorage キー一覧
 | キー | 用途 |
@@ -529,8 +505,7 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 
 - **データ同期**（Firebase Firestore方式Bを検討したが未実装）
 - **Tauri配布ビルド**: `npm run build` で NSIS インストーラ生成（未実施）
-- **Photino配布ビルド**: `dotnet publish` で単一exe生成（未実施）
-- **3方式の最終選定**: サイズ・動作を比較して採用方式を決定
+- **タスクバーバッジ**: 未対応／未着手予定の超過件数を Windows タスクバーアイコンにオーバーレイ表示する案あり
 - **Outlook連携**: `outlook:` プロトコルがWindows未登録のため断念
 
 ---
@@ -551,6 +526,11 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 ## 直近コミット履歴
 
 ```
+437bfb5 refactor: 重複 CSS と曜日配列を集約
+b87a2bc feat: 繰り返し機能（毎日/毎週X曜/毎月X日 or 末日）を追加
+c65408c ui: サブグループ内に完了トグル「▷ 完了 (N件)」を追加
+a3eab13 fix: 親完了時のサブ扱いとサブのフィルター判定を修正
+b034381 ui: 期限/開始日バッジを統一配色化＋開始日を常時表示
 e4fbcc2 ui: サイドバーの件数バッジを緊急度で色分け
 42ec6f3 fix: フィルター適用時に完了済みタスクを除外
 d1448e0 ui: サイドバーのリスト件数表示を「未完了件数」に変更

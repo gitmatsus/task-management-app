@@ -210,11 +210,15 @@
       cursor:default;
     }
     .list-count-pill.sel { background:var(--sidebar-act-pill-bg); color:var(--sidebar-act-pill-text); }
-    /* 緊急度カラー: 超過は赤、今日のみは橙（選択中も上書き） */
+    /* 緊急度カラー: 超過=赤、今日=黄、今週中=緑、来週以降=水色（選択中も上書き） */
     .list-count-pill.urgent-ov, .list-count-pill.urgent-ov.sel { background:#fecaca; color:#b91c1c; }
     html.dark .list-count-pill.urgent-ov, html.dark .list-count-pill.urgent-ov.sel { background:rgba(239,68,68,.4); color:#fca5a5; }
     .list-count-pill.urgent-td, .list-count-pill.urgent-td.sel { background:#fef3c7; color:#b45309; }
     html.dark .list-count-pill.urgent-td, html.dark .list-count-pill.urgent-td.sel { background:rgba(245,158,11,.25); color:#fbbf24; }
+    .list-count-pill.urgent-fu, .list-count-pill.urgent-fu.sel { background:#d1fae5; color:#059669; }
+    html.dark .list-count-pill.urgent-fu, html.dark .list-count-pill.urgent-fu.sel { background:rgba(16,185,129,.25); color:#34d399; }
+    .list-count-pill.urgent-far, .list-count-pill.urgent-far.sel { background:#e0f2fe; color:#0369a1; }
+    html.dark .list-count-pill.urgent-far, html.dark .list-count-pill.urgent-far.sel { background:rgba(14,165,233,.22); color:#7dd3fc; }
     .list-del-wrap { flex-shrink:0; position:relative; display:inline-flex; }
     .list-del-btn {
       width:20px; height:20px; display:flex; align-items:center; justify-content:center;
@@ -336,11 +340,13 @@
     .dot-ov  { background:#fecaca; color:#b91c1c; }
     .dot-td  { background:#fef3c7; color:#d97706; }
     .dot-fu  { background:#d1fae5; color:#059669; }
+    .dot-far { background:#e0f2fe; color:#0369a1; }
     .dot-nd  { background:#e2e8f0; color:#64748b; }
     .dot-dn  { background:#6366f1; color:#fff; }
     html.dark .dot-ov { background:rgba(239,68,68,.4);   color:#fca5a5; }
     html.dark .dot-td { background:rgba(245,158,11,.25);  color:#fbbf24; }
     html.dark .dot-fu { background:rgba(16,185,129,.25);  color:#34d399; }
+    html.dark .dot-far{ background:rgba(14,165,233,.22); color:#7dd3fc; }
     html.dark .dot-nd { background:#334155;               color:#94a3b8; }
     html.dark .dot-dn { background:#4f46e5;               color:#fff; }
 
@@ -361,10 +367,20 @@
     .sub-toggle-placeholder { width:18px; flex-shrink:0; padding:0 2px; }
     .todo-item.drop-as-sub { box-shadow:inset 0 0 0 2px #6366f1; background:rgba(99,102,241,.06); }
     html.dark .todo-item.drop-as-sub { background:rgba(99,102,241,.15); }
-    .due-badge.start-fu { background:#e0e7ff; color:#4338ca; }
-    html.dark .due-badge.start-fu { background:rgba(99,102,241,.25); color:#a5b4fc; }
+    .due-badge.start-fu { background:#e0f2fe; color:#0369a1; }
+    html.dark .due-badge.start-fu { background:rgba(14,165,233,.22); color:#7dd3fc; }
     .due-badge.start-td { background:#fef3c7; color:#d97706; }
     html.dark .due-badge.start-td { background:rgba(245,158,11,.25); color:#fbbf24; }
+    .due-badge.start-past,
+    .due-badge.recurrence-badge { background:#f1f5f9; color:#64748b; }
+    html.dark .due-badge.start-past,
+    html.dark .due-badge.recurrence-badge { background:#334155; color:#94a3b8; }
+    .edit-recurrence {
+      font-size:12px; padding:3px 8px; border-radius:8px;
+      border:1px solid var(--input-border); background:var(--card); color:var(--t1);
+      cursor:pointer; outline:none; font-family:inherit;
+    }
+    .edit-recurrence:focus { box-shadow:0 0 0 2px rgba(99,102,241,.3); }
     .completed-time { font-size:10px; color:var(--t3); margin-top:2px; display:block; line-height:1; }
     .text-wrap-inner { display:flex; flex-direction:column; min-width:0; flex:1; }
     .edit-date-label { font-size:10px; color:var(--t3); margin-right:4px; }
@@ -387,13 +403,37 @@
     .completed-section-caret svg { width:14px; height:14px; }
     .completed-section-label { flex:1; }
     .completed-list { padding-top:0; }
+
+    /* ── サブ完了トグル（親のサブグループ内） ── */
+    .sub-done-header {
+      display:flex; align-items:center; gap:6px;
+      padding:6px 20px 6px 32px;
+      cursor:pointer;
+      color:var(--t3);
+      font-size:12px;
+      font-weight:600;
+      background:transparent;
+      transition:background .15s;
+      list-style:none;
+      user-select:none;
+      border-bottom:1px solid var(--item-border);
+    }
+    /* 展開時（直下が完了サブ）と末尾は下線を消す */
+    .sub-done-header:has(+ .todo-item.is-sub),
+    .sub-done-header:last-child { border-bottom:none; }
+    .sub-done-header:hover { background:var(--filter-bg); color:var(--t1); }
+    .sub-done-caret { display:inline-flex; width:12px; height:12px; transition:transform .2s; color:var(--t3); }
+    .sub-done-caret.open { transform:rotate(90deg); }
+    .sub-done-caret svg { width:12px; height:12px; }
+    .sub-done-label { flex:1; }
     .todo-item {
       display:flex; align-items:stretch; border-bottom:1px solid var(--item-border);
       border-radius:8px; transition:background .15s,opacity .15s; cursor:text; position:relative;
     }
     .todo-item:last-child { border-bottom:none; }
-    /* メインとサブの間、サブとサブの間は線を消す（直後がサブなら線なし） */
-    .todo-item:has(+ .todo-item.is-sub) { border-bottom:none; }
+    /* メインとサブの間、サブとサブの間、サブと完了トグルの間は線を消す */
+    .todo-item:has(+ .todo-item.is-sub),
+    .todo-item:has(+ .sub-done-header) { border-bottom:none; }
     .todo-item:hover:not(.drag-over) { background:var(--item-hover); }
     .todo-item.drag-over { background:rgba(99,102,241,.07); }
     html.dark .todo-item.drag-over { background:rgba(99,102,241,.15); }
@@ -459,12 +499,14 @@
       padding:2px 6px; border-radius:6px; font-size:10px; font-weight:600; white-space:nowrap;
     }
     .due-badge svg { width:10px; height:10px; flex-shrink:0; }
-    .due-ov { background:#fecaca; color:#b91c1c; }
-    .due-td { background:#fef3c7; color:#f59e0b; }
-    .due-fu { background:#d1fae5; color:#10b981; }
-    html.dark .due-ov { background:rgba(239,68,68,.4);   color:#fca5a5; }
-    html.dark .due-td { background:rgba(245,158,11,.25);  color:#f59e0b; }
-    html.dark .due-fu { background:rgba(16,185,129,.25);  color:#10b981; }
+    .due-ov  { background:#fecaca; color:#b91c1c; }
+    .due-td  { background:#fef3c7; color:#f59e0b; }
+    .due-fu  { background:#d1fae5; color:#10b981; }
+    .due-far { background:#e0f2fe; color:#0369a1; }
+    html.dark .due-ov  { background:rgba(239,68,68,.4);   color:#fca5a5; }
+    html.dark .due-td  { background:rgba(245,158,11,.25); color:#f59e0b; }
+    html.dark .due-fu  { background:rgba(16,185,129,.25); color:#10b981; }
+    html.dark .due-far { background:rgba(14,165,233,.22); color:#7dd3fc; }
     .item-del { display:flex; align-items:center; padding:12px 8px 12px 0; flex-shrink:0; }
     .item-del button {
       width:28px; height:28px; display:flex; align-items:center; justify-content:center;
@@ -1077,7 +1119,7 @@
 let todos = [], trash = [], lists = [], selectedListId = '';
 let showTrash = false;
 let showCompletedSection = false; // 完了セクションの開閉（セッション単位）
-let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', editLinkType = 'folder', skipFocusRestore = false;
+let editId = null, editText = '', editDue = '', editFolderPath = '', editDetail = '', editLinkType = 'folder', editRecurrence = {}, skipFocusRestore = false;
 let memoPopupId = null, memoPopupPos = null;
 let editingListId = null, editingListName = '', editingListType = 'todo';
 let addingList = false, newListName = '';
@@ -1097,6 +1139,7 @@ let subInputParentId = null; // サブタスク入力モード時の親タスク
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let editStartDate = '';
 let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
+let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
 let dragSubZoneTargetId = null; // ドラッグ中のサブ化候補ターゲットID
 
 // ── Persistence ────────────────────────────────────────
@@ -1124,6 +1167,10 @@ function load() {
     const seen = new Set();
     todos = todos.filter(t => seen.has(t.id) ? false : (seen.add(t.id), true));
   }
+  // 旧形式の繰り返しフィールド（文字列）はクリア（新形式はオブジェクト）
+  todos.forEach(t => {
+    if (t.recurrence && typeof t.recurrence !== 'object') t.recurrence = undefined;
+  });
   // 過去の復元バグで ゴミ箱に残った "親不在の paired サブ" を除去
   {
     const trashIds = new Set(trash.map(t => t.id));
@@ -1149,6 +1196,90 @@ function save() {
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const today    = () => ymd(new Date());
 const tomorrow = () => ymd(new Date(Date.now() + 86400000));
+const WEEKDAY_LABELS = ['日','月','火','水','木','金','土'];
+
+// ── 繰り返し関連ヘルパー ─────────────────────────────────
+function addDaysYmd(yyyymmdd, n) {
+  const [y, m, d] = yyyymmdd.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + n);
+  return ymd(date);
+}
+// 指定の年月（1-12）と日（1-31 or 'last'）から YMD 文字列を作る。
+// 月オーバーフローは年に繰り上げ、'last' および月末超過は当月末に丸める。
+function monthlyDateFor(year, month, day) {
+  let y = year, m = month;
+  while (m > 12) { y += 1; m -= 12; }
+  while (m < 1)  { y -= 1; m += 12; }
+  const lastDay = new Date(y, m, 0).getDate();
+  const d = (day === 'last' || day > lastDay) ? lastDay : day;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+// 繰り返し設定から「今日以降の最初の発生日」を返す
+function computeFirstDueDate(recurrence, now) {
+  now = now || new Date();
+  const todayStr = ymd(now);
+  if (recurrence.type === 'daily')  return todayStr;
+  if (recurrence.type === 'weekly') {
+    const diff = ((recurrence.weekday ?? 1) - now.getDay() + 7) % 7;
+    return addDaysYmd(todayStr, diff);
+  }
+  if (recurrence.type === 'monthly') {
+    const thisMonth = monthlyDateFor(now.getFullYear(), now.getMonth() + 1, recurrence.day);
+    if (thisMonth >= todayStr) return thisMonth;
+    return monthlyDateFor(now.getFullYear(), now.getMonth() + 2, recurrence.day);
+  }
+  return todayStr;
+}
+// 既存の dueDate から「次の発生日（今日以降まで進める）」を返す
+function advanceRecurrenceDate(recurrence, fromYmd, now) {
+  now = now || new Date();
+  const todayStr = ymd(now);
+  let d = fromYmd;
+  let safety = 1000;
+  do {
+    if (recurrence.type === 'daily')       d = addDaysYmd(d, 1);
+    else if (recurrence.type === 'weekly') d = addDaysYmd(d, 7);
+    else if (recurrence.type === 'monthly') {
+      const [y, m] = d.split('-').map(Number);
+      d = monthlyDateFor(y, m + 1, recurrence.day);
+    } else break;
+    if (--safety <= 0) break;
+  } while (d < todayStr);
+  return d;
+}
+function isoWeekKey(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+}
+function getPeriodKey(date, recurrence) {
+  if (recurrence.type === 'daily')   return ymd(date);
+  if (recurrence.type === 'monthly') return ymd(date).slice(0, 7);
+  if (recurrence.type === 'weekly')  return isoWeekKey(date);
+  return null;
+}
+// 繰り返しタスクの周期境界をまたいだものを未完了に戻し、dueDate を次回発生日に進める
+function applyRecurringResets() {
+  const now = new Date();
+  let changed = false;
+  todos.forEach(t => {
+    if (!t.recurrence?.type || !t.completed || !t.completedAt) return;
+    const cKey = getPeriodKey(new Date(t.completedAt), t.recurrence);
+    const nKey = getPeriodKey(now, t.recurrence);
+    if (cKey && nKey && cKey !== nKey) {
+      t.completed = false;
+      t.completedAt = undefined;
+      if (t.dueDate) t.dueDate = advanceRecurrenceDate(t.recurrence, t.dueDate, now);
+      changed = true;
+    }
+  });
+  if (changed) save();
+  return changed;
+}
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function isMobile() {
@@ -1161,6 +1292,7 @@ function currentTrash() { return trash.filter(x => x.listId === selectedListId);
 
 function listStats(lid) {
   const t = today();
+  const weekEnd = endOfWeekYmd();
   const lst = todos.filter(x => x.listId === lid);
   const active = lst.filter(x => !x.completed);
   return {
@@ -1169,7 +1301,8 @@ function listStats(lid) {
     done:     lst.length - active.length,
     overdue:  active.filter(x => x.dueDate && x.dueDate < t).length,
     dueToday: active.filter(x => x.dueDate === t).length,
-    future:   active.filter(x => x.dueDate && x.dueDate > t).length,
+    dueWeek:  active.filter(x => x.dueDate && x.dueDate > t && x.dueDate <= weekEnd).length,
+    weekPlus: active.filter(x => x.dueDate && x.dueDate > weekEnd).length,
     noDate:   active.filter(x => !x.dueDate).length,
   };
 }
@@ -1187,7 +1320,15 @@ function splitGroupsByCompletion() {
   const activeMainIds = new Set();
   const completedMainIds = new Set();
   lst.forEach(t => {
-    if (!t.parentId) (t.completed ? completedMainIds : activeMainIds).add(t.id);
+    if (!t.parentId) {
+      // 親が完了でも未完了サブが残っていれば active グループに留める
+      const hasIncompleteSubs = lst.some(s => s.parentId === t.id && !s.completed);
+      if (t.completed && !hasIncompleteSubs) {
+        completedMainIds.add(t.id);
+      } else {
+        activeMainIds.add(t.id);
+      }
+    }
   });
   const active = [];
   const completed = [];
@@ -1247,14 +1388,16 @@ function applyTaskFilter(list) {
     }
   });
   // フィルター中は完了済みタスクを非表示にする（メイン/サブ問わず）
+  // サブは「親が残る」だけでなく「サブ自身もマッチする」ことを必須にする
   return list.filter(t => {
     if (t.completed) return false;
-    return (!t.parentId && keepMainIds.has(t.id)) ||
-      (t.parentId && keepMainIds.has(t.parentId));
+    if (!t.parentId) return keepMainIds.has(t.id);
+    return keepMainIds.has(t.parentId) && matchFilter(t);
   });
 }
 
 // 描画用：表示順を「メイン→そのサブ群」と並べる
+// active セクション内では「未完了サブ → 完了トグル → 完了サブ（展開時のみ）」の順
 function arrangeForRender(visibleList) {
   const visibleIds = new Set(visibleList.map(x => x.id));
   const cur = currentTodos();
@@ -1265,10 +1408,26 @@ function arrangeForRender(visibleList) {
     if (!visibleIds.has(t.id)) return;
     result.push(t);
     if (collapsedIds.has(t.id)) return;
-    // そのメインのサブを元順で
+    // この親の可視サブを元順で抽出
+    const visibleSubs = [];
     cur.forEach(s => {
-      if (s.parentId === t.id && visibleIds.has(s.id)) result.push(s);
+      if (s.parentId === t.id && visibleIds.has(s.id)) visibleSubs.push(s);
     });
+    // 完了セクション側（親完了 AND 全サブ完了）はそのまま並べる
+    const isActiveContext = !t.completed || visibleSubs.some(s => !s.completed);
+    if (!isActiveContext) {
+      visibleSubs.forEach(s => result.push(s));
+    } else {
+      // 未完了サブを先に、完了サブはトグルの下にまとめる
+      const activeSubs = visibleSubs.filter(s => !s.completed);
+      const doneSubs   = visibleSubs.filter(s => s.completed);
+      activeSubs.forEach(s => result.push(s));
+      if (doneSubs.length > 0) {
+        const expanded = expandedDoneSubs.has(t.id);
+        result.push({ _doneSubsHeader: true, parentId: t.id, doneCount: doneSubs.length, expanded });
+        if (expanded) doneSubs.forEach(s => result.push(s));
+      }
+    }
   });
   // 親が現在リストに存在しない孤児サブ（保険）
   cur.forEach(t => {
@@ -1305,25 +1464,25 @@ const I = {
 
 // ── Due badge HTML ─────────────────────────────────────
 function dueBadge(d) {
-  const t = today(), tm = tomorrow();
-  const ov = d < t, td = d === t, tmr = d === tm;
+  const t = today(), tm = tomorrow(), we = endOfWeekYmd();
+  const ov = d < t, td = d === t, tmr = d === tm, far = d > we;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
-  const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
+  const cls = ov ? 'due-ov' : td ? 'due-td' : far ? 'due-far' : 'due-fu';
   return `<span class="due-badge ${cls}">${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
 }
 function startBadge(d) {
   const t = today(), tm = tomorrow();
-  const td = d === t, tmr = d === tm;
+  const past = d < t, td = d === t, tmr = d === tm;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
-  const cls = td ? 'start-td' : 'start-fu';
+  const cls = past ? 'start-past' : td ? 'start-td' : 'start-fu';
   return `<span class="due-badge ${cls}">${I.play}${lbl}</span>`;
 }
 function sameDayBadge(d) {
   // 開始日と終了日が同じ日の場合の統合バッジ（▶📅 両方のアイコン表示）
-  const t = today(), tm = tomorrow();
-  const ov = d < t, td = d === t, tmr = d === tm;
+  const t = today(), tm = tomorrow(), we = endOfWeekYmd();
+  const ov = d < t, td = d === t, tmr = d === tm, far = d > we;
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
-  const cls = ov ? 'due-ov' : td ? 'due-td' : 'due-fu';
+  const cls = ov ? 'due-ov' : td ? 'due-td' : far ? 'due-far' : 'due-fu';
   return `<span class="due-badge ${cls}">${I.play}${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
 }
 
@@ -1333,16 +1492,25 @@ function htmlSidebar() {
     const isSel     = lst.id === selectedListId;
     const isEditing = editingListId === lst.id;
     const s         = listStats(lst.id);
-    const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.future > 0 || s.noDate > 0 || s.done > 0;
+    const hasDots   = s.overdue > 0 || s.dueToday > 0 || s.dueWeek > 0 || s.weekPlus > 0 || s.noDate > 0 || s.done > 0;
 
     const isMemo = lst.type === 'memo';
     const dots = (!isMemo && showListStats && hasDots) ? `<div class="dot-badges sidebar-dots">
-      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`   : ''}
-      ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>` : ''}
-      ${s.future   > 0 ? `<span class="dot dot-fu">${s.future}</span>`   : ''}
-      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`     : ''}
-      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`             : ''}
+      ${s.overdue  > 0 ? `<span class="dot dot-ov">${s.overdue}</span>`     : ''}
+      ${s.dueToday > 0 ? `<span class="dot dot-td">${s.dueToday}</span>`   : ''}
+      ${s.dueWeek  > 0 ? `<span class="dot dot-fu">${s.dueWeek}</span>`     : ''}
+      ${s.weekPlus > 0 ? `<span class="dot dot-far">${s.weekPlus}</span>`   : ''}
+      ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`       : ''}
+      ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`               : ''}
     </div>` : '';
+    const tier = isMemo
+      ? { cls:'', n:s.total,    title:'件数' }
+      : s.overdue  > 0 ? { cls:'urgent-ov',  n:s.overdue,  title:`超過${s.overdue}件` }
+      : s.dueToday > 0 ? { cls:'urgent-td',  n:s.dueToday, title:`今日${s.dueToday}件` }
+      : s.dueWeek  > 0 ? { cls:'urgent-fu',  n:s.dueWeek,  title:`今週中${s.dueWeek}件` }
+      : s.weekPlus > 0 ? { cls:'urgent-far', n:s.weekPlus, title:`来週以降${s.weekPlus}件` }
+      :                  { cls:'',           n:s.active,   title:`未完了${s.active}件` };
+    const pillCls = `list-count-pill${isSel ? ' sel' : ''}${tier.cls ? ' ' + tier.cls : ''}`;
     const typeIcon = `<span class="list-type-icon${isMemo ? ' memo-type' : ''}">${isMemo ? I.notepad : I.clip}</span>`;
     const nameRow = isEditing
       ? `<input id="list-rename-inp" class="list-rename-input" type="text" value="${esc(editingListName)}" autocomplete="off">
@@ -1351,7 +1519,7 @@ function htmlSidebar() {
            メモ
          </label>`
       : `${typeIcon}<span class="list-item-name">${esc(lst.name)}</span>
-         <span class="list-count-pill${isSel ? ' sel' : ''}${!isMemo && s.overdue > 0 ? ' urgent-ov' : (!isMemo && s.dueToday > 0 ? ' urgent-td' : '')}" title="${isMemo ? '件数' : `未完了件数${!isMemo && s.overdue > 0 ? ` (超過${s.overdue}件)` : (!isMemo && s.dueToday > 0 ? ` (今日${s.dueToday}件)` : '')}`}">${isMemo ? s.total : s.active}</span>`;
+         <span class="${pillCls}" title="${tier.title}">${tier.n}</span>`;
 
     return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
       <div class="list-drag-handle" draggable="${!isEditing && !('ontouchstart' in window)}">${I.grip}</div>
@@ -1464,9 +1632,20 @@ function htmlMain() {
       completedMainCount = split.completed.filter(t => !t.parentId).length;
     }
   }
+  // フィルター適用後の残件数（フッター用）
+  const filteredActiveCount = isMemoList
+    ? c.total
+    : currentTodos().filter(t => !t.completed && matchFilter(t)).length;
 
   const chevronRight = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`;
   const renderItem = t => {
+        // 完了サブのトグル行マーカー
+        if (t._doneSubsHeader) {
+          return `<li class="sub-done-header${t.expanded ? ' expanded' : ''}" data-a="toggle-done-subs" data-id="${t.parentId}">
+            <span class="sub-done-caret${t.expanded ? ' open' : ''}">${chevronRight}</span>
+            <span class="sub-done-label">完了 (${t.doneCount}件)</span>
+          </li>`;
+        }
         const editing = editId === t.id;
         const isSub = !!t.parentId;
         const hasSub = !isSub && hasSubs(t.id);
@@ -1480,7 +1659,7 @@ function htmlMain() {
               <input id="ei-folder" class="edit-folder-inp" type="text" placeholder="${editLinkType === 'url' ? 'https://example.com' : 'フォルダパス（例: C:\\\\Users\\\\...）'}" value="${esc(editFolderPath)}" autocomplete="off">
               ${editFolderPath ? `<button class="edit-folder-clr" data-a="clr-folder" title="クリア">${I.x}</button>` : ''}
             </div>
-            <div class="edit-actions-row1">
+            ${!editRecurrence?.type ? `<div class="edit-actions-row1">
               <span class="edit-date-label">開始</span>
               ${editStartDate
                 ? `<div class="edit-date-wrap">
@@ -1505,6 +1684,28 @@ function htmlMain() {
                      <input id="ei-date" class="edit-date" type="date" value="">
                    </div>`
               }
+            </div>` : ''}
+            <div class="edit-actions-row1">
+              <span class="edit-date-label">繰り返し</span>
+              <select id="ei-recurrence-type" class="edit-recurrence">
+                <option value=""        ${!editRecurrence?.type            ? 'selected' : ''}>なし</option>
+                <option value="daily"   ${editRecurrence?.type === 'daily'   ? 'selected' : ''}>毎日</option>
+                <option value="weekly"  ${editRecurrence?.type === 'weekly'  ? 'selected' : ''}>毎週</option>
+                <option value="monthly" ${editRecurrence?.type === 'monthly' ? 'selected' : ''}>毎月</option>
+              </select>
+              ${editRecurrence?.type === 'weekly' ? `
+                <select id="ei-recurrence-weekday" class="edit-recurrence">
+                  ${WEEKDAY_LABELS.map((lbl, d) =>
+                    `<option value="${d}" ${editRecurrence.weekday === d ? 'selected' : ''}>${lbl}曜</option>`
+                  ).join('')}
+                </select>` : ''}
+              ${editRecurrence?.type === 'monthly' ? `
+                <select id="ei-recurrence-day" class="edit-recurrence">
+                  ${Array.from({length:30}, (_, i) => i + 1).map(d =>
+                    `<option value="${d}" ${editRecurrence.day === d ? 'selected' : ''}>${d}日</option>`
+                  ).join('')}
+                  <option value="last" ${editRecurrence.day === 'last' ? 'selected' : ''}>末日</option>
+                </select>` : ''}
             </div>
             <div class="edit-actions-row2">
               <button class="edit-cancel" data-a="cancel">キャンセル</button>
@@ -1536,13 +1737,20 @@ function htmlMain() {
           } else {
             if (t.dueDate) badge = `<div class="due-wrap">${dueBadge(t.dueDate)}</div>`;
             if (t.startDate) {
-              const td = today();
-              if (t.startDate >= td) {
-                startBadgeHtml = `<div class="due-wrap">${startBadge(t.startDate)}</div>`;
-              }
+              startBadgeHtml = `<div class="due-wrap">${startBadge(t.startDate)}</div>`;
             }
           }
         }
+        const recLbl = (() => {
+          if (!t.recurrence?.type) return '';
+          if (t.recurrence.type === 'daily')   return '毎日';
+          if (t.recurrence.type === 'weekly')  return '毎週' + WEEKDAY_LABELS[t.recurrence.weekday ?? 1];
+          if (t.recurrence.type === 'monthly') return '毎月' + (t.recurrence.day === 'last' ? '末日' : (t.recurrence.day ?? 1) + '日');
+          return '';
+        })();
+        const recurrenceBadgeHtml = (recLbl && !editing)
+          ? `<div class="due-wrap"><span class="due-badge recurrence-badge" title="繰り返し: ${recLbl}">🔁 ${recLbl}</span></div>`
+          : '';
 
         const togglePart = hasSub
           ? `<button class="sub-toggle${expanded ? ' expanded' : ''}" data-a="toggle-collapse" data-id="${t.id}" title="${expanded ? '折りたたむ' : '展開する'}">${chevronRight}</button>`
@@ -1557,6 +1765,7 @@ function htmlMain() {
           ${t.folderPath && !editing && (t.linkType === 'url' || !hasTouch) ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
           ${!isSub && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
           ${startBadgeHtml}
+          ${recurrenceBadgeHtml}
           ${badge}
           ${(t.completed || isMemoList) ? `<div class="item-del"><button data-a="to-trash" data-id="${t.id}">${I.trash}</button></div>` : ''}
         </li>`;
@@ -1572,10 +1781,10 @@ function htmlMain() {
     <div class="task-filters">
       ${[
         { k:'all',        l:'すべて',     ic:'' },
-        { k:'week',       l:'今週中',     ic:'📅' },
         { k:'actionable', l:'着手可能',   ic:'▶️' },
-        { k:'overdue',    l:'超過',       ic:'🔥' },
+        { k:'week',       l:'今週中',     ic:'📅' },
         { k:'today',      l:'今日',       ic:'⚡' },
+        { k:'overdue',    l:'超過',       ic:'🔥' },
       ].map(f => `<button class="task-filter-chip${taskFilter===f.k?' active':''}" data-a="set-task-filter" data-filter="${f.k}">${f.ic?`<span class="chip-ic">${f.ic}</span>`:''}${f.l}</button>`).join('')}
     </div>` : '';
 
@@ -1667,7 +1876,7 @@ function htmlMain() {
       <ul class="todo-list" id="todo-list">${items}</ul>
       ${completedSection}
       <div class="footer">
-        <span class="remaining">${isMemoList ? `<strong>${c.total}</strong> 件` : `残り <strong>${c.active}</strong> 件`}</span>
+        <span class="remaining">${isMemoList ? `<strong>${c.total}</strong> 件` : `残り <strong>${filteredActiveCount}</strong> 件`}</span>
         <button class="trash-btn${showTrash?' open':''}" id="trash-btn" data-a="toggle-trash">
           ${I.trash}ゴミ箱
           ${ct.length > 0 ? `<span class="trash-cnt">${ct.length}</span>` : ''}
@@ -1881,6 +2090,7 @@ function html() {
 
 // ── Render ─────────────────────────────────────────────
 function render() {
+  applyRecurringResets();
   const sy = window.scrollY;
   document.getElementById('app').innerHTML = html();
   window.scrollTo(0, sy);
@@ -1974,16 +2184,35 @@ function startEdit(id) {
   if (!t) return;
   const selList = lists.find(l => l.id === t.listId);
   if (t.completed && selList?.type !== 'memo') return;
-  editId = id; editText = t.text; editDue = t.dueDate || ''; editStartDate = t.startDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || '';
+  editId = id; editText = t.text; editDue = t.dueDate || ''; editStartDate = t.startDate || ''; editFolderPath = t.folderPath || ''; editLinkType = t.linkType || 'folder'; editDetail = t.detail || ''; editRecurrence = (t.recurrence && typeof t.recurrence === 'object') ? { ...t.recurrence } : {};
   memoPopupId = null; memoPopupPos = null;
   render();
 }
-function resetEditState() { editId = null; editText = ''; editDue = ''; editStartDate = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; }
+function resetEditState() { editId = null; editText = ''; editDue = ''; editStartDate = ''; editFolderPath = ''; editLinkType = 'folder'; editDetail = ''; editRecurrence = {}; }
 function commitEdit() {
   const text = editText.trim();
   if (text && editId) {
     const t = todos.find(x => x.id === editId);
-    if (t) { t.text = text; t.dueDate = editDue || undefined; t.startDate = editStartDate || undefined; t.folderPath = editFolderPath.trim() || undefined; t.linkType = editFolderPath.trim() ? editLinkType : undefined; t.detail = editDetail.trim() || undefined; }
+    if (t) {
+      t.text = text;
+      t.folderPath = editFolderPath.trim() || undefined;
+      t.linkType = editFolderPath.trim() ? editLinkType : undefined;
+      t.detail = editDetail.trim() || undefined;
+      if (editRecurrence?.type) {
+        // 繰り返し ON: dueDate を自動計算、startDate はクリア
+        const rec = { type: editRecurrence.type };
+        if (rec.type === 'weekly')  rec.weekday = editRecurrence.weekday ?? 1;
+        if (rec.type === 'monthly') rec.day     = editRecurrence.day     ?? 1;
+        t.recurrence = rec;
+        t.dueDate = computeFirstDueDate(rec);
+        t.startDate = undefined;
+      } else {
+        // 繰り返し OFF: 通常の編集
+        t.recurrence = undefined;
+        t.dueDate    = editDue       || undefined;
+        t.startDate  = editStartDate || undefined;
+      }
+    }
     save();
   }
   resetEditState(); render();
@@ -2404,6 +2633,11 @@ document.addEventListener('click', e => {
       if (collapsedIds.has(id)) collapsedIds.delete(id); else collapsedIds.add(id);
       render(); break;
     }
+    case 'toggle-done-subs': {
+      e.stopPropagation();
+      if (expandedDoneSubs.has(id)) expandedDoneSubs.delete(id); else expandedDoneSubs.add(id);
+      render(); break;
+    }
     case 'promote-to-main': promoteSubToMain(id); break;
     case 'memo-show': {
       e.stopPropagation();
@@ -2433,11 +2667,7 @@ document.addEventListener('click', e => {
             .catch(() => showToast('⚠️ URLを開けませんでした'));
           break;
         }
-        // Photino環境：既定ブラウザで開く
-        if (window.external?.sendMessage) {
-          window.external.sendMessage('open-url:' + url);
-          break;
-        }
+        // Web環境：window.open で開く
         window.open(url, '_blank');
         showToast('🔗 URLを開きました');
         break;
@@ -2451,21 +2681,6 @@ document.addEventListener('click', e => {
             showToast('📋 パスをクリップボードにコピーしました');
             navigator.clipboard.writeText(ft.folderPath).catch(() => {});
           });
-        break;
-      }
-
-      // Photino環境：sendMessage経由でフォルダを開く
-      if (window.external?.sendMessage) {
-        window.external.sendMessage('open-folder:' + ft.folderPath);
-        break;
-      }
-
-      // Electron環境：直接フォルダを開く
-      if (window.electronAPI?.openFolder) {
-        window.electronAPI.openFolder(ft.folderPath).then(res => {
-          showToast(res.success ? '📁 フォルダを開きました' : '📋 パスをクリップボードにコピーしました');
-          if (!res.success) navigator.clipboard.writeText(ft.folderPath).catch(() => {});
-        });
         break;
       }
 
@@ -2645,6 +2860,25 @@ document.addEventListener('change', e => {
     const val = e.target.value;
     editStartDate = val;
     if (!val || !isIOS) { skipFocusRestore = true; render(); }
+  }
+  if (e.target.id === 'ei-recurrence-type') {
+    const v = e.target.value;
+    if (v) {
+      editRecurrence = { type: v };
+      if (v === 'weekly')  editRecurrence.weekday = 1; // デフォルト月曜
+      if (v === 'monthly') editRecurrence.day     = 1; // デフォルト1日
+    } else {
+      editRecurrence = {};
+    }
+    skipFocusRestore = true;
+    render();
+  }
+  if (e.target.id === 'ei-recurrence-weekday') {
+    editRecurrence.weekday = parseInt(e.target.value, 10);
+  }
+  if (e.target.id === 'ei-recurrence-day') {
+    const v = e.target.value;
+    editRecurrence.day = v === 'last' ? 'last' : parseInt(v, 10);
   }
 });
 
@@ -2995,16 +3229,6 @@ document.addEventListener('drop', e => {
 })();
 
 
-
-// ── Photino メッセージ受信 ─────────────────────────────
-if (window.external?.receiveMessage) {
-  window.external.receiveMessage((msg) => {
-    if (msg === 'folder-result:success') showToast('📁 フォルダを開きました');
-    else if (msg === 'url-result:success') showToast('🔗 URLを開きました');
-    else if (msg.startsWith('folder-result:error:')) showToast('📋 パスをクリップボードにコピーしました');
-    else if (msg.startsWith('url-result:error:')) showToast('⚠️ URLを開けませんでした');
-  });
-}
 
 // ── 右クリックメニュー ─────────────────────────────────
 document.addEventListener('contextmenu', e => {

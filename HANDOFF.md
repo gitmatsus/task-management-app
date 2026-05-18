@@ -143,6 +143,7 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 | リスト間移動 | タスク長押しでポップアップ選択（モバイル）・サブの場合は「⬆️ メインに昇格」も |
 | 全て折り畳み/展開 | リストヘッダーの▶/▽トグルボタン（hover ツールチップ） |
 | 緊急度カラー | サイドバー件数バッジ 5段階: 超過=赤 > 今日=橙 > 今週中=緑 > 来週以降=水 > 既定 |
+| タスクバーバッジ | Windows タスクバーアイコンに「超過＋今日」の合計件数を赤バッジで重ねて表示（Tauri 環境）。PWA インストール時は `setAppBadge` も呼ぶ。ウインドウタイトルにも `(N) TList` で反映 |
 | ダークモード | トグル、localStorage永続化 |
 | インポート/エクスポート | JSON形式、リスト単位で選択可、サブの parentId をIDマップでリマップ |
 | ファイルD&D | JSONファイルをドロップしてインポート |
@@ -501,11 +502,38 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 
 ---
 
+## タスクバーバッジ
+
+期限超過 + 今日が期限のタスク数を、Windows タスクバーアイコンに赤バッジで重ねて表示します。
+
+### バッジ数の算出
+`computeBadgeCount()`（`TList.html`）が `lists` を走査し、メモリスト以外について `listStats(l.id).overdue + .dueToday` を合算します。
+
+### 配信経路
+`render()` の末尾で `updateBadge(computeBadgeCount())` を呼ぶ。前回値と一致すれば早期 return（無駄な native 呼び出しを避ける）。
+
+| 環境 | 経路 | 表示 |
+|---|---|---|
+| Tauri (Windows) | `invoke('set_taskbar_badge', { count })` → Rust 側で `ITaskbarList3::SetOverlayIcon` | タスクバーアイコンの右下に赤い数字バッジ |
+| PWA (Chrome/Edge にインストール時) | `navigator.setAppBadge(n)` / `clearAppBadge()` | OS のバッジ機構（環境依存） |
+| ブラウザ全般 | `document.title = '(N) TList'` | タイトルバー／タブ／タスクバー hover に件数表示 |
+
+### Rust 側 (`src-tauri/src/main.rs`)
+- `set_taskbar_badge(window, count)` コマンド
+- `count == 0` のときは `SetOverlayIcon(hwnd, null, "")` でオーバーレイクリア
+- 0 より大: `create_count_overlay_icon(count)` で 32×32 の HICON を動的生成（赤背景に白い数字、`99+` で打ち切り）
+- 依存: `windows` クレート 0.61（Tauri 2 と同バージョン）の `Win32_Foundation` / `Win32_System_Com` / `Win32_UI_Shell` / `Win32_UI_WindowsAndMessaging` / `Win32_Graphics_Gdi`
+
+### 制約
+- バッジ数は更新時の差分検知（`_lastBadgeCount`）で重複呼び出しを抑制
+- 非 Windows 環境では `set_taskbar_badge` は no-op（ビルドエラーを避けるため `#[cfg]` 分岐）
+
+---
+
 ## 未実装・検討事項
 
 - **データ同期**（Firebase Firestore方式Bを検討したが未実装）
 - **Tauri配布ビルド**: `npm run build` で NSIS インストーラ生成（未実施）
-- **タスクバーバッジ**: 未対応／未着手予定の超過件数を Windows タスクバーアイコンにオーバーレイ表示する案あり
 - **Outlook連携**: `outlook:` プロトコルがWindows未登録のため断念
 
 ---

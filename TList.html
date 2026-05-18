@@ -1306,6 +1306,46 @@ function listStats(lid) {
     noDate:   active.filter(x => !x.dueDate).length,
   };
 }
+
+// ── Taskbar Badge ─────────────────────────────────────
+// 全 todo リスト（メモ除く）の「超過 + 今日が期限」の合計を返す
+// バッジに載せる数 = 緊急度高（赤＋橙）に該当する未完了タスク数
+function computeBadgeCount() {
+  let n = 0;
+  for (const l of lists) {
+    if (l.type === 'memo') continue;
+    const s = listStats(l.id);
+    n += s.overdue + s.dueToday;
+  }
+  return n;
+}
+
+// 環境に応じてタスクバー/Dock バッジを更新
+// - Tauri: invoke('set_taskbar_badge', { count }) で Windows タスクバーオーバーレイを更新
+// - PWA (Chrome/Edge にインストール時): navigator.setAppBadge
+// - ブラウザのみ: 何もしない（document.title に件数だけ反映）
+let _lastBadgeCount = -1;
+async function updateBadge(n) {
+  if (n === _lastBadgeCount) return;  // 変化がないときはスキップ（無駄な native 呼び出しを避ける）
+  _lastBadgeCount = n;
+
+  // タイトルにも反映（タスクバー hover で件数が見える）
+  document.title = n > 0 ? `(${n}) TList` : 'TList';
+
+  // PWA Badging API
+  if ('setAppBadge' in navigator) {
+    try {
+      if (n > 0) await navigator.setAppBadge(n);
+      else await navigator.clearAppBadge();
+    } catch (_) { /* ignore */ }
+  }
+
+  // Tauri: Windows タスクバーアイコンのオーバーレイバッジ
+  if (window.__TAURI__?.core?.invoke) {
+    try { await window.__TAURI__.core.invoke('set_taskbar_badge', { count: n }); }
+    catch (_) { /* ignore */ }
+  }
+}
 function subTodosOf(parentId) { return todos.filter(x => x.parentId === parentId); }
 function hasSubs(id) { return todos.some(x => x.parentId === id); }
 function isSubTask(t) { return !!t?.parentId; }
@@ -2107,6 +2147,8 @@ function render() {
     const inp = document.getElementById('list-add-inp');
     if (inp) inp.focus();
   }
+  // タスクバー/Dock バッジを更新（fire-and-forget、render をブロックしない）
+  updateBadge(computeBadgeCount());
 }
 
 // ── Todo Actions ───────────────────────────────────────

@@ -3304,10 +3304,29 @@ async function gitPush() {
     gitStatusCache = st;
 
     if (st.has_upstream && st.behind > 0) {
+      // リモートが先行 → 先に Pull して取り込んでから Push を続行
       showToast('⚠️ リモートに新しい変更があります。先に Pull します');
       gitBusy = false;
       await gitPull();
-      return;
+      gitBusy = true;
+      // Pull で衝突マージモーダルが出ている場合は中断（ユーザー操作待ち）
+      if (modalMode === 'git-merge') {
+        return;
+      }
+      // 再度 status を確認。まだ behind > 0 なら何かおかしい
+      await invoke('git_fetch', { repoPath: cfg.repoPath, remote: cfg.remote || 'origin' });
+      const st2 = await invoke('git_status', { repoPath: cfg.repoPath, fileName: cfg.fileName });
+      gitStatusCache = st2;
+      if (st2.has_upstream && st2.behind > 0) {
+        showGitError('Pull 後もリモートが先行しています',
+          'ローカルブランチがリモートと枝分かれしている可能性があります。\n' +
+          '一度コマンドプロンプトで以下を実行してリポジトリをリモートに合わせてください:\n\n' +
+          `cd ${cfg.repoPath}\n` +
+          'git fetch origin\n' +
+          `git reset --hard origin/${st2.branch}\n\n` +
+          'その後、アプリの設定モーダルから「ベースラインをリセット」してから Pull → Push の順に実行してください。');
+        return;
+      }
     }
 
     const payload = buildExportPayload(null, { includeTimestamp: false });

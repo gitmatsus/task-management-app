@@ -115,6 +115,7 @@
     .header-icon svg { width:16px; height:16px; }
     h1 { font-size:20px; font-weight:700; color:var(--t1); letter-spacing:-.025em; line-height:1.2; }
     .header-sub { font-size:11px; color:var(--t3); }
+    .app-version { font-size:11px; color:var(--t3); font-weight:400; margin-left:4px; vertical-align:middle; }
     .header-right { display:flex; align-items:center; gap:8px; }
     .dark-toggle {
       width:36px; height:36px; flex-shrink:0;
@@ -815,6 +816,120 @@
     html.dark .io-btn:hover { color:#a5b4fc; background:rgba(99,102,241,.15); }
     .io-btn svg { width:12px; height:12px; }
 
+    /* ── Git sync area ── */
+    .git-sync-area {
+      padding:4px 8px 8px; display:flex; gap:4px; align-items:center;
+      border-top:1px dashed var(--divider);
+    }
+    .git-sync-status {
+      flex:1; font-size:10px; color:var(--t3); display:flex; flex-direction:column; gap:2px;
+      overflow:hidden; min-width:0;
+    }
+    .git-sync-status .git-branch { font-weight:500; color:var(--t2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .git-sync-status .git-last { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .git-sync-btn {
+      position:relative;
+      display:flex; align-items:center; justify-content:center; gap:3px;
+      padding:5px 8px; font-size:11px; font-weight:500; color:var(--t2);
+      background:rgba(99,102,241,.08); border:1px solid var(--divider);
+      border-radius:6px; cursor:pointer; font-family:inherit;
+      transition:all .15s;
+    }
+    .git-sync-btn:hover { background:rgba(99,102,241,.18); color:#6366f1; }
+    html.dark .git-sync-btn:hover { color:#a5b4fc; }
+    .git-sync-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .git-sync-btn svg { width:11px; height:11px; }
+    .git-sync-btn .git-cnt {
+      position:absolute; top:-5px; right:-5px;
+      min-width:14px; height:14px; padding:0 3px;
+      border-radius:7px; background:#6366f1; color:#fff;
+      font-size:9px; font-weight:700; line-height:14px; text-align:center;
+    }
+    .git-sync-btn.behind .git-cnt { background:#f59e0b; }
+    .git-sync-btn.ahead .git-cnt  { background:#10b981; }
+    .git-config-btn {
+      display:flex; align-items:center; justify-content:center;
+      width:26px; height:26px; padding:0;
+      background:none; border:none; color:var(--t3); cursor:pointer;
+      border-radius:6px; transition:all .15s;
+    }
+    .git-config-btn:hover { background:rgba(99,102,241,.1); color:#6366f1; }
+    .git-config-btn svg { width:14px; height:14px; }
+
+    /* Git config / merge / error modal の共通スタイル */
+    .git-modal-body { padding:14px 20px; font-size:13px; color:var(--t1); display:flex; flex-direction:column; gap:10px; }
+    .git-modal-body label.fld { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--t3); font-weight:500; }
+    .git-modal-body label.fld input[type="text"] {
+      padding:7px 10px; border-radius:8px; border:1px solid var(--input-border);
+      background:var(--input-bg); color:var(--t1); font-family:inherit; font-size:13px;
+    }
+    .git-modal-body label.row {
+      display:flex; align-items:center; gap:8px; font-size:13px; color:var(--t1);
+    }
+    .git-modal-body label.row input[type="checkbox"] { accent-color:#6366f1; }
+    .git-modal-body .git-info-box {
+      padding:8px 10px; background:rgba(99,102,241,.07);
+      border:1px solid var(--divider); border-radius:8px;
+      font-size:12px; color:var(--t2); white-space:pre-wrap; word-break:break-all;
+    }
+    .git-modal-body .git-info-box.err {
+      background:rgba(239,68,68,.07); color:#dc2626; border-color:rgba(239,68,68,.3);
+    }
+    html.dark .git-modal-body .git-info-box.err { color:#fca5a5; }
+    .git-modal-body .git-info-box pre {
+      margin:0; font-family:ui-monospace, "Cascadia Code", Consolas, monospace; font-size:11px;
+      white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto;
+    }
+    .git-test-btn {
+      align-self:flex-start;
+      padding:5px 10px; border-radius:6px; border:1px solid var(--divider);
+      background:none; color:var(--t2); font-size:11px; cursor:pointer; font-family:inherit;
+    }
+    .git-test-btn:hover { background:rgba(99,102,241,.1); color:#6366f1; }
+
+    /* Merge UI */
+    .git-merge-summary { font-size:12px; color:var(--t3); }
+    .git-merge-bulk { display:flex; gap:6px; margin-bottom:4px; }
+    .git-merge-bulk button {
+      padding:4px 10px; border-radius:6px; border:1px solid var(--divider);
+      background:none; color:var(--t2); font-size:11px; cursor:pointer; font-family:inherit;
+    }
+    .git-merge-bulk button:hover { background:rgba(99,102,241,.1); color:#6366f1; }
+    .git-merge-list {
+      display:flex; flex-direction:column; gap:8px;
+      max-height:50vh; overflow-y:auto;
+    }
+    .git-merge-item {
+      border:1px solid var(--divider); border-radius:8px; padding:8px 10px;
+      background:var(--input-bg);
+    }
+    .git-merge-item .git-merge-head {
+      font-size:11px; color:var(--t3); font-weight:500; margin-bottom:6px;
+    }
+    .git-merge-item .git-merge-head .kind-tag {
+      display:inline-block; padding:1px 6px; border-radius:4px;
+      background:rgba(99,102,241,.15); color:#6366f1; font-size:10px;
+      margin-right:6px; font-weight:600;
+    }
+    .git-merge-options { display:flex; flex-direction:column; gap:4px; }
+    .git-merge-option {
+      display:flex; align-items:flex-start; gap:6px;
+      padding:6px 8px; border-radius:6px; cursor:pointer;
+      border:1px solid transparent; background:rgba(0,0,0,.02);
+    }
+    html.dark .git-merge-option { background:rgba(255,255,255,.03); }
+    .git-merge-option:hover { background:rgba(99,102,241,.08); }
+    .git-merge-option.selected {
+      background:rgba(99,102,241,.12); border-color:rgba(99,102,241,.5);
+    }
+    .git-merge-option input[type="radio"] { margin-top:2px; accent-color:#6366f1; }
+    .git-merge-option .opt-label {
+      font-size:10px; color:var(--t3); font-weight:600; margin-bottom:2px;
+    }
+    .git-merge-option .opt-content { font-size:12px; color:var(--t1); white-space:pre-wrap; word-break:break-word; }
+    .git-merge-option .opt-content.deleted { color:#dc2626; font-style:italic; }
+    html.dark .git-merge-option .opt-content.deleted { color:#fca5a5; }
+
     /* ── Task filter chips ── */
     .task-filters {
       display:flex; flex-wrap:wrap; gap:6px;
@@ -1115,6 +1230,9 @@
 <body>
 <div id="app" class="app"></div>
 <script>
+// ── App Version ────────────────────────────────────────
+const APP_VERSION = '1.1.0';
+
 // ── State ──────────────────────────────────────────────
 let todos = [], trash = [], lists = [], selectedListId = '';
 let showTrash = false;
@@ -1142,15 +1260,20 @@ let collapsedIds = new Set(); // セッション単位の折りたたみ状態�
 let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
 let dragSubZoneTargetId = null; // ドラッグ中のサブ化候補ターゲットID
 
+// ── Git 同期 ───────────────────────────────────────────
+let gitStatusCache = null;     // 最後に取得した git_status の結果（{ahead, behind, branch, ...}）
+let gitBusy = false;            // pull/push 実行中フラグ
+let gitConfigDraft = null;      // 設定モーダル編集中の一時オブジェクト
+let gitConfigTestResult = null; // 接続テスト結果（{ok, info, err}）
+let gitMergeData = null;        // マージモーダル用：{ base, ours, theirs, mergedAuto, conflicts, resolutions }
+let gitErrorPayload = null;     // エラーモーダル用：{ title, message, detail }
+
 // ── Persistence ────────────────────────────────────────
-function load() {
-  try { lists = JSON.parse(localStorage.getItem('todo-app-lists') || '[]'); } catch { lists = []; }
+// 共通の data 整合性修復処理（load 後と Git マージ反映後の両方で使う）
+function repairAfterLoad() {
   if (!lists.length) {
     lists = [{ id: crypto.randomUUID(), name: 'マイタスク', createdAt: Date.now() }];
   }
-  try { todos = JSON.parse(localStorage.getItem('todo-app-todos') || '[]'); } catch { todos = []; }
-  try { trash = JSON.parse(localStorage.getItem('todo-app-trash') || '[]'); } catch { trash = []; }
-  try { listTrash = JSON.parse(localStorage.getItem('todo-app-list-trash') || '[]'); } catch { listTrash = []; }
   const defId = lists[0].id;
   todos = todos.map(t => t.listId ? t : { ...t, listId: defId });
   trash = trash.map(t => t.listId ? t : { ...t, listId: defId });
@@ -1162,16 +1285,16 @@ function load() {
       t.parentId = undefined;
     }
   });
-  // 過去の復元バグで todos に重複した可能性のあるエントリを排除（id 重複は最初の1件のみ残す）
+  // id 重複排除（先勝ち）
   {
     const seen = new Set();
     todos = todos.filter(t => seen.has(t.id) ? false : (seen.add(t.id), true));
   }
-  // 旧形式の繰り返しフィールド（文字列）はクリア（新形式はオブジェクト）
+  // 旧形式の繰り返しフィールド（文字列）はクリア
   todos.forEach(t => {
     if (t.recurrence && typeof t.recurrence !== 'object') t.recurrence = undefined;
   });
-  // 過去の復元バグで ゴミ箱に残った "親不在の paired サブ" を除去
+  // 親不在の paired サブをゴミ箱から除去
   {
     const trashIds = new Set(trash.map(t => t.id));
     trash = trash.filter(t => {
@@ -1179,6 +1302,14 @@ function load() {
       return trashIds.has(t._trashedWithParent);
     });
   }
+}
+
+function load() {
+  try { lists = JSON.parse(localStorage.getItem('todo-app-lists') || '[]'); } catch { lists = []; }
+  try { todos = JSON.parse(localStorage.getItem('todo-app-todos') || '[]'); } catch { todos = []; }
+  try { trash = JSON.parse(localStorage.getItem('todo-app-trash') || '[]'); } catch { trash = []; }
+  try { listTrash = JSON.parse(localStorage.getItem('todo-app-list-trash') || '[]'); } catch { listTrash = []; }
+  repairAfterLoad();
   // 全データ読み込み後に選択リストを復元
   const savedListId = localStorage.getItem('todo-app-selected-list');
   selectedListId = (savedListId && lists.find(l => l.id === savedListId))
@@ -1500,6 +1631,9 @@ const I = {
   sortCal: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 11v4m0 0l-1.5-1.5M12 15l1.5-1.5"/></svg>`,
   link:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>`,
   notepad: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  git:     `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+  pullIcon:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>`,
+  pushIcon:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>`,
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -1638,9 +1772,46 @@ function htmlSidebar() {
         <button class="io-btn" data-a="open-export">${I.download}エクスポート</button>
         <button class="io-btn" data-a="open-import">${I.upload}インポート</button>
       </div>
+      ${htmlGitSyncArea()}
       ${trashToggle}
       ${listTrashSection}
     </div>
+  </div>`;
+}
+
+// ── Git 同期エリア（サイドバー）──────────────────────────
+function htmlGitSyncArea() {
+  if (!isTauriEnv()) return '';
+  const cfg = getGitConfig();
+  if (!cfg.enabled) {
+    // 未設定時は設定ボタンのみ
+    return `<div class="git-sync-area" title="Git 同期">
+      <div class="git-sync-status">
+        <span class="git-branch">Git 同期: 未設定</span>
+      </div>
+      <button class="git-config-btn" data-a="open-git-config" title="設定">${I.git}</button>
+    </div>`;
+  }
+  const st = gitStatusCache;
+  const ahead  = st ? st.ahead  : 0;
+  const behind = st ? st.behind : 0;
+  const branch = st ? st.branch : '';
+  const lastSync = localStorage.getItem(GIT_KEYS.lastSync);
+  const lastSyncStr = lastSync ? new Date(lastSync).toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '未同期';
+  const pullCls = behind > 0 ? ' behind' : '';
+  const pushCls = ahead  > 0 ? ' ahead'  : '';
+  const pullBadge = behind > 0 ? `<span class="git-cnt">${behind}</span>` : '';
+  const pushBadge = ahead  > 0 ? `<span class="git-cnt">${ahead}</span>`  : '';
+  const stash = getGitStash();
+  const stashHint = stash ? ' ⚠️未解決' : '';
+  return `<div class="git-sync-area">
+    <div class="git-sync-status">
+      <span class="git-branch">⎇ ${esc(branch || cfg.branch || '...')}${stashHint}</span>
+      <span class="git-last">最終: ${lastSyncStr}</span>
+    </div>
+    <button class="git-sync-btn${pullCls}" data-a="git-pull" title="Pull" ${gitBusy ? 'disabled' : ''}>${I.pullIcon}Pull${pullBadge}</button>
+    <button class="git-sync-btn${pushCls}" data-a="git-push" title="Push" ${gitBusy ? 'disabled' : ''}>${I.pushIcon}Push${pushBadge}</button>
+    <button class="git-config-btn" data-a="open-git-config" title="設定">${I.git}</button>
   </div>`;
 }
 
@@ -1930,6 +2101,9 @@ function htmlMain() {
 // ── Modal HTML ────────────────────────────────────────
 function htmlModal() {
   if (!modalMode) return '';
+  if (modalMode === 'git-config') return htmlGitConfigModal();
+  if (modalMode === 'git-merge')  return htmlGitMergeModal();
+  if (modalMode === 'git-error')  return htmlGitErrorModal();
   const isExport = modalMode === 'export';
   const title = isExport ? 'エクスポート' : 'インポート';
   const actionLabel = isExport ? 'エクスポート' : 'インポート';
@@ -1962,6 +2136,153 @@ function htmlModal() {
       <div class="modal-footer">
         <button class="modal-btn-cancel" data-a="modal-close">キャンセル</button>
         <button class="modal-btn-primary" data-a="modal-confirm" ${selectedCount === 0 ? 'disabled' : ''}>${actionLabel} (${selectedCount})</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Git 同期モーダル ─────────────────────────────────────
+function htmlGitConfigModal() {
+  const d = gitConfigDraft || { ...DEFAULT_GIT_CONFIG };
+  const test = gitConfigTestResult;
+  let testBox = '';
+  if (test) {
+    if (test.ok) {
+      const info = test.info || {};
+      const lines = [];
+      lines.push(`ブランチ: ${esc(info.branch || '(初期コミット前)')}`);
+      if (info.head) lines.push(`HEAD: ${esc(info.head)}`);
+      if (info.remote_url) lines.push(`リモート: ${esc(info.remote_url)}`);
+      lines.push(`${d.fileName || 'tasks.json'}: ${info.file_exists ? '存在' : '未作成（初回 Push で作成）'}`);
+      testBox = `<div class="git-info-box">${lines.join('<br>')}</div>`;
+    } else {
+      testBox = `<div class="git-info-box err">${esc(test.err || '失敗')}</div>`;
+    }
+  }
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⚙ Git 同期 設定</span>
+        <button class="modal-close" data-a="modal-close">${I.x}</button>
+      </div>
+      <div class="git-modal-body">
+        <label class="row">
+          <input type="checkbox" id="git-cfg-enabled" ${d.enabled ? 'checked' : ''}>
+          <span>Git 同期を有効にする</span>
+        </label>
+        <label class="fld">
+          リポジトリパス（ローカル）
+          <input type="text" id="git-cfg-path" value="${esc(d.repoPath)}" placeholder="C:\\path\\to\\local-repo" autocomplete="off">
+        </label>
+        <label class="fld">
+          ファイル名（リポジトリ直下）
+          <input type="text" id="git-cfg-file" value="${esc(d.fileName)}" placeholder="tasks.json" autocomplete="off">
+        </label>
+        <label class="fld">
+          リモート名
+          <input type="text" id="git-cfg-remote" value="${esc(d.remote)}" placeholder="origin" autocomplete="off">
+        </label>
+        <label class="fld">
+          ブランチ（空欄なら現在ブランチ）
+          <input type="text" id="git-cfg-branch" value="${esc(d.branch)}" placeholder="main" autocomplete="off">
+        </label>
+        <label class="fld">
+          コミットメッセージのテンプレート
+          <input type="text" id="git-cfg-msg" value="${esc(d.commitTemplate)}" placeholder="Update {file} via TList ({date})" autocomplete="off">
+        </label>
+        <button class="git-test-btn" data-a="git-config-test">接続テスト</button>
+        ${testBox}
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" data-a="modal-close">キャンセル</button>
+        <button class="modal-btn-primary" data-a="git-config-save">保存</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function htmlGitMergeModal() {
+  if (!gitMergeData) return '';
+  const fmt = (v) => {
+    if (!v) return '<span class="opt-content deleted">（削除されています）</span>';
+    if (v.text !== undefined) {
+      const dueStr = v.dueDate ? `\n期限: ${v.dueDate}` : '';
+      const status = v.completed ? ' [完了]' : '';
+      return `<span class="opt-content">${esc(String(v.text || '').split('\n')[0])}${status}${esc(dueStr)}</span>`;
+    }
+    if (v.name !== undefined) {
+      return `<span class="opt-content">${esc(v.name)}${v.type ? ` [${esc(v.type)}]` : ''}</span>`;
+    }
+    return `<span class="opt-content">${esc(JSON.stringify(v))}</span>`;
+  };
+  const kindLabel = (k) => k === 'lists' ? 'リスト' : k === 'todos' ? 'タスク' : 'ゴミ箱';
+  const items = gitMergeData.conflicts.map((c, i) => {
+    const r = gitMergeData.resolutions[i];
+    const opts = [
+      { val:'ours',   label:'ローカル', data:c.ours },
+      { val:'theirs', label:'リモート', data:c.theirs },
+      { val:'both',   label:'両方残す', data:null },
+    ];
+    const optsHtml = opts.map(o => {
+      const sel = r.choice === o.val ? ' selected' : '';
+      const disabled = (o.val === 'both' && (!c.ours || !c.theirs)) ? ' style="display:none"' : '';
+      const content = o.val === 'both'
+        ? `<span class="opt-content">ローカル版を残しつつ、リモート版を新規 ID で追加</span>`
+        : fmt(o.data);
+      return `<label class="git-merge-option${sel}"${disabled} data-a="git-merge-pick" data-idx="${i}" data-choice="${o.val}">
+        <input type="radio" name="git-merge-${i}" ${sel ? 'checked' : ''}>
+        <div style="flex:1; min-width:0;">
+          <div class="opt-label">${o.label}</div>
+          ${content}
+        </div>
+      </label>`;
+    }).join('');
+    return `<div class="git-merge-item">
+      <div class="git-merge-head">
+        <span class="kind-tag">${kindLabel(c.kind)}</span>
+        ID: <code>${esc(c.id.slice(0, 8))}…</code>
+      </div>
+      <div class="git-merge-options">${optsHtml}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal" style="max-width:640px;">
+      <div class="modal-header">
+        <span class="modal-title">🔀 競合の解決 (${gitMergeData.conflicts.length} 件)</span>
+        <button class="modal-close" data-a="git-merge-cancel">${I.x}</button>
+      </div>
+      <div class="git-modal-body">
+        <div class="git-merge-summary">リモートとローカルの両方で同じ項目が変更されました。各項目でどちらを採用するか選んでください。</div>
+        <div class="git-merge-bulk">
+          <button data-a="git-merge-bulk" data-choice="ours">すべてローカル優先</button>
+          <button data-a="git-merge-bulk" data-choice="theirs">すべてリモート優先</button>
+          <button data-a="git-merge-bulk" data-choice="both">すべて両方残す</button>
+        </div>
+        <div class="git-merge-list">${items}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" data-a="git-merge-cancel">キャンセル</button>
+        <button class="modal-btn-primary" data-a="git-merge-confirm">マージを確定</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function htmlGitErrorModal() {
+  const p = gitErrorPayload || { title: 'エラー', hint: '', detail: '' };
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⚠️ ${esc(p.title)}</span>
+        <button class="modal-close" data-a="modal-close">${I.x}</button>
+      </div>
+      <div class="git-modal-body">
+        ${p.hint ? `<div>${esc(p.hint)}</div>` : ''}
+        ${p.detail ? `<div class="git-info-box err"><pre>${esc(p.detail)}</pre></div>` : ''}
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-primary" data-a="modal-close">閉じる</button>
       </div>
     </div>
   </div>`;
@@ -2101,7 +2422,7 @@ function html() {
       <div class="header-left">
         <div class="header-icon">${I.app}</div>
         <div>
-          <h1>タスク管理</h1>
+          <h1>タスク管理 <span class="app-version">v${APP_VERSION}</span></h1>
           <p class="header-sub">今日やることを整理しよう</p>
         </div>
       </div>
@@ -2462,6 +2783,9 @@ function promoteSubToMain(id) {
 // ── Import / Export ────────────────────────────────────
 function closeModal() {
   modalMode = null; modalLists = []; modalAllChecked = false; importPayload = null;
+  gitConfigDraft = null; gitConfigTestResult = null;
+  gitErrorPayload = null;
+  // gitMergeData は明示的にキャンセル/確定したときのみクリアするため、ここではクリアしない
   render();
 }
 function renderModal() {
@@ -2499,17 +2823,42 @@ function openExportModal() {
   modalAllChecked = true;
   render();
 }
+// 全リスト or 選択リストの export payload を組み立てる（純粋関数）
+function buildExportPayload(selectedIdsOrNull) {
+  const stripInternal = t => { const { _trashedWithParent, ...rest } = t; return rest; };
+  if (selectedIdsOrNull) {
+    return {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      lists: lists.filter(l => selectedIdsOrNull.has(l.id)),
+      todos: todos.filter(t => selectedIdsOrNull.has(t.listId)).map(stripInternal),
+      trash: trash.filter(t => selectedIdsOrNull.has(t.listId)).map(stripInternal),
+    };
+  }
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    lists: lists.map(l => ({ ...l })),
+    todos: todos.map(stripInternal),
+    trash: trash.map(stripInternal),
+  };
+}
+
+// payload を localStorage に直接反映（ID 同一性を保つ＝Git 同期用）
+function applyExportPayloadInPlace(payload) {
+  if (!validateImportData(payload)) throw new Error('invalid payload');
+  lists    = (payload.lists || []).map(l => ({ ...l }));
+  todos    = (payload.todos || []).map(t => ({ ...t }));
+  trash    = (payload.trash || []).map(t => ({ ...t }));
+  repairAfterLoad();
+  if (!lists.find(l => l.id === selectedListId)) selectedListId = lists[0]?.id || '';
+  save();
+}
+
 function executeExport() {
   const selectedIds = new Set(modalLists.filter(l => l.checked).map(l => l.id));
   if (selectedIds.size === 0) return;
-  const stripInternal = t => { const { _trashedWithParent, ...rest } = t; return rest; };
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    lists: lists.filter(l => selectedIds.has(l.id)),
-    todos: todos.filter(t => selectedIds.has(t.listId)).map(stripInternal),
-    trash: trash.filter(t => selectedIds.has(t.listId)).map(stripInternal),
-  };
+  const payload = buildExportPayload(selectedIds);
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2611,6 +2960,434 @@ function executeImport() {
   const firstImported = idMap.values().next().value;
   if (firstImported) { selectedListId = firstImported; showTrash = false; }
   closeModal();
+}
+
+// ── Git 同期 ──────────────────────────────────────────────
+const GIT_KEYS = {
+  config:   'todo-app-git-config',
+  baseline: 'todo-app-git-baseline',
+  stash:    'todo-app-git-stash',
+  lastSync: 'todo-app-git-last-sync',
+};
+const DEFAULT_GIT_CONFIG = {
+  enabled: false, repoPath: '', fileName: 'tasks.json',
+  remote: 'origin', branch: '',
+  commitTemplate: 'Update {file} via TList ({date})',
+};
+
+function getGitConfig() {
+  try {
+    const v = JSON.parse(localStorage.getItem(GIT_KEYS.config) || '{}');
+    return { ...DEFAULT_GIT_CONFIG, ...v };
+  } catch { return { ...DEFAULT_GIT_CONFIG }; }
+}
+function setGitConfig(cfg) {
+  localStorage.setItem(GIT_KEYS.config, JSON.stringify(cfg));
+}
+function getGitBaseline() {
+  const s = localStorage.getItem(GIT_KEYS.baseline);
+  if (!s) return null;
+  try { return JSON.parse(s); } catch { return null; }
+}
+function setGitBaseline(payload) {
+  localStorage.setItem(GIT_KEYS.baseline, JSON.stringify(payload));
+  localStorage.setItem(GIT_KEYS.lastSync, new Date().toISOString());
+}
+function getGitStash() {
+  const s = localStorage.getItem(GIT_KEYS.stash);
+  if (!s) return null;
+  try { return JSON.parse(s); } catch { return null; }
+}
+function setGitStash(payload) {
+  if (payload) localStorage.setItem(GIT_KEYS.stash, JSON.stringify(payload));
+  else localStorage.removeItem(GIT_KEYS.stash);
+}
+
+function tauriInvoke() {
+  return window.__TAURI__?.core?.invoke || null;
+}
+function isTauriEnv() {
+  return !!tauriInvoke();
+}
+
+function formatGitCommitMessage(template, fileName) {
+  const date = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return (template || DEFAULT_GIT_CONFIG.commitTemplate)
+    .replace('{file}', fileName || 'tasks.json')
+    .replace('{date}', dateStr);
+}
+
+// エラーメッセージから種別を推定して、UI 向けの説明文を返す
+function classifyGitError(errMsg) {
+  const m = String(errMsg || '');
+  if (m.includes('git の起動に失敗') || m.includes('git CLI が見つかりません')) {
+    return { title: 'Git CLI が見つかりません', hint: 'Git for Windows をインストールしてください。https://git-scm.com/download/win から入手できます。' };
+  }
+  if (m.match(/Authentication failed|could not read Username|Permission denied|fatal: Authentication/i)) {
+    return { title: '認証に失敗しました', hint: 'コマンドプロンプトで `gh auth login` または `git push` を一度実行し、Windows 資格情報マネージャに認証情報を保存してください。' };
+  }
+  if (m.match(/Could not resolve host|Failed to connect|unable to access/i)) {
+    return { title: 'ネットワークに接続できません', hint: 'インターネット接続を確認してください。' };
+  }
+  if (m.includes('指定パスは git リポジトリではありません')) {
+    return { title: 'Git リポジトリではありません', hint: 'ローカルで `git clone` 済みのフォルダのパスを指定してください。' };
+  }
+  if (m.includes('リポジトリが見つかりません')) {
+    return { title: 'パスが見つかりません', hint: '設定画面のパスを確認してください。' };
+  }
+  if (m.match(/Updates were rejected|non-fast-forward|tip of your current branch is behind/i)) {
+    return { title: 'リモートが先行しています', hint: '先に Pull を実行してから Push してください。' };
+  }
+  if (m.match(/does not exist|exists on disk, but not in/)) {
+    return { title: 'ファイルが見つかりません', hint: 'リモートに tasks.json がまだ存在しないか、ブランチを確認してください。' };
+  }
+  return { title: 'Git 操作に失敗しました', hint: '詳細は下のメッセージを確認してください。' };
+}
+
+function showGitError(title, err) {
+  const errMsg = (err && err.message) ? err.message : String(err || '');
+  const c = classifyGitError(errMsg);
+  gitErrorPayload = {
+    title: title || c.title,
+    hint: c.hint,
+    detail: errMsg,
+  };
+  modalMode = 'git-error';
+  render();
+}
+
+// ── Git 同期 UI 操作 ─────────────────────────────────────
+function openGitConfigModal() {
+  if (!isTauriEnv()) {
+    showGitError('Git 同期は Tauri 版でのみ利用可能です', 'window.__TAURI__ が見つかりません');
+    return;
+  }
+  gitConfigDraft = { ...getGitConfig() };
+  gitConfigTestResult = null;
+  modalMode = 'git-config';
+  render();
+}
+
+async function gitConfigTest() {
+  if (!gitConfigDraft) return;
+  const invoke = tauriInvoke();
+  if (!invoke) return;
+  try {
+    const info = await invoke('git_validate_repo', {
+      repoPath: gitConfigDraft.repoPath,
+      fileName: gitConfigDraft.fileName || 'tasks.json',
+    });
+    gitConfigTestResult = { ok: true, info };
+  } catch (e) {
+    gitConfigTestResult = { ok: false, err: String(e) };
+  }
+  render();
+}
+
+function gitConfigSave() {
+  if (!gitConfigDraft) return;
+  // 簡易バリデーション
+  gitConfigDraft.repoPath = (gitConfigDraft.repoPath || '').trim();
+  gitConfigDraft.fileName = (gitConfigDraft.fileName || 'tasks.json').trim() || 'tasks.json';
+  gitConfigDraft.remote   = (gitConfigDraft.remote   || 'origin').trim() || 'origin';
+  gitConfigDraft.branch   = (gitConfigDraft.branch   || '').trim();
+  setGitConfig(gitConfigDraft);
+  gitConfigDraft = null;
+  gitConfigTestResult = null;
+  closeModal();
+  refreshGitStatus(); // 非同期、結果は次の render で
+}
+
+async function refreshGitStatus() {
+  const cfg = getGitConfig();
+  if (!cfg.enabled || !cfg.repoPath || !isTauriEnv()) {
+    if (gitStatusCache) { gitStatusCache = null; render(); }
+    return;
+  }
+  try {
+    const st = await tauriInvoke()('git_status', {
+      repoPath: cfg.repoPath, fileName: cfg.fileName,
+    });
+    gitStatusCache = st;
+    render();
+  } catch (e) {
+    // ステータス取得失敗は静かに（バッジ非表示）
+    gitStatusCache = null;
+  }
+}
+
+async function gitPull() {
+  if (gitBusy) return;
+  const cfg = getGitConfig();
+  if (!cfg.enabled || !cfg.repoPath) { openGitConfigModal(); return; }
+  const invoke = tauriInvoke();
+  if (!invoke) return;
+  gitBusy = true;
+  try {
+    showToast('⬇️ Pull 中...');
+    await invoke('git_fetch', { repoPath: cfg.repoPath, remote: cfg.remote || 'origin' });
+    const st = await invoke('git_status', { repoPath: cfg.repoPath, fileName: cfg.fileName });
+    gitStatusCache = st;
+
+    if (!st.has_upstream) {
+      showToast('⚠️ 上流ブランチが未設定です（初回 Push を先に実行してください）');
+      return;
+    }
+    if (st.behind === 0) {
+      showToast('✅ すでに最新です');
+      // 念のため baseline を最新の HEAD に揃える
+      const theirsTextNow = await invoke('git_read_file_at_ref', {
+        repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: 'HEAD',
+      }).catch(() => null);
+      if (theirsTextNow) {
+        try { setGitBaseline(JSON.parse(theirsTextNow)); } catch {}
+      }
+      return;
+    }
+
+    // リモートの最新 tasks.json
+    const theirsText = await invoke('git_read_file_at_ref', {
+      repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: 'FETCH_HEAD',
+    });
+    const theirs = theirsText ? JSON.parse(theirsText) : emptyPayload();
+    const baseline = getGitBaseline() || emptyPayload();
+    const ours = buildExportPayload(null);
+
+    // 3-way マージ
+    const mergeResult = mergeThreeWay(baseline, ours, theirs);
+
+    if (mergeResult.conflicts.length === 0) {
+      // 自動マージで完結
+      applyExportPayloadInPlace(mergeResult.merged);
+      await writeAndCommit(cfg, mergeResult.merged, 'Merge remote (auto)');
+      setGitBaseline(mergeResult.merged);
+      await refreshGitStatus();
+      render();
+      showToast('🔀 自動マージしました');
+    } else {
+      // 競合 → 退避してマージ UI を開く
+      setGitStash(ours);
+      gitMergeData = {
+        base: baseline,
+        ours,
+        theirs,
+        mergedAuto: mergeResult.merged,
+        conflicts: mergeResult.conflicts,
+        resolutions: mergeResult.conflicts.map(c => ({ id: c.id, kind: c.kind, choice: 'ours' })),
+      };
+      modalMode = 'git-merge';
+      render();
+    }
+  } catch (e) {
+    showGitError('Pull に失敗しました', e);
+  } finally {
+    gitBusy = false;
+  }
+}
+
+async function gitPush() {
+  if (gitBusy) return;
+  const cfg = getGitConfig();
+  if (!cfg.enabled || !cfg.repoPath) { openGitConfigModal(); return; }
+  const invoke = tauriInvoke();
+  if (!invoke) return;
+  gitBusy = true;
+  try {
+    showToast('⬆️ Push 中...');
+    // 先に fetch でリモート状態を確認
+    await invoke('git_fetch', { repoPath: cfg.repoPath, remote: cfg.remote || 'origin' });
+    const st = await invoke('git_status', { repoPath: cfg.repoPath, fileName: cfg.fileName });
+    gitStatusCache = st;
+
+    if (st.has_upstream && st.behind > 0) {
+      showToast('⚠️ リモートに新しい変更があります。先に Pull します');
+      gitBusy = false;
+      await gitPull();
+      return;
+    }
+
+    const payload = buildExportPayload(null);
+    const content = JSON.stringify(payload, null, 2);
+    await invoke('git_write_file', {
+      repoPath: cfg.repoPath, fileName: cfg.fileName, content,
+    });
+    const msg = formatGitCommitMessage(cfg.commitTemplate, cfg.fileName);
+    const result = await invoke('git_commit_and_push', {
+      repoPath: cfg.repoPath, fileName: cfg.fileName,
+      message: msg,
+      remote: cfg.remote || 'origin',
+      branch: cfg.branch || null,
+    });
+    setGitBaseline(payload);
+    await refreshGitStatus();
+    render();
+    if (result.nothing_to_commit) {
+      showToast('✅ 変更なし（Push 完了）');
+    } else {
+      showToast(`⬆️ Push 完了 (${result.sha || ''})`);
+    }
+  } catch (e) {
+    showGitError('Push に失敗しました', e);
+  } finally {
+    gitBusy = false;
+  }
+}
+
+// payload を tasks.json に書き出してコミット（push なし）。マージ後に使う。
+async function writeAndCommit(cfg, payload, message) {
+  const invoke = tauriInvoke();
+  if (!invoke) return;
+  const content = JSON.stringify(payload, null, 2);
+  await invoke('git_write_file', {
+    repoPath: cfg.repoPath, fileName: cfg.fileName, content,
+  });
+  await invoke('git_commit_only', {
+    repoPath: cfg.repoPath, fileName: cfg.fileName, message,
+  });
+}
+
+function emptyPayload() {
+  return { version: 1, exportedAt: new Date(0).toISOString(), lists: [], todos: [], trash: [] };
+}
+
+// ── 3-way マージ ─────────────────────────────────────────
+// 「意味のあるフィールド」だけを比較対象にする（exportedAt や内部フラグは除外）
+const MEANINGFUL_FIELDS_TODO = [
+  'text', 'completed', 'createdAt', 'listId', 'dueDate', 'startDate',
+  'completedAt', 'folderPath', 'linkType', 'detail', 'parentId', 'recurrence',
+];
+const MEANINGFUL_FIELDS_LIST = ['name', 'createdAt', 'type'];
+
+function recordEqual(a, b, fields) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  for (const f of fields) {
+    const av = JSON.stringify(a[f] ?? null);
+    const bv = JSON.stringify(b[f] ?? null);
+    if (av !== bv) return false;
+  }
+  return true;
+}
+
+function mergeThreeWay(base, ours, theirs) {
+  const merged = { version: 1, exportedAt: new Date().toISOString(), lists: [], todos: [], trash: [] };
+  const conflicts = [];
+
+  const categories = [
+    { key: 'lists', fields: MEANINGFUL_FIELDS_LIST },
+    { key: 'todos', fields: MEANINGFUL_FIELDS_TODO },
+    { key: 'trash', fields: MEANINGFUL_FIELDS_TODO },
+  ];
+  for (const { key, fields } of categories) {
+    const baseMap   = new Map((base[key]   || []).map(x => [x.id, x]));
+    const oursMap   = new Map((ours[key]   || []).map(x => [x.id, x]));
+    const theirsMap = new Map((theirs[key] || []).map(x => [x.id, x]));
+    const allIds = new Set([...baseMap.keys(), ...oursMap.keys(), ...theirsMap.keys()]);
+
+    for (const id of allIds) {
+      const b = baseMap.get(id);
+      const o = oursMap.get(id);
+      const t = theirsMap.get(id);
+      const oursChanged   = !recordEqual(b, o, fields);
+      const theirsChanged = !recordEqual(b, t, fields);
+
+      // (1) どちらも変更なし
+      if (!oursChanged && !theirsChanged) {
+        if (o || t) merged[key].push({ ...(o || t) });
+        continue;
+      }
+      // (2) ours のみ変更
+      if (oursChanged && !theirsChanged) {
+        if (o) merged[key].push({ ...o });
+        continue;
+      }
+      // (3) theirs のみ変更
+      if (!oursChanged && theirsChanged) {
+        if (t) merged[key].push({ ...t });
+        continue;
+      }
+      // (4) 両方変更（または削除）
+      // 4-a: 両方とも同じ結果に変更 → 残す
+      if (o && t && recordEqual(o, t, fields)) {
+        merged[key].push({ ...o });
+        continue;
+      }
+      // 4-b: 競合
+      conflicts.push({ kind: key, id, base: b || null, ours: o || null, theirs: t || null });
+    }
+  }
+  return { merged, conflicts };
+}
+
+// マージ確定: resolutions に従って merged を構築
+function buildMergedWithResolutions(autoMerged, conflicts, resolutions) {
+  const result = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    lists: autoMerged.lists.map(x => ({ ...x })),
+    todos: autoMerged.todos.map(x => ({ ...x })),
+    trash: autoMerged.trash.map(x => ({ ...x })),
+  };
+  for (let i = 0; i < conflicts.length; i++) {
+    const c = conflicts[i];
+    const r = resolutions[i];
+    const choice = r?.choice || 'ours';
+    const arr = result[c.kind];
+    if (choice === 'ours') {
+      if (c.ours) arr.push({ ...c.ours });
+    } else if (choice === 'theirs') {
+      if (c.theirs) arr.push({ ...c.theirs });
+    } else if (choice === 'both') {
+      // 両方残す（theirs に新 ID を割り当てて衝突回避）
+      if (c.ours)   arr.push({ ...c.ours });
+      if (c.theirs) arr.push({ ...c.theirs, id: crypto.randomUUID(), parentId: undefined });
+    }
+  }
+  return result;
+}
+
+async function gitMergeConfirm() {
+  if (!gitMergeData) return;
+  const cfg = getGitConfig();
+  if (!cfg.enabled || !cfg.repoPath) return;
+  gitBusy = true;
+  try {
+    const merged = buildMergedWithResolutions(
+      gitMergeData.mergedAuto, gitMergeData.conflicts, gitMergeData.resolutions
+    );
+    applyExportPayloadInPlace(merged);
+    await writeAndCommit(cfg, merged, 'Merge remote (manual resolution)');
+    setGitBaseline(merged);
+    setGitStash(null);
+    gitMergeData = null;
+    closeModal();
+    await refreshGitStatus();
+    render();
+    showToast('🔀 マージを確定しました。Push して反映してください');
+  } catch (e) {
+    showGitError('マージ確定に失敗しました', e);
+  } finally {
+    gitBusy = false;
+  }
+}
+
+function gitMergeCancel() {
+  // 退避していたローカル変更をそのまま残す（stash には残しておく）
+  gitMergeData = null;
+  closeModal();
+}
+
+function gitMergePick(index, choice) {
+  if (!gitMergeData || !gitMergeData.resolutions[index]) return;
+  gitMergeData.resolutions[index].choice = choice;
+  render();
+}
+function gitMergeBulk(choice) {
+  if (!gitMergeData) return;
+  gitMergeData.resolutions.forEach(r => { r.choice = choice; });
+  render();
 }
 
 // ── Drag visual helpers ─────────────────────────────────
@@ -2749,8 +3526,41 @@ document.addEventListener('click', e => {
     case 'start-add-list': addingList = true; newListName = ''; render(); break;
     case 'open-export':     openExportModal(); break;
     case 'open-import':     openImportModal(); break;
+    case 'open-git-config': openGitConfigModal(); break;
+    case 'git-pull':        gitPull(); break;
+    case 'git-push':        gitPush(); break;
+    case 'git-config-test': gitConfigTest(); break;
+    case 'git-config-save': {
+      if (!gitConfigDraft) break;
+      const $ = id => document.getElementById(id);
+      gitConfigDraft.enabled  = $('git-cfg-enabled')?.checked || false;
+      gitConfigDraft.repoPath = $('git-cfg-path')?.value     || '';
+      gitConfigDraft.fileName = $('git-cfg-file')?.value     || 'tasks.json';
+      gitConfigDraft.remote   = $('git-cfg-remote')?.value   || 'origin';
+      gitConfigDraft.branch   = $('git-cfg-branch')?.value   || '';
+      gitConfigDraft.commitTemplate = $('git-cfg-msg')?.value || DEFAULT_GIT_CONFIG.commitTemplate;
+      gitConfigSave();
+      break;
+    }
+    case 'git-merge-confirm': gitMergeConfirm(); break;
+    case 'git-merge-cancel':  gitMergeCancel(); break;
+    case 'git-merge-pick': {
+      const idx = parseInt(el.dataset.idx, 10);
+      const choice = el.dataset.choice;
+      gitMergePick(idx, choice);
+      break;
+    }
+    case 'git-merge-bulk': {
+      const choice = el.dataset.choice;
+      gitMergeBulk(choice);
+      break;
+    }
     case 'modal-close':     closeModal(); break;
-    case 'modal-overlay':   if (e.target.classList.contains('modal-overlay')) closeModal(); break;
+    case 'modal-overlay':
+      // モーダル内から始めたドラッグが枠外で離れた場合は閉じない
+      if (e.target.classList.contains('modal-overlay') && _mouseDownOnModalOverlay) closeModal();
+      _mouseDownOnModalOverlay = false;
+      break;
     case 'modal-toggle-all': toggleModalAll(); break;
     case 'modal-toggle':    toggleModalItem(id); break;
     case 'modal-confirm':   if (modalMode === 'export') executeExport(); else executeImport(); break;
@@ -2829,8 +3639,11 @@ document.addEventListener('submit', e => {
   if (form) { e.preventDefault(); addTodo(form); }
 });
 
-// ダブルクリック時のテキスト全選択を防止
+// モーダル overlay クリック判定用：mousedown 開始位置が overlay 自身かを記録
+// （モーダル内のテキストを選択しようとして枠外で離したときに閉じてしまうのを防ぐ）
+let _mouseDownOnModalOverlay = false;
 document.addEventListener('mousedown', e => {
+  _mouseDownOnModalOverlay = !!(e.target && e.target.classList && e.target.classList.contains('modal-overlay'));
   if (e.detail < 2) return;
   if (e.target.closest('.text-wrap, .list-nav-item .list-content')) e.preventDefault();
 });
@@ -3304,6 +4117,8 @@ document.addEventListener('contextmenu', e => {
 // ── Init ───────────────────────────────────────────────
 load();
 render();
+// 起動時に Git ステータスを取得（Tauri 環境かつ enabled の場合のみ）
+refreshGitStatus();
 </script>
 </body>
 </html>

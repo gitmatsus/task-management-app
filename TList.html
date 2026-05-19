@@ -3162,21 +3162,21 @@ async function gitPull() {
 
     const baselineSaved = getGitBaseline();
 
-    // behind=0 かつ baseline 既にある＝完全に同期済み
-    if (st.behind === 0 && baselineSaved) {
-      showToast('✅ すでに最新です');
-      return;
-    }
-
-    // behind=0 で baseline 未設定なら「初回 Pull」として HEAD を取り込む
-    // behind>0 なら FETCH_HEAD を取り込む
+    // リモート（または HEAD）の tasks.json を取得
     const ref = st.behind > 0 ? 'FETCH_HEAD' : 'HEAD';
     const theirsText = await invoke('git_read_file_at_ref', {
       repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: ref,
-    });
+    }).catch(() => null);
     const theirs = theirsText ? JSON.parse(theirsText) : emptyPayload();
     const baseline = baselineSaved || emptyPayload();
     const ours = buildExportPayload(null, { includeTimestamp: false });
+
+    // behind=0 で、かつローカル localStorage の内容がリモート tasks.json と一致 → 本当に最新
+    if (st.behind === 0 && payloadsEquivalent(ours, theirs)) {
+      showToast('✅ すでに最新です');
+      setGitBaseline(theirs); // baseline を最新状態と一致するよう揃える
+      return;
+    }
 
     // 3-way マージ
     const mergeResult = mergeThreeWay(baseline, ours, theirs);
@@ -3290,6 +3290,25 @@ function recordEqual(a, b, fields) {
     const av = JSON.stringify(a[f] ?? null);
     const bv = JSON.stringify(b[f] ?? null);
     if (av !== bv) return false;
+  }
+  return true;
+}
+
+// 2 つの payload が「リスト/タスク/ゴミ箱の内容として」実質的に同じかを判定
+function payloadsEquivalent(a, b) {
+  for (const { key, fields } of [
+    { key: 'lists', fields: MEANINGFUL_FIELDS_LIST },
+    { key: 'todos', fields: MEANINGFUL_FIELDS_TODO },
+    { key: 'trash', fields: MEANINGFUL_FIELDS_TODO },
+  ]) {
+    const aArr = a[key] || [], bArr = b[key] || [];
+    if (aArr.length !== bArr.length) return false;
+    const aMap = new Map(aArr.map(x => [x.id, x]));
+    for (const bItem of bArr) {
+      const aItem = aMap.get(bItem.id);
+      if (!aItem) return false;
+      if (!recordEqual(aItem, bItem, fields)) return false;
+    }
   }
   return true;
 }

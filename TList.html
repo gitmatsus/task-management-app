@@ -3245,6 +3245,20 @@ async function gitPull() {
       // 自動マージで完結
       const beforeCount = ours.todos.length;
       applyExportPayloadInPlace(mergeResult.merged);
+      // 先にローカルブランチをリモートに ff-only で追従させる
+      // （これをしないとローカルが枝分かれして次の Push が拒否される）
+      if (st.behind > 0) {
+        try {
+          await invoke('git_pull_ff_only', {
+            repoPath: cfg.repoPath,
+            remote: cfg.remote || 'origin',
+            branch: cfg.branch || null,
+          });
+        } catch (ffErr) {
+          // ff-only 失敗時はそのまま続行（merge commit 風になるが Push は別途エラーで気付く）
+          console.warn('git pull --ff-only before merge commit failed:', ffErr);
+        }
+      }
       await writeAndCommit(cfg, mergeResult.merged, 'Merge remote (auto)');
       setGitBaseline(mergeResult.merged);
       await refreshGitStatus();
@@ -3459,12 +3473,25 @@ async function gitMergeConfirm() {
   if (!gitMergeData) return;
   const cfg = getGitConfig();
   if (!cfg.enabled || !cfg.repoPath) return;
+  const invoke = tauriInvoke();
+  if (!invoke) return;
   gitBusy = true;
   try {
     const merged = buildMergedWithResolutions(
       gitMergeData.mergedAuto, gitMergeData.conflicts, gitMergeData.resolutions
     );
     applyExportPayloadInPlace(merged);
+    // ローカルブランチをリモートに ff-only で追従させてから commit
+    // （これをしないと枝分かれして Push が拒否される）
+    try {
+      await invoke('git_pull_ff_only', {
+        repoPath: cfg.repoPath,
+        remote: cfg.remote || 'origin',
+        branch: cfg.branch || null,
+      });
+    } catch (ffErr) {
+      console.warn('git pull --ff-only before manual merge commit failed:', ffErr);
+    }
     await writeAndCommit(cfg, merged, 'Merge remote (manual resolution)');
     setGitBaseline(merged);
     setGitStash(null);

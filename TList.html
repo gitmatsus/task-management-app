@@ -3070,14 +3070,27 @@ function openGitConfigModal() {
   render();
 }
 
+// 入力フィールドから gitConfigDraft に値を吸い上げる
+function syncGitConfigDraftFromInputs() {
+  if (!gitConfigDraft) return;
+  const $ = id => document.getElementById(id);
+  gitConfigDraft.enabled        = $('git-cfg-enabled')?.checked || false;
+  gitConfigDraft.repoPath       = $('git-cfg-path')?.value     ?? gitConfigDraft.repoPath;
+  gitConfigDraft.fileName       = $('git-cfg-file')?.value     ?? gitConfigDraft.fileName;
+  gitConfigDraft.remote         = $('git-cfg-remote')?.value   ?? gitConfigDraft.remote;
+  gitConfigDraft.branch         = $('git-cfg-branch')?.value   ?? gitConfigDraft.branch;
+  gitConfigDraft.commitTemplate = $('git-cfg-msg')?.value      ?? gitConfigDraft.commitTemplate;
+}
+
 async function gitConfigTest() {
   if (!gitConfigDraft) return;
+  syncGitConfigDraftFromInputs();
   const invoke = tauriInvoke();
   if (!invoke) return;
   try {
     const info = await invoke('git_validate_repo', {
-      repoPath: gitConfigDraft.repoPath,
-      fileName: gitConfigDraft.fileName || 'tasks.json',
+      repoPath: (gitConfigDraft.repoPath || '').trim(),
+      fileName: (gitConfigDraft.fileName || 'tasks.json').trim() || 'tasks.json',
     });
     gitConfigTestResult = { ok: true, info };
   } catch (e) {
@@ -3532,13 +3545,7 @@ document.addEventListener('click', e => {
     case 'git-config-test': gitConfigTest(); break;
     case 'git-config-save': {
       if (!gitConfigDraft) break;
-      const $ = id => document.getElementById(id);
-      gitConfigDraft.enabled  = $('git-cfg-enabled')?.checked || false;
-      gitConfigDraft.repoPath = $('git-cfg-path')?.value     || '';
-      gitConfigDraft.fileName = $('git-cfg-file')?.value     || 'tasks.json';
-      gitConfigDraft.remote   = $('git-cfg-remote')?.value   || 'origin';
-      gitConfigDraft.branch   = $('git-cfg-branch')?.value   || '';
-      gitConfigDraft.commitTemplate = $('git-cfg-msg')?.value || DEFAULT_GIT_CONFIG.commitTemplate;
+      syncGitConfigDraftFromInputs();
       gitConfigSave();
       break;
     }

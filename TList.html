@@ -3151,24 +3151,23 @@ async function gitPull() {
       showToast('⚠️ 上流ブランチが未設定です（初回 Push を先に実行してください）');
       return;
     }
-    if (st.behind === 0) {
+
+    const baselineSaved = getGitBaseline();
+
+    // behind=0 かつ baseline 既にある＝完全に同期済み
+    if (st.behind === 0 && baselineSaved) {
       showToast('✅ すでに最新です');
-      // 念のため baseline を最新の HEAD に揃える
-      const theirsTextNow = await invoke('git_read_file_at_ref', {
-        repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: 'HEAD',
-      }).catch(() => null);
-      if (theirsTextNow) {
-        try { setGitBaseline(JSON.parse(theirsTextNow)); } catch {}
-      }
       return;
     }
 
-    // リモートの最新 tasks.json
+    // behind=0 で baseline 未設定なら「初回 Pull」として HEAD を取り込む
+    // behind>0 なら FETCH_HEAD を取り込む
+    const ref = st.behind > 0 ? 'FETCH_HEAD' : 'HEAD';
     const theirsText = await invoke('git_read_file_at_ref', {
-      repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: 'FETCH_HEAD',
+      repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: ref,
     });
     const theirs = theirsText ? JSON.parse(theirsText) : emptyPayload();
-    const baseline = getGitBaseline() || emptyPayload();
+    const baseline = baselineSaved || emptyPayload();
     const ours = buildExportPayload(null, { includeTimestamp: false });
 
     // 3-way マージ

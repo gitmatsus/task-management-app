@@ -3164,10 +3164,45 @@ async function gitPull() {
 
     // リモート（または HEAD）の tasks.json を取得
     const ref = st.behind > 0 ? 'FETCH_HEAD' : 'HEAD';
-    const theirsText = await invoke('git_read_file_at_ref', {
-      repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: ref,
-    }).catch(() => null);
-    const theirs = theirsText ? JSON.parse(theirsText) : emptyPayload();
+    let theirsText;
+    try {
+      theirsText = await invoke('git_read_file_at_ref', {
+        repoPath: cfg.repoPath, fileName: cfg.fileName, gitRef: ref,
+      });
+    } catch (e) {
+      showGitError('リモートのファイル取得に失敗しました', e);
+      return;
+    }
+    if (theirsText === null) {
+      // ref に tasks.json がない（リモートにまだファイルがない、ブランチ違い等）
+      // 取り込めるデータが無いのにマージを進めるとローカルが「全削除した」と誤解され、
+      // Push 時にデータが消えるためここで明示的に止める。
+      // ただし、ローカルもデータが空に近い「初回 Push 待ち」状態なら、エラーではなく案内する
+      const oursPre = buildExportPayload(null, { includeTimestamp: false });
+      const oursIsEmpty = oursPre.lists.length <= 1 && oursPre.todos.length === 0 && oursPre.trash.length === 0;
+      if (oursIsEmpty) {
+        showToast('ℹ️ リモートに ' + cfg.fileName + ' がまだありません。Push で初回作成してください');
+      } else {
+        showGitError(
+          `リモートに ${cfg.fileName} が見つかりません`,
+          `${ref} に ${cfg.fileName} が含まれていません。\n\n` +
+          `考えられる原因:\n` +
+          `・リモートにファイルがまだ Push されていない\n` +
+          `・設定のブランチ名(${cfg.branch || st.branch})がリモートと違う\n` +
+          `・ファイル名(${cfg.fileName})の設定間違い\n\n` +
+          `そのまま Push するとローカルの内容で上書きされます。`
+        );
+      }
+      return;
+    }
+
+    let theirs;
+    try {
+      theirs = JSON.parse(theirsText);
+    } catch (e) {
+      showGitError(`${cfg.fileName} の JSON 解析に失敗しました`, e);
+      return;
+    }
     const baseline = baselineSaved || emptyPayload();
     const ours = buildExportPayload(null, { includeTimestamp: false });
 

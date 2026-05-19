@@ -2824,12 +2824,15 @@ function openExportModal() {
   render();
 }
 // 全リスト or 選択リストの export payload を組み立てる（純粋関数）
-function buildExportPayload(selectedIdsOrNull) {
+// opts.includeTimestamp: true なら exportedAt を含める（DL用）、false なら含めない（Git同期用）
+function buildExportPayload(selectedIdsOrNull, opts = {}) {
+  const { includeTimestamp = true } = opts;
   const stripInternal = t => { const { _trashedWithParent, ...rest } = t; return rest; };
+  const ts = includeTimestamp ? { exportedAt: new Date().toISOString() } : {};
   if (selectedIdsOrNull) {
     return {
       version: 1,
-      exportedAt: new Date().toISOString(),
+      ...ts,
       lists: lists.filter(l => selectedIdsOrNull.has(l.id)),
       todos: todos.filter(t => selectedIdsOrNull.has(t.listId)).map(stripInternal),
       trash: trash.filter(t => selectedIdsOrNull.has(t.listId)).map(stripInternal),
@@ -2837,7 +2840,7 @@ function buildExportPayload(selectedIdsOrNull) {
   }
   return {
     version: 1,
-    exportedAt: new Date().toISOString(),
+    ...ts,
     lists: lists.map(l => ({ ...l })),
     todos: todos.map(stripInternal),
     trash: trash.map(stripInternal),
@@ -3166,7 +3169,7 @@ async function gitPull() {
     });
     const theirs = theirsText ? JSON.parse(theirsText) : emptyPayload();
     const baseline = getGitBaseline() || emptyPayload();
-    const ours = buildExportPayload(null);
+    const ours = buildExportPayload(null, { includeTimestamp: false });
 
     // 3-way マージ
     const mergeResult = mergeThreeWay(baseline, ours, theirs);
@@ -3221,7 +3224,7 @@ async function gitPush() {
       return;
     }
 
-    const payload = buildExportPayload(null);
+    const payload = buildExportPayload(null, { includeTimestamp: false });
     const content = JSON.stringify(payload, null, 2);
     await invoke('git_write_file', {
       repoPath: cfg.repoPath, fileName: cfg.fileName, content,
@@ -3262,7 +3265,7 @@ async function writeAndCommit(cfg, payload, message) {
 }
 
 function emptyPayload() {
-  return { version: 1, exportedAt: new Date(0).toISOString(), lists: [], todos: [], trash: [] };
+  return { version: 1, lists: [], todos: [], trash: [] };
 }
 
 // ── 3-way マージ ─────────────────────────────────────────
@@ -3285,7 +3288,7 @@ function recordEqual(a, b, fields) {
 }
 
 function mergeThreeWay(base, ours, theirs) {
-  const merged = { version: 1, exportedAt: new Date().toISOString(), lists: [], todos: [], trash: [] };
+  const merged = { version: 1, lists: [], todos: [], trash: [] };
   const conflicts = [];
 
   const categories = [
@@ -3338,7 +3341,6 @@ function mergeThreeWay(base, ours, theirs) {
 function buildMergedWithResolutions(autoMerged, conflicts, resolutions) {
   const result = {
     version: 1,
-    exportedAt: new Date().toISOString(),
     lists: autoMerged.lists.map(x => ({ ...x })),
     todos: autoMerged.todos.map(x => ({ ...x })),
     trash: autoMerged.trash.map(x => ({ ...x })),

@@ -3183,12 +3183,16 @@ async function gitPull() {
 
     if (mergeResult.conflicts.length === 0) {
       // 自動マージで完結
+      const beforeCount = ours.todos.length;
       applyExportPayloadInPlace(mergeResult.merged);
       await writeAndCommit(cfg, mergeResult.merged, 'Merge remote (auto)');
       setGitBaseline(mergeResult.merged);
       await refreshGitStatus();
       render();
-      showToast('🔀 自動マージしました');
+      const m = mergeResult.merged;
+      const addedTodos = m.todos.length - beforeCount;
+      const delta = addedTodos > 0 ? ` +${addedTodos}` : addedTodos < 0 ? ` ${addedTodos}` : '';
+      showToast(`🔀 自動マージ完了：リスト ${m.lists.length} / タスク ${m.todos.length}${delta}`);
     } else {
       // 競合 → 退避してマージ UI を開く
       setGitStash(ours);

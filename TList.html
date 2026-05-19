@@ -3246,6 +3246,7 @@ async function gitPull() {
     showGitError('Pull に失敗しました', e);
   } finally {
     gitBusy = false;
+    render();
   }
 }
 
@@ -3294,6 +3295,7 @@ async function gitPush() {
     showGitError('Push に失敗しました', e);
   } finally {
     gitBusy = false;
+    render();
   }
 }
 
@@ -3450,6 +3452,7 @@ async function gitMergeConfirm() {
     showGitError('マージ確定に失敗しました', e);
   } finally {
     gitBusy = false;
+    render();
   }
 }
 

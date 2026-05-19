@@ -2159,6 +2159,13 @@ function htmlGitConfigModal() {
       testBox = `<div class="git-info-box err">${esc(test.err || '失敗')}</div>`;
     }
   }
+  const hasBaseline = !!localStorage.getItem(GIT_KEYS.baseline);
+  const baselineBox = hasBaseline ? `
+    <div class="git-info-box" style="display:flex; align-items:center; gap:8px;">
+      <span style="flex:1;">ベースラインあり（過去に同期成功あり）</span>
+      <button class="git-test-btn" data-a="git-baseline-reset" title="次回 Pull を初回扱いにする">リセット</button>
+    </div>` : `
+    <div class="git-info-box">ベースラインなし（次回 Pull は初回扱いで実行されます）</div>`;
   return `<div class="modal-overlay" data-a="modal-overlay">
     <div class="modal">
       <div class="modal-header">
@@ -2192,6 +2199,7 @@ function htmlGitConfigModal() {
         </label>
         <button class="git-test-btn" data-a="git-config-test">接続テスト</button>
         ${testBox}
+        ${baselineBox}
       </div>
       <div class="modal-footer">
         <button class="modal-btn-cancel" data-a="modal-close">キャンセル</button>
@@ -3544,6 +3552,15 @@ document.addEventListener('click', e => {
     case 'git-pull':        gitPull(); break;
     case 'git-push':        gitPush(); break;
     case 'git-config-test': gitConfigTest(); break;
+    case 'git-baseline-reset': {
+      if (confirm('ベースラインをリセットしますか？\n次回 Pull が「初回 Pull」として実行され、リモートの内容を取り込み直します。')) {
+        localStorage.removeItem(GIT_KEYS.baseline);
+        localStorage.removeItem(GIT_KEYS.stash);
+        showToast('🔄 ベースラインをリセットしました');
+        render();
+      }
+      break;
+    }
     case 'git-config-save': {
       if (!gitConfigDraft) break;
       syncGitConfigDraftFromInputs();

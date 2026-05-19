@@ -3208,9 +3208,34 @@ async function gitPull() {
 
     // behind=0 で、かつローカル localStorage の内容がリモート tasks.json と一致 → 本当に最新
     if (st.behind === 0 && payloadsEquivalent(ours, theirs)) {
-      showToast('✅ すでに最新です');
-      setGitBaseline(theirs); // baseline を最新状態と一致するよう揃える
+      showToast(`✅ すでに最新です（リスト ${ours.lists.length} / タスク ${ours.todos.length}）`);
+      setGitBaseline(theirs);
       return;
+    }
+
+    // behind > 0 かつローカル変更なし（ours == baseline）→ git pull --ff-only でローカルブランチを前進
+    // これがあるべき「git pull」動作：リモートを取得してローカルブランチを進める
+    const oursUnchanged = baselineSaved && payloadsEquivalent(ours, baseline);
+    if (st.behind > 0 && oursUnchanged && !st.has_target_file_change) {
+      try {
+        await invoke('git_pull_ff_only', {
+          repoPath: cfg.repoPath,
+          remote: cfg.remote || 'origin',
+          branch: cfg.branch || null,
+        });
+        applyExportPayloadInPlace(theirs);
+        setGitBaseline(theirs);
+        await refreshGitStatus();
+        render();
+        const beforeCount = ours.todos.length;
+        const addedTodos = theirs.todos.length - beforeCount;
+        const delta = addedTodos > 0 ? ` +${addedTodos}` : addedTodos < 0 ? ` ${addedTodos}` : '';
+        showToast(`⬇️ Pull 完了：リスト ${theirs.lists.length} / タスク ${theirs.todos.length}${delta}`);
+        return;
+      } catch (e) {
+        // ff-only 失敗時は 3-way マージにフォールバック
+        console.warn('ff-only failed, fallback to 3-way merge:', e);
+      }
     }
 
     // 3-way マージ

@@ -2606,7 +2606,7 @@ function html() {
       </div>
       <div class="header-right">
         <button class="sidebar-toggle-btn${sidebarOpen ? ' active' : ''}" data-a="toggle-sidebar" aria-label="リスト">${I.menu}</button>
-        <button class="header-icon-btn${getNotifyPermission() === 'default' ? ' has-dot' : ''}" data-a="open-notify-config" title="通知（バッジ）設定" aria-label="通知設定">${I.bell}</button>
+        ${isTauriEnv() ? '' : `<button class="header-icon-btn${getNotifyPermission() === 'default' ? ' has-dot' : ''}" data-a="open-notify-config" title="通知（バッジ）設定" aria-label="通知設定">${I.bell}</button>`}
         <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
       </div>
     </div>

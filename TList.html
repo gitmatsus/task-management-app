@@ -1296,6 +1296,11 @@
       select {
         font-size:16px !important;
       }
+      /* <input type="date"> は opacity:0 で隠した上に label を重ねている構造のため、
+         label 側の文字サイズも 16px にしておかないと iOS Safari が小さい要素と
+         判断して自動ズームを発動する */
+      .edit-date-placeholder { font-size:16px; padding:6px 10px; }
+      .edit-date-wrap { min-height:34px; }
     }
 
 

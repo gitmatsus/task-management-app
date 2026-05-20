@@ -1147,21 +1147,18 @@
     ══════════════════════════════════════════ */
     @media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
       /* 長押しコンテキストメニュー・テキスト選択を抑制
-         子孫要素（.todo-text 等）にも適用しないと iOS Safari の選択ハイライトが残る */
-      .todo-item, .todo-item *,
-      .list-nav-item, .list-nav-item *,
-      .drag-handle, .cb, .dot, .due-badge, .filter-btn, .trash-btn,
-      .trash-item, .trash-item * {
+         アプリ全体に適用しないと、メニュー操作で画面が切り替わった後に
+         別の要素上でテキスト選択ハイライトが残る現象が起きる */
+      body, body * {
         -webkit-touch-callout:none;
         -webkit-user-select:none;
         user-select:none;
         -webkit-tap-highlight-color:transparent;
       }
-      /* ただし編集モードの入力要素は通常通り選択・コピー可能にする */
-      .edit-form input, .edit-form textarea, .edit-form select,
-      .modal input, .modal textarea, .modal select,
-      .input-bar-mobile input, .input-bar-mobile textarea,
-      .memo-popup-text {
+      /* ただし入力要素・編集可能要素・メモ表示テキストは通常通り選択・コピー可能 */
+      input, textarea, select,
+      [contenteditable="true"],
+      .memo-popup-text, .memo-popup-text * {
         -webkit-user-select:text;
         user-select:text;
         -webkit-touch-callout:default;
@@ -4486,6 +4483,11 @@ document.addEventListener('contextmenu', e => {
   // 入力欄（textarea/input）ではブラウザ標準メニューを維持
   if (e.target.matches('textarea, input')) return;
   e.preventDefault();
+  // iOS Safari の長押しで先に発生したテキスト選択を解除（メニュー後に残るのを防止）
+  try {
+    const sel = window.getSelection();
+    if (sel && sel.removeAllRanges) sel.removeAllRanges();
+  } catch (_) { /* ignore */ }
   // タスク行で右クリック → タスク用メニュー
   const item = e.target.closest('.todo-item');
   if (item && !e.target.closest('.edit-form')) {

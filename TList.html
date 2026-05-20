@@ -1146,11 +1146,25 @@
        モバイル対応 (max-width: 640px)
     ══════════════════════════════════════════ */
     @media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
-      /* 長押しコンテキストメニュー・テキスト選択を抑制 */
-      .todo-item, .list-nav-item, .drag-handle, .cb, .dot, .due-badge, .filter-btn, .trash-btn {
+      /* 長押しコンテキストメニュー・テキスト選択を抑制
+         子孫要素（.todo-text 等）にも適用しないと iOS Safari の選択ハイライトが残る */
+      .todo-item, .todo-item *,
+      .list-nav-item, .list-nav-item *,
+      .drag-handle, .cb, .dot, .due-badge, .filter-btn, .trash-btn,
+      .trash-item, .trash-item * {
         -webkit-touch-callout:none;
         -webkit-user-select:none;
         user-select:none;
+        -webkit-tap-highlight-color:transparent;
+      }
+      /* ただし編集モードの入力要素は通常通り選択・コピー可能にする */
+      .edit-form input, .edit-form textarea, .edit-form select,
+      .modal input, .modal textarea, .modal select,
+      .input-bar-mobile input, .input-bar-mobile textarea,
+      .memo-popup-text {
+        -webkit-user-select:text;
+        user-select:text;
+        -webkit-touch-callout:default;
       }
 
       body {

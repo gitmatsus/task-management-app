@@ -1286,8 +1286,16 @@
       /* 編集フォーム */
       .edit-text { font-size:16px; }
       .edit-actions { gap:6px; }
-      .edit-date { font-size:12px; }
       .edit-date-wrap .edit-date { pointer-events:auto; }
+
+      /* ── iOS Safari の自動ズーム防止 ──
+         input/textarea/select は font-size を 16px 以上にしないと
+         フォーカス時に iOS Safari が画面を強制ズームしてしまう */
+      input:not([type="checkbox"]):not([type="radio"]),
+      textarea,
+      select {
+        font-size:16px !important;
+      }
     }
 
 

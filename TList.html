@@ -1468,6 +1468,10 @@ function saveUiState() {
       listExpanded,
       taskFilter,
     }));
+    // 選択中リストも render のたびに保存（リスト切り替えだけでも次回起動時に復元できるよう）
+    if (selectedListId) {
+      localStorage.setItem('todo-app-selected-list', selectedListId);
+    }
   } catch { /* ignore (容量超過等) */ }
 }
 

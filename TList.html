@@ -127,6 +127,22 @@
     .dark-toggle:hover { border-color:#818cf8; }
     .dark-toggle svg { width:16px; height:16px; }
 
+    /* ヘッダー共通アイコンボタン（ベル等） */
+    .header-icon-btn {
+      position:relative;
+      width:36px; height:36px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; border-radius:50%;
+      background:var(--card); border:1px solid var(--input-border); cursor:pointer;
+      color:var(--t2); transition:all .2s; box-shadow:0 1px 2px rgba(0,0,0,.05);
+    }
+    .header-icon-btn:hover { border-color:#818cf8; color:#6366f1; }
+    .header-icon-btn svg { width:16px; height:16px; }
+    .header-icon-btn.has-dot::after {
+      content:''; position:absolute; top:6px; right:6px;
+      width:8px; height:8px; border-radius:50%; background:#ef4444;
+      box-shadow:0 0 0 2px var(--card);
+    }
+
     /* モバイル用サイドバー開閉ボタン */
     .sidebar-toggle-btn {
       display:none;
@@ -1268,6 +1284,43 @@ let gitConfigTestResult = null; // 接続テスト結果（{ok, info, err}）
 let gitMergeData = null;        // マージモーダル用：{ base, ours, theirs, mergedAuto, conflicts, resolutions }
 let gitErrorPayload = null;     // エラーモーダル用：{ title, message, detail }
 
+// ── 通知（バッジ）設定 ─────────────────────────────────
+let notifyPermissionCache = null; // 'default' | 'granted' | 'denied' | 'unsupported'
+
+function getNotifyPermission() {
+  if (!('Notification' in window)) return 'unsupported';
+  return Notification.permission; // 'default' | 'granted' | 'denied'
+}
+function isIOSSafari() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  // iPad の Safari は Mac と区別しづらいので touch + Safari で判定
+  const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  return (isIOS || isIPadOS) && isSafari;
+}
+function isStandalonePWA() {
+  // ホーム画面追加されたかどうか（iOS Safari / Chromium 両対応）
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  if (window.navigator.standalone === true) return true;
+  return false;
+}
+async function requestNotifyPermission() {
+  if (!('Notification' in window)) return 'unsupported';
+  const p = Notification.permission;
+  if (p === 'granted' || p === 'denied') return p;
+  try {
+    // 一部ブラウザはコールバック型しか対応していないので両対応
+    const result = await new Promise((resolve) => {
+      const ret = Notification.requestPermission((r) => resolve(r));
+      if (ret && typeof ret.then === 'function') ret.then(resolve);
+    });
+    return result;
+  } catch {
+    return 'denied';
+  }
+}
+
 // ── Persistence ────────────────────────────────────────
 // 共通の data 整合性修復処理（load 後と Git マージ反映後の両方で使う）
 function repairAfterLoad() {
@@ -1634,6 +1687,7 @@ const I = {
   git:     `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
   pullIcon:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>`,
   pushIcon:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>`,
+  bell:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`,
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -2101,9 +2155,10 @@ function htmlMain() {
 // ── Modal HTML ────────────────────────────────────────
 function htmlModal() {
   if (!modalMode) return '';
-  if (modalMode === 'git-config') return htmlGitConfigModal();
-  if (modalMode === 'git-merge')  return htmlGitMergeModal();
-  if (modalMode === 'git-error')  return htmlGitErrorModal();
+  if (modalMode === 'git-config')    return htmlGitConfigModal();
+  if (modalMode === 'git-merge')     return htmlGitMergeModal();
+  if (modalMode === 'git-error')     return htmlGitErrorModal();
+  if (modalMode === 'notify-config') return htmlNotifyConfigModal();
   const isExport = modalMode === 'export';
   const title = isExport ? 'エクスポート' : 'インポート';
   const actionLabel = isExport ? 'エクスポート' : 'インポート';
@@ -2277,6 +2332,86 @@ function htmlGitMergeModal() {
   </div>`;
 }
 
+function htmlNotifyConfigModal() {
+  const perm = getNotifyPermission();
+  const standalone = isStandalonePWA();
+  const iOS = isIOSSafari();
+  const badgeCount = computeBadgeCount();
+
+  let permLabel = '', permClass = '';
+  if (perm === 'unsupported') {
+    permLabel = 'このブラウザは通知 API に対応していません';
+    permClass = 'err';
+  } else if (perm === 'granted') {
+    permLabel = '✅ 通知が許可されています';
+  } else if (perm === 'denied') {
+    permLabel = '❌ 通知がブロックされています';
+    permClass = 'err';
+  } else {
+    permLabel = '⚪ 通知許可は未設定です';
+  }
+
+  let badgeApiBox = '';
+  if ('setAppBadge' in navigator) {
+    badgeApiBox = `<div class="git-info-box">✅ バッジ API 対応<br>現在のバッジ件数: <b>${badgeCount}</b></div>`;
+  } else {
+    badgeApiBox = `<div class="git-info-box err">❌ このブラウザは Badging API に対応していません</div>`;
+  }
+
+  let actionButton = '';
+  if (perm === 'default' || perm === 'unsupported') {
+    if (perm === 'default') {
+      actionButton = `<button class="modal-btn-primary" data-a="notify-request">通知を有効にする</button>`;
+    }
+  } else if (perm === 'denied') {
+    actionButton = `<div class="git-info-box">iOS の場合: 設定 → Safari → 詳細 → Web サイトデータ → タスク管理 を削除してから再度許可してください。<br>または iOS 16.4 以上の最新版にアップデートしてください。</div>`;
+  } else if (perm === 'granted') {
+    actionButton = `<button class="git-test-btn" data-a="notify-refresh">バッジを更新</button>`;
+  }
+
+  // iOS Safari でホーム画面追加されていない → 案内
+  let installBox = '';
+  if (iOS && !standalone) {
+    installBox = `<div class="git-info-box">
+      <b>📲 ホーム画面に追加してください</b><br>
+      iPhone でバッジを表示するには、このアプリを「ホーム画面に追加」する必要があります。<br><br>
+      1. Safari 下部の <b>共有ボタン（□↑）</b> をタップ<br>
+      2. <b>「ホーム画面に追加」</b> を選択<br>
+      3. ホーム画面のアイコンから起動して、再度この画面を開く
+    </div>`;
+  } else if (!standalone && !iOS) {
+    installBox = `<div class="git-info-box">
+      ヒント: このアプリを <b>PWA としてインストール</b>するとアイコンにバッジが表示されます。<br>
+      ・Edge / Chrome: アドレスバー右端の「アプリのインストール」アイコン
+    </div>`;
+  } else if (standalone) {
+    installBox = `<div class="git-info-box">✅ ホーム画面追加（standalone）モードで実行中</div>`;
+  }
+
+  // 現在の Tauri 環境なら別途案内
+  const tauriBox = isTauriEnv() ? `<div class="git-info-box">ℹ️ Tauri 版で実行中（Windows タスクバーにもバッジが表示されます）</div>` : '';
+
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">🔔 通知（バッジ）設定</span>
+        <button class="modal-close" data-a="modal-close">${I.x}</button>
+      </div>
+      <div class="git-modal-body">
+        <div class="git-info-box ${permClass}">${permLabel}</div>
+        ${badgeApiBox}
+        ${installBox}
+        ${tauriBox}
+        ${actionButton}
+        <div class="git-info-box">バッジ表示条件: <b>期限切れ + 今日が期限</b> の未完了タスク件数</div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-primary" data-a="modal-close">閉じる</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function htmlGitErrorModal() {
   const p = gitErrorPayload || { title: 'エラー', hint: '', detail: '' };
   return `<div class="modal-overlay" data-a="modal-overlay">
@@ -2436,6 +2571,7 @@ function html() {
       </div>
       <div class="header-right">
         <button class="sidebar-toggle-btn${sidebarOpen ? ' active' : ''}" data-a="toggle-sidebar" aria-label="リスト">${I.menu}</button>
+        <button class="header-icon-btn${getNotifyPermission() === 'default' ? ' has-dot' : ''}" data-a="open-notify-config" title="通知（バッジ）設定" aria-label="通知設定">${I.bell}</button>
         <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
       </div>
     </div>
@@ -3681,6 +3817,32 @@ document.addEventListener('click', e => {
     case 'open-export':     openExportModal(); break;
     case 'open-import':     openImportModal(); break;
     case 'open-git-config': openGitConfigModal(); break;
+    case 'open-notify-config': {
+      modalMode = 'notify-config';
+      render();
+      break;
+    }
+    case 'notify-request': {
+      requestNotifyPermission().then(result => {
+        if (result === 'granted') {
+          // 直後にバッジを反映
+          _lastBadgeCount = -1; // 強制再送
+          updateBadge(computeBadgeCount());
+          showToast('✅ 通知が有効になりました');
+        } else if (result === 'denied') {
+          showToast('通知がブロックされました');
+        }
+        render();
+      });
+      break;
+    }
+    case 'notify-refresh': {
+      _lastBadgeCount = -1;
+      updateBadge(computeBadgeCount());
+      showToast(`🔔 バッジ更新（件数: ${computeBadgeCount()}）`);
+      render();
+      break;
+    }
     case 'git-pull':        gitPull(); break;
     case 'git-push':        gitPush(); break;
     case 'git-config-test': gitConfigTest(); break;

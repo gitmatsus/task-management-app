@@ -1213,12 +1213,18 @@
       .trash-actions { opacity:1; }
 
       /* 期限バッジを省スペース化 */
-      .due-badge { font-size:9px; padding:2px 4px; }
+      .due-badge {
+        font-size:9px;
+        padding:1px 3px;
+        gap:2px;
+        line-height:1.2;
+      }
+      .due-badge svg { width:9px; height:9px; }
 
       /* ── モバイルでタスク 1 件が縦長になる対策 ──
          - テキストを最大 2 行で省略表示（縦長を防止）
-         - バッジ・アイコン群が折り返せるように flex-wrap
-         - 折り返し後の 2 行目はテキスト幅を圧迫しないため詰めた行間に */
+         - バッジ・アイコン群を可能な限り狭めて 1 行に収まりやすく
+         - それでも入らなければ自然に折り返し（flex-wrap） */
       .todo-item {
         flex-wrap:wrap;
         row-gap:0;
@@ -1226,7 +1232,7 @@
         align-items:center;
       }
       .text-wrap {
-        padding:10px 6px 10px 0;
+        padding:10px 4px 10px 0;
         align-items:flex-start;
         min-width:0;
       }
@@ -1240,13 +1246,22 @@
         word-break:break-word;
         font-size:14px;
       }
-      /* バッジは縦余白を詰めて 2 列目に流れても自然に */
-      .due-wrap { padding:6px 4px 6px 0; }
-      .item-memo, .item-folder, .item-add-sub { padding:6px 2px 6px 0; }
+      /* アイコンボタンを縮小 */
+      .item-memo, .item-folder, .item-add-sub { padding:6px 0; }
       .item-memo button, .item-folder button, .item-add-sub button {
-        width:26px; height:26px;
+        width:22px; height:22px;
       }
-      .item-del { padding:6px 4px 6px 0; margin-left:auto; }
+      .item-memo svg, .item-folder svg, .item-add-sub svg {
+        width:11px; height:11px;
+      }
+      /* バッジまわりのパディングも詰める */
+      .due-wrap { padding:6px 1px 6px 0; }
+      /* チェックボックス周りのパディングを少し圧縮 */
+      .cb-wrap { padding:10px 6px 10px 4px; }
+      /* 削除ボタンも詰めて 22px に */
+      .item-del { padding:6px 0; margin-left:auto; }
+      .item-del button { width:22px; height:22px; }
+      .item-del svg { width:12px; height:12px; }
       /* 完了タスクの取り消し線も 2 行表示に追従させる */
       .todo-text.done { background-image:none; text-decoration:line-through; text-decoration-color:#9ca3af; }
 

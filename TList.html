@@ -1441,6 +1441,15 @@ function load() {
   const savedListId = localStorage.getItem('todo-app-selected-list');
   selectedListId = (savedListId && lists.find(l => l.id === savedListId))
     ? savedListId : lists[0].id;
+  // UI 状態の復元（折りたたみ・展開状態・フィルター等）
+  try {
+    const s = JSON.parse(localStorage.getItem('todo-app-ui-state') || '{}');
+    if (Array.isArray(s.collapsedIds))      collapsedIds      = new Set(s.collapsedIds);
+    if (Array.isArray(s.expandedDoneSubs))  expandedDoneSubs  = new Set(s.expandedDoneSubs);
+    if (typeof s.showCompletedSection === 'boolean') showCompletedSection = s.showCompletedSection;
+    if (typeof s.listExpanded         === 'boolean') listExpanded         = s.listExpanded;
+    if (typeof s.taskFilter           === 'string')  taskFilter           = s.taskFilter;
+  } catch { /* ignore */ }
 }
 function save() {
   localStorage.setItem('todo-app-todos',  JSON.stringify(todos));
@@ -1448,6 +1457,18 @@ function save() {
   localStorage.setItem('todo-app-lists',  JSON.stringify(lists));
   localStorage.setItem('todo-app-list-trash', JSON.stringify(listTrash));
   localStorage.setItem('todo-app-selected-list', selectedListId);
+}
+// UI 表示状態（展開・折りたたみ・フィルター等）の永続化
+function saveUiState() {
+  try {
+    localStorage.setItem('todo-app-ui-state', JSON.stringify({
+      collapsedIds:        [...collapsedIds],
+      expandedDoneSubs:    [...expandedDoneSubs],
+      showCompletedSection,
+      listExpanded,
+      taskFilter,
+    }));
+  } catch { /* ignore (容量超過等) */ }
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -2688,6 +2709,8 @@ function render() {
   }
   // タスクバー/Dock バッジを更新（fire-and-forget、render をブロックしない）
   updateBadge(computeBadgeCount());
+  // UI 表示状態を永続化（折りたたみ・展開・フィルター等）
+  saveUiState();
 }
 
 // ── Todo Actions ───────────────────────────────────────

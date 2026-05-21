@@ -2426,10 +2426,23 @@ function htmlCalendarDayDetail(dateStr, dayEntries) {
 
 // カレンダーの詳細パネル行ダブルクリックで該当タスクのリストへジャンプ。
 // ジャンプ直後にハイライトを掛け、画面内にスクロールする。
+// 折りたたまれた親タスク / 完了セクションは自動展開してターゲットを必ず可視化する。
 function jumpFromCalendarToTodo(listId, todoId) {
   if (!listId || !lists.find(l => l.id === listId)) return;
   selectedListId = listId;
   localStorage.setItem('todo-app-selected-list', selectedListId);
+  // 折りたたまれていてハイライトが見えないケースを解消する
+  const target = todos.find(t => t.id === todoId);
+  if (target) {
+    if (target.parentId) {
+      // サブタスクの場合: 親の折りたたみを解除
+      collapsedIds.delete(target.parentId);
+      // 完了サブなら親の「完了済みサブ」セクションも展開
+      if (target.completed) expandedDoneSubs.add(target.parentId);
+    }
+    // メインタスクが完了済みなら、リスト下部の「完了済み」セクションを開く
+    if (target.completed && !target.parentId) showCompletedSection = true;
+  }
   highlightTodoId = todoId;
   if (_highlightTimer) { clearTimeout(_highlightTimer); _highlightTimer = null; }
   closeModal(); // 内部で render() を呼ぶので、ハイライトクラスは初回描画から付く

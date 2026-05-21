@@ -1284,9 +1284,22 @@
       .trash-header { padding:12px 14px; }
       .trash-list { padding:6px 8px; }
 
-      /* モーダル：下から出るシート形式 */
-      .modal { width:100%; max-width:100%; max-height:90vh; border-radius:20px 20px 0 0; }
-      .modal-overlay { align-items:flex-end; padding:0; }
+      /* モーダル：下から出るシート形式
+         iPhone のノッチ / Dynamic Island / Safari URL バーで × が押せなくならない
+         よう、上下に safe-area 余白を取り、サイズも動的ビューポート (dvh) に合わせる */
+      .modal-overlay {
+        align-items:flex-end;
+        padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+      }
+      .modal, .cal-modal-wrap {
+        width:100%; max-width:100%;
+        max-height:calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        border-radius:20px 20px 0 0;
+      }
+      /* × ボタンのタップ領域を Apple HIG 推奨の 44px 近くに拡大 */
+      .modal-close { width:40px; height:40px; border-radius:10px; }
+      .modal-close svg { width:18px; height:18px; }
 
       /* ドットバッジ：サイドバー内 */
       .sidebar-dots { flex-wrap:wrap; }
@@ -1656,6 +1669,7 @@ let calendarDateMode = 'due';                // 'due'=終了日 / 'start'=開始
 let highlightTodoId = null;                  // カレンダージャンプ直後にハイライトする todo の id
 let _highlightTimer = null;
 let calendarCellMenu = null;                 // 日セル右クリックメニュー { date, x, y } | null
+let _suppressNextDblclick = false;           // モバイル ダブルタップ後に発生する dblclick を 1 回だけ抑止
 
 // ── Git 同期 ───────────────────────────────────────────
 let gitStatusCache = null;     // 最後に取得した git_status の結果（{ahead, behind, branch, ...}）
@@ -4875,6 +4889,12 @@ document.addEventListener('mousedown', e => {
   if (e.target.closest('.text-wrap, .list-nav-item .list-content')) e.preventDefault();
 });
 document.addEventListener('dblclick', e => {
+  // モバイル ダブルタップで先にジャンプ処理を済ませた直後の合成 dblclick は無視
+  // （新しい DOM の todo-item に当たって startEdit が誤発火するのを防ぐ）
+  if (_suppressNextDblclick) {
+    _suppressNextDblclick = false;
+    return;
+  }
   // カレンダー詳細パネルのタスク行: ダブルクリックで該当タスクのリストへ移動
   // ただし行内のアクションボタン（メモ / フォルダ / URL）上のダブルクリックは無視
   const calRow = e.target.closest('.cal-detail-todo-row');
@@ -4915,6 +4935,9 @@ document.addEventListener('dblclick', e => {
       const calRow = target.closest('.cal-detail-todo-row');
       if (calRow && calRow.dataset.a === 'calendar-jump-to-todo' && !target.closest('.cal-todo-action')) {
         e.preventDefault();
+        // この後に iOS が発火する合成 dblclick で新 DOM の todo-item に当たって
+        // startEdit が誤発火しないよう、1 回だけ抑止フラグを立てる
+        _suppressNextDblclick = true;
         jumpFromCalendarToTodo(calRow.dataset.listId, calRow.dataset.todoId);
         lastTap = 0; lastTarget = null;
         return;

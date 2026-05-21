@@ -1297,8 +1297,13 @@
         max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
         border-radius:20px 20px 0 0;
       }
-      /* × ボタンのタップ領域を Apple HIG 推奨の 44px 近くに拡大 */
-      .modal-close { width:40px; height:40px; border-radius:10px; }
+      /* × ボタンのタップ領域を Apple HIG 推奨の 44px 近くに拡大し、
+         背景をつけて視認性を確保（ノッチ近くでも見つけやすく） */
+      .modal-close {
+        width:40px; height:40px; border-radius:10px;
+        background:var(--filter-bg);
+      }
+      .modal-close:hover { background:var(--item-hover); }
       .modal-close svg { width:18px; height:18px; }
 
       /* ドットバッジ：サイドバー内 */
@@ -1620,7 +1625,29 @@
       .cal-todo-chip { font-size:9px; padding:1px 3px; }
       .cal-grid { grid-auto-rows:minmax(62px, 1fr); }
       .cal-legend { display:none; }
-      .cal-modal-wrap { width:100%; max-height:100vh; }
+      /* 上で定義した .cal-modal-wrap { width:96%; max-height:90vh } が source order で
+         先に書いた safe-area 対応を上書きしてしまうため、モバイルではここで再宣言する */
+      .cal-modal-wrap {
+        width:100%; max-width:100%;
+        max-height:calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      }
+
+      /* カレンダーツールバーをコンパクトに（ボタンの折り返しを減らしてモーダルの縦サイズを抑制） */
+      .cal-toolbar {
+        gap:4px; padding:5px 8px; min-height:auto;
+      }
+      .cal-nav-group { gap:0; }
+      .cal-nav-btn { width:28px; height:28px; }
+      .cal-nav-btn svg { width:11px; height:11px; }
+      .cal-month-label {
+        font-size:13px; font-weight:700;
+        min-width:88px; padding:0 2px;
+      }
+      .cal-today-btn, .cal-tool-btn {
+        padding:4px 8px; font-size:12px; border-radius:5px;
+      }
+      .cal-list-select { padding:3px 6px; }
     }
 
   </style>

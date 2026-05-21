@@ -602,7 +602,7 @@
     /* メモポップアップ */
     .memo-popup {
       position:fixed; left:50%; transform:translateX(-50%);
-      bottom:72px; z-index:95;
+      bottom:72px; z-index:110;
       background:var(--card); border:1px solid var(--card-border);
       border-radius:14px; padding:14px 18px;
       min-width:220px; max-width:min(500px, calc(100vw - 32px));
@@ -1314,6 +1314,301 @@
       .edit-date-wrap { min-height:34px; }
     }
 
+    /* ══════════════════════════════════════════════════════════
+       カレンダーモーダル（月ビュー）
+       ══════════════════════════════════════════════════════════ */
+    .cal-modal-wrap { width:96%; max-width:1100px; max-height:90vh; }
+    .cal-modal-wrap .modal-body { padding:0; display:flex; flex-direction:column; overflow:hidden; }
+    .cal-content { display:flex; flex-direction:row; flex:1; min-height:0; overflow:hidden; }
+    .cal-main-area { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+    .cal-grid-scroll { flex:1; overflow-y:auto; }
+    .cal-toolbar {
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      padding:8px 12px; min-height:48px; box-sizing:border-box;
+      border-bottom:1px solid var(--input-border); background:var(--filter-bg);
+      flex-shrink:0;
+    }
+    .cal-nav-group {
+      display:inline-flex; align-items:center; gap:2px;
+    }
+    .cal-month-label { font-size:15px; font-weight:700; color:var(--t1); min-width:110px; text-align:center; padding:0 4px; }
+    .cal-nav-btn {
+      width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+      border-radius:6px; border:1px solid var(--input-border); background:var(--card); color:var(--t1);
+      cursor:pointer; transition:all .15s; padding:0;
+    }
+    .cal-nav-btn:hover { background:var(--filter-bg); border-color:#818cf8; }
+    .cal-nav-btn svg { width:14px; height:14px; }
+    .cal-today-btn {
+      padding:6px 12px; font-size:12px; font-weight:600;
+      border-radius:6px; border:1px solid rgba(99,102,241,.4); background:var(--card);
+      color:#4338ca; cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    html.dark .cal-today-btn { color:#a5b4fc; border-color:rgba(99,102,241,.3); }
+    .cal-today-btn:hover { border-color:#6366f1; background:rgba(99,102,241,.08); }
+    .cal-tool-btn {
+      padding:6px 10px; border-radius:6px; border:1px solid var(--input-border);
+      background:var(--card); color:var(--t1); cursor:pointer; font-size:12px; font-weight:500;
+      font-family:inherit; transition:all .15s;
+    }
+    .cal-tool-btn:hover { background:var(--filter-bg); border-color:#818cf8; }
+    .cal-tool-btn.active {
+      background:rgba(99,102,241,.85); color:#fff; border-color:rgba(99,102,241,.85);
+    }
+    .cal-tool-btn.active:hover { background:rgba(99,102,241,.95); }
+    .cal-list-select {
+      padding:5px 8px; border-radius:6px; border:1px solid var(--input-border);
+      background:var(--card); color:var(--t1); font-size:12px; font-family:inherit;
+    }
+    .cal-legend { display:flex; gap:10px; flex-wrap:wrap; margin-left:auto; align-items:center; }
+    .cal-legend-item { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--t2); }
+    .cal-legend-dot { width:10px; height:10px; border-radius:3px; }
+    .cal-grid-header {
+      display:grid; grid-template-columns:repeat(7, 1fr);
+      background:var(--filter-bg);
+      border-top:1px solid var(--input-border);
+      border-bottom:2px solid var(--input-border);
+      flex-shrink:0;
+    }
+    html.dark .cal-grid-header { border-top-color:#4b5563; border-bottom-color:#4b5563; }
+    .cal-grid-header-cell {
+      padding:6px 4px; text-align:center; font-size:11px; font-weight:700; color:var(--t2);
+      border-right:1px solid var(--input-border);
+    }
+    .cal-grid-header-cell:last-child { border-right:none; }
+    .cal-grid-header-cell.sat { color:#3b82f6; }
+    .cal-grid-header-cell.sun { color:#ef4444; }
+    .cal-grid {
+      display:grid; grid-template-columns:repeat(7, 1fr); grid-auto-rows:minmax(96px, 1fr);
+    }
+    .cal-day-cell {
+      position:relative; padding:4px 6px; min-height:96px; min-width:0;
+      border-right:1px solid var(--input-border); border-bottom:1px solid var(--input-border);
+      background:var(--card); cursor:pointer; transition:background .15s;
+      display:flex; flex-direction:column; gap:2px; overflow:hidden;
+      user-select:none;
+    }
+    .cal-day-cell:nth-child(7n) { border-right:none; }
+    .cal-day-cell:hover { background:var(--filter-bg); }
+    .cal-day-cell.other-month { background:rgba(148,163,184,.04); }
+    .cal-day-cell.other-month .cal-day-number { color:var(--t3); opacity:.6; }
+    html.dark .cal-day-cell.other-month { background:rgba(15,23,42,.4); }
+    .cal-day-cell.today { background:rgba(245,158,11,.10); }
+    .cal-day-cell.today .cal-day-number { color:#d97706; font-weight:800; }
+    html.dark .cal-day-cell.today { background:rgba(245,158,11,.16); }
+    html.dark .cal-day-cell.today .cal-day-number { color:#fbbf24; }
+    .cal-day-cell.sat .cal-day-number { color:#3b82f6; }
+    .cal-day-cell.sun .cal-day-number, .cal-day-cell.holiday .cal-day-number { color:#ef4444; }
+    .cal-day-cell.holiday { background:rgba(239,68,68,.06); }
+    html.dark .cal-day-cell.holiday { background:rgba(239,68,68,.10); }
+    .cal-day-cell.selected { outline:2px solid #6366f1; outline-offset:-2px; z-index:1; }
+    /* 今日かつ選択中: アウトラインを優先しつつ background は今日のまま */
+    .cal-day-cell.today.selected { outline-color:#6366f1; }
+
+    /* カレンダーからジャンプ直後のターゲット行をナチュラルにハイライト
+       ホバー延長くらいの主張で、ほんのりインディゴに染めて素早くフェードアウト */
+    @keyframes calJumpNatural {
+      0%   { background:transparent; }
+      20%  { background:rgba(99,102,241,.08); }
+      100% { background:transparent; }
+    }
+    html.dark .todo-item.cal-highlight { animation-name:calJumpNaturalDark; }
+    @keyframes calJumpNaturalDark {
+      0%   { background:transparent; }
+      20%  { background:rgba(129,140,248,.12); }
+      100% { background:transparent; }
+    }
+    .todo-item.cal-highlight {
+      animation:calJumpNatural 1.8s cubic-bezier(.4,0,.2,1) 1;
+    }
+    .cal-day-number {
+      font-size:11px; font-weight:700; color:var(--t1);
+      display:flex; align-items:center; justify-content:space-between; gap:4px;
+      padding:1px 2px;
+    }
+    .cal-day-holiday-name {
+      font-size:9px; color:#ef4444; font-weight:600;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;
+    }
+    /* タスクチップ: 元アプリの due-badge 系統（超過=赤 / 今日=アンバー / 今週=緑 / 来週以降=水色）に合わせる */
+    .cal-todo-chip {
+      font-size:10px; line-height:1.3; padding:1px 5px; border-radius:3px;
+      display:flex; align-items:center; gap:3px;
+      background:#d1fae5; border-left:3px solid #10b981; color:#10b981;
+      cursor:pointer;
+    }
+    .cal-todo-chip > .chip-text {
+      flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .cal-todo-chip .chip-ico {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:9px; height:9px; flex-shrink:0;
+    }
+    .cal-todo-chip .chip-ico svg { width:100%; height:100%; }
+    html.dark .cal-todo-chip { background:rgba(16,185,129,.25); color:#10b981; }
+    .cal-todo-chip.overdue { background:#fecaca; border-left-color:#b91c1c; color:#b91c1c; }
+    .cal-todo-chip.today   { background:#fef3c7; border-left-color:#f59e0b; color:#f59e0b; }
+    .cal-todo-chip.far     { background:#e0f2fe; border-left-color:#0369a1; color:#0369a1; }
+    .cal-todo-chip.done    { opacity:.55; text-decoration:line-through; }
+    html.dark .cal-todo-chip.overdue { background:rgba(239,68,68,.4);   color:#fca5a5; border-left-color:#fca5a5; }
+    html.dark .cal-todo-chip.today   { background:rgba(245,158,11,.25); color:#f59e0b; border-left-color:#f59e0b; }
+    html.dark .cal-todo-chip.far     { background:rgba(14,165,233,.22); color:#7dd3fc; border-left-color:#7dd3fc; }
+    /* 開始日チップ（kind='start'）: 元アプリ start-badge と同じ配色
+       開始済み=グレー / 今日開始=アンバー / 開始予定=水色 */
+    .cal-todo-chip.kind-start             { background:#e0f2fe; border-left-color:#0369a1; color:#0369a1; }
+    .cal-todo-chip.kind-start.start-td    { background:#fef3c7; border-left-color:#d97706; color:#d97706; }
+    .cal-todo-chip.kind-start.start-past  { background:#f1f5f9; border-left-color:#64748b; color:#64748b; }
+    html.dark .cal-todo-chip.kind-start            { background:rgba(14,165,233,.22); color:#7dd3fc; border-left-color:#7dd3fc; }
+    html.dark .cal-todo-chip.kind-start.start-td   { background:rgba(245,158,11,.25); color:#fbbf24; border-left-color:#fbbf24; }
+    html.dark .cal-todo-chip.kind-start.start-past { background:#334155;               color:#94a3b8; border-left-color:#94a3b8; }
+    .cal-overflow-badge {
+      font-size:9px; padding:1px 4px; border-radius:3px;
+      background:rgba(99,102,241,.85); color:#fff;
+      font-weight:600; align-self:flex-start; cursor:pointer;
+    }
+
+    /* 日セル右クリックメニュー（タスク一覧 → クリックで該当リストへジャンプ）*/
+    .cal-cell-menu {
+      position:fixed; z-index:120;
+      background:var(--card); border:1px solid var(--card-border);
+      border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.18);
+      min-width:240px; max-width:360px; max-height:60vh; overflow-y:auto;
+      padding:4px;
+      animation:fadeIn .12s ease;
+      font-size:12px;
+    }
+    .cal-cell-menu-hd {
+      padding:6px 10px 8px; font-size:11px; font-weight:700;
+      color:var(--t2); text-transform:uppercase; letter-spacing:.5px;
+      border-bottom:1px solid var(--divider); margin-bottom:4px;
+    }
+    .cal-cell-menu-empty {
+      padding:14px 10px; font-size:12px; color:var(--t3); text-align:center;
+    }
+    .cal-cell-menu-item {
+      display:flex; align-items:center; gap:6px;
+      padding:7px 10px; border-radius:6px; cursor:pointer;
+      color:var(--t1); transition:background .12s;
+    }
+    .cal-cell-menu-item:hover { background:var(--item-hover); }
+    .cal-cell-menu-item .cmi-icon {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:11px; height:11px; flex-shrink:0; color:var(--t3);
+    }
+    .cal-cell-menu-item .cmi-icon svg { width:100%; height:100%; }
+    .cal-cell-menu-item .cmi-text {
+      flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .cal-cell-menu-item .cmi-list {
+      flex-shrink:0; max-width:90px; font-size:10px; color:var(--t3);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .cal-cell-menu-item.done .cmi-text { text-decoration:line-through; opacity:.6; }
+    .cal-cell-menu-item.overdue .cmi-text { color:#b91c1c; }
+    .cal-cell-menu-item.today .cmi-text { color:#d97706; }
+    .cal-cell-menu-item.far .cmi-text { color:#0369a1; }
+    html.dark .cal-cell-menu-item.overdue .cmi-text { color:#fca5a5; }
+    html.dark .cal-cell-menu-item.today .cmi-text { color:#fbbf24; }
+    html.dark .cal-cell-menu-item.far .cmi-text { color:#7dd3fc; }
+    .cal-detail-panel {
+      width:300px; flex-shrink:0;
+      border-left:1px solid var(--input-border); background:var(--filter-bg);
+      display:flex; flex-direction:column; overflow:hidden;
+    }
+    .cal-detail-panel-body {
+      flex:1; overflow-y:auto;
+      padding:12px 14px;
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .cal-detail-empty-state {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      text-align:center; color:var(--t3); font-size:13px; padding:24px 12px;
+      line-height:1.6;
+    }
+    .cal-detail-title {
+      font-size:13px; font-weight:700; color:var(--t1); margin-bottom:8px;
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      padding-bottom:8px; border-bottom:1px solid var(--input-border);
+    }
+    .cal-detail-section-title {
+      font-size:11px; font-weight:700; color:var(--t2);
+      text-transform:uppercase; letter-spacing:.5px; margin:6px 0 4px;
+    }
+    .cal-detail-empty { font-size:12px; color:var(--t3); padding:4px 0; }
+    .cal-detail-todo-group { margin-bottom:6px; }
+    .cal-detail-todo-group-hd {
+      font-size:11px; color:var(--t2); font-weight:600;
+      padding:2px 0; border-bottom:1px dashed var(--input-border); margin-bottom:2px;
+    }
+    .cal-detail-todo-row {
+      display:flex; align-items:center; gap:6px; padding:3px 6px;
+      border-radius:4px; font-size:12px; color:var(--t1);
+      cursor:pointer; padding-left:10px;
+    }
+    .cal-detail-todo-row:hover { background:rgba(99,102,241,.08); }
+    .cal-detail-todo-row.overdue { color:#b91c1c; font-weight:600; }
+    .cal-detail-todo-row.today { color:#d97706; font-weight:600; }
+    .cal-detail-todo-row.far { color:#0369a1; }
+    .cal-detail-todo-row.start-past { color:#64748b; }
+    .cal-detail-todo-row.done { color:var(--t2); text-decoration:line-through; opacity:.6; }
+    html.dark .cal-detail-todo-row.overdue { color:#fca5a5; }
+    html.dark .cal-detail-todo-row.today { color:#fbbf24; }
+    html.dark .cal-detail-todo-row.far { color:#7dd3fc; }
+    html.dark .cal-detail-todo-row.start-past { color:#94a3b8; }
+    .cal-detail-todo-row .cal-detail-mark .chip-ico {
+      display:inline-flex; align-items:center; justify-content:center; width:11px; height:11px;
+    }
+    .cal-detail-todo-row .cal-detail-mark .chip-ico svg { width:100%; height:100%; }
+    .cal-detail-todo-text {
+      flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .cal-detail-todo-dates {
+      flex-shrink:0; display:inline-flex; align-items:center; gap:3px;
+      font-size:10px; color:var(--t3); white-space:nowrap;
+    }
+    .cal-detail-todo-dates .dt-chip {
+      display:inline-flex; align-items:center; gap:2px;
+      padding:0 4px; border-radius:3px;
+    }
+    .cal-detail-todo-dates .dt-chip .chip-ico {
+      display:inline-flex; align-items:center; justify-content:center; width:9px; height:9px;
+    }
+    .cal-detail-todo-dates .dt-chip .chip-ico svg { width:100%; height:100%; }
+    .cal-detail-todo-dates .dt-start { color:#0369a1; background:rgba(14,165,233,.10); }
+    .cal-detail-todo-dates .dt-due   { color:#10b981; background:rgba(16,185,129,.10); }
+    .cal-detail-todo-dates .dt-sep   { color:var(--t3); }
+    html.dark .cal-detail-todo-dates .dt-start { color:#7dd3fc; background:rgba(14,165,233,.18); }
+    html.dark .cal-detail-todo-dates .dt-due   { color:#34d399; background:rgba(16,185,129,.18); }
+    /* done 行では日付チップも淡くする */
+    .cal-detail-todo-row.done .cal-detail-todo-dates .dt-chip { opacity:.65; }
+    /* 詳細行内のアクションボタン（メモ / フォルダ / URL） */
+    .cal-detail-todo-row .cal-todo-action {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:18px; height:18px; padding:0;
+      border-radius:4px; border:none; background:transparent;
+      color:var(--t3); cursor:pointer; transition:all .15s; flex-shrink:0;
+      font-family:inherit;
+    }
+    .cal-detail-todo-row .cal-todo-action:hover {
+      background:rgba(99,102,241,.12); color:#6366f1;
+    }
+    html.dark .cal-detail-todo-row .cal-todo-action:hover { color:#a5b4fc; }
+    .cal-detail-todo-row .cal-todo-action.memo-active { color:#f59e0b; background:rgba(245,158,11,.15); }
+    .cal-detail-todo-row .cal-todo-action svg { width:11px; height:11px; }
+    .cal-detail-todo-row .cal-detail-mark {
+      display:inline-block; width:14px; text-align:center; color:var(--t3); flex-shrink:0;
+    }
+    @media (max-width:900px) {
+      .cal-content { flex-direction:column; }
+      .cal-detail-panel { width:auto; max-height:280px; border-left:none; border-top:1px solid var(--input-border); }
+    }
+    @media (max-width:640px) {
+      .cal-day-cell { min-height:62px; padding:2px 3px; }
+      .cal-todo-chip { font-size:9px; padding:1px 3px; }
+      .cal-grid { grid-auto-rows:minmax(62px, 1fr); }
+      .cal-legend { display:none; }
+      .cal-modal-wrap { width:100%; max-height:100vh; }
+    }
 
   </style>
 </head>
@@ -1349,6 +1644,18 @@ let editStartDate = '';
 let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
 let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
 let dragSubZoneTargetId = null; // ドラッグ中のサブ化候補ターゲットID
+
+// ── カレンダー（月ビュー）状態 ───────────────────────────
+const _calNow = new Date();
+let calendarYear = _calNow.getFullYear();
+let calendarMonth = _calNow.getMonth() + 1; // 1-12
+let calendarSelectedDate = null;            // 'YYYY-MM-DD'
+let calendarShowDone = false;               // 完了済みも表示
+let calendarFilterListId = null;            // null=全リスト
+let calendarDateMode = 'due';                // 'due'=終了日 / 'start'=開始日 / 'both'=両方
+let highlightTodoId = null;                  // カレンダージャンプ直後にハイライトする todo の id
+let _highlightTimer = null;
+let calendarCellMenu = null;                 // 日セル右クリックメニュー { date, x, y } | null
 
 // ── Git 同期 ───────────────────────────────────────────
 let gitStatusCache = null;     // 最後に取得した git_status の結果（{ahead, behind, branch, ...}）
@@ -1787,6 +2094,24 @@ const I = {
   pullIcon:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>`,
   pushIcon:`<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12"/></svg>`,
   bell:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`,
+  chevLeft:  `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>`,
+  chevRight: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`,
+};
+
+// ── 国民の祝日（2025〜2030）──────────────────────────
+const NATIONAL_HOLIDAYS = {
+  // 2025
+  '2025-01-01':'元日','2025-01-13':'成人の日','2025-02-11':'建国記念の日','2025-02-23':'天皇誕生日','2025-02-24':'振替休日','2025-03-20':'春分の日','2025-04-29':'昭和の日','2025-05-03':'憲法記念日','2025-05-04':'みどりの日','2025-05-05':'こどもの日','2025-05-06':'振替休日','2025-07-21':'海の日','2025-08-11':'山の日','2025-09-15':'敬老の日','2025-09-23':'秋分の日','2025-10-13':'スポーツの日','2025-11-03':'文化の日','2025-11-23':'勤労感謝の日','2025-11-24':'振替休日',
+  // 2026
+  '2026-01-01':'元日','2026-01-12':'成人の日','2026-02-11':'建国記念の日','2026-02-23':'天皇誕生日','2026-03-20':'春分の日','2026-04-29':'昭和の日','2026-05-03':'憲法記念日','2026-05-04':'みどりの日','2026-05-05':'こどもの日','2026-05-06':'振替休日','2026-07-20':'海の日','2026-08-11':'山の日','2026-09-21':'敬老の日','2026-09-22':'国民の休日','2026-09-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-03':'文化の日','2026-11-23':'勤労感謝の日',
+  // 2027
+  '2027-01-01':'元日','2027-01-11':'成人の日','2027-02-11':'建国記念の日','2027-02-23':'天皇誕生日','2027-03-21':'春分の日','2027-03-22':'振替休日','2027-04-29':'昭和の日','2027-05-03':'憲法記念日','2027-05-04':'みどりの日','2027-05-05':'こどもの日','2027-07-19':'海の日','2027-08-11':'山の日','2027-09-20':'敬老の日','2027-09-23':'秋分の日','2027-10-11':'スポーツの日','2027-11-03':'文化の日','2027-11-23':'勤労感謝の日',
+  // 2028
+  '2028-01-01':'元日','2028-01-10':'成人の日','2028-02-11':'建国記念の日','2028-02-23':'天皇誕生日','2028-03-20':'春分の日','2028-04-29':'昭和の日','2028-05-03':'憲法記念日','2028-05-04':'みどりの日','2028-05-05':'こどもの日','2028-07-17':'海の日','2028-08-11':'山の日','2028-09-18':'敬老の日','2028-09-22':'秋分の日','2028-10-09':'スポーツの日','2028-11-03':'文化の日','2028-11-23':'勤労感謝の日',
+  // 2029
+  '2029-01-01':'元日','2029-01-08':'成人の日','2029-02-11':'建国記念の日','2029-02-12':'振替休日','2029-02-23':'天皇誕生日','2029-03-20':'春分の日','2029-04-29':'昭和の日','2029-04-30':'振替休日','2029-05-03':'憲法記念日','2029-05-04':'みどりの日','2029-05-05':'こどもの日','2029-07-16':'海の日','2029-08-11':'山の日','2029-09-17':'敬老の日','2029-09-23':'秋分の日','2029-09-24':'振替休日','2029-10-08':'スポーツの日','2029-11-03':'文化の日','2029-11-23':'勤労感謝の日',
+  // 2030
+  '2030-01-01':'元日','2030-01-14':'成人の日','2030-02-11':'建国記念の日','2030-02-23':'天皇誕生日','2030-03-20':'春分の日','2030-04-29':'昭和の日','2030-05-03':'憲法記念日','2030-05-04':'みどりの日','2030-05-06':'振替休日','2030-05-05':'こどもの日','2030-07-15':'海の日','2030-08-11':'山の日','2030-08-12':'振替休日','2030-09-16':'敬老の日','2030-09-23':'秋分の日','2030-10-14':'スポーツの日','2030-11-03':'文化の日','2030-11-04':'振替休日','2030-11-23':'勤労感謝の日',
 };
 
 // ── Due badge HTML ─────────────────────────────────────
@@ -1811,6 +2136,392 @@ function sameDayBadge(d) {
   const lbl = td ? '今日' : tmr ? '明日' : d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3');
   const cls = ov ? 'due-ov' : td ? 'due-td' : far ? 'due-far' : 'due-fu';
   return `<span class="due-badge ${cls}">${I.play}${I.cal}${ov ? `超過 (${lbl})` : lbl}</span>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// カレンダー（月ビュー）
+// ══════════════════════════════════════════════════════════
+// 月ビュー用に 6 週 × 7 日 = 42 日の日付文字列配列を返す。
+function buildCalendarDays(year, month) {
+  const first = new Date(year, month - 1, 1);
+  const startDow = first.getDay(); // 0=日
+  const gridStart = new Date(year, month - 1, 1 - startDow);
+  const days = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    days.push(ymd(d));
+  }
+  return days;
+}
+
+// カレンダー表示用に、指定範囲の対象タスクを { dateStr: [{ todo, kind }] } で返す。
+// kind は 'due' | 'start' | 'both'（同日かつ mode='both' のときのみ 'both'）。
+// 完了済みは calendarShowDone が true のときのみ含める。メモリストは除外。
+function getCalendarTodosByDate(startDate, endDate) {
+  const out = {};
+  const memoListIds = new Set(lists.filter(l => l.type === 'memo').map(l => l.id));
+  const mode = calendarDateMode;
+  const wantDue   = (mode === 'due'   || mode === 'both');
+  const wantStart = (mode === 'start' || mode === 'both');
+  const push = (d, todo, kind) => {
+    if (!d) return;
+    if (startDate && d < startDate) return;
+    if (endDate   && d > endDate)   return;
+    if (!out[d]) out[d] = [];
+    out[d].push({ todo, kind });
+  };
+  for (const t of todos) {
+    if (memoListIds.has(t.listId)) continue;
+    if (calendarFilterListId && t.listId !== calendarFilterListId) continue;
+    if (!calendarShowDone && t.completed) continue;
+    // mode='both' かつ 開始日 === 終了日 の場合は 1 件の 'both' チップにまとめる
+    if (mode === 'both' && t.startDate && t.dueDate && t.startDate === t.dueDate) {
+      push(t.dueDate, t, 'both');
+      continue;
+    }
+    if (wantDue   && t.dueDate)   push(t.dueDate,   t, 'due');
+    if (wantStart && t.startDate) push(t.startDate, t, 'start');
+  }
+  return out;
+}
+
+// チップ内の小アイコン HTML（▶ = 開始日 / 📅 = 終了日 / ✓ = 完了済み）
+function calChipIconHtml(kind, done) {
+  if (done) return '<span class="chip-ico" aria-hidden="true">✓</span>';
+  if (kind === 'both')  return `<span class="chip-ico">${I.play}</span><span class="chip-ico">${I.cal}</span>`;
+  if (kind === 'start') return `<span class="chip-ico">${I.play}</span>`;
+  return `<span class="chip-ico">${I.cal}</span>`;
+}
+
+function htmlCalendarModal() {
+  const year = calendarYear;
+  const month = calendarMonth;
+  const days = buildCalendarDays(year, month);
+  const monthStart = days[0];
+  const monthEnd = days[days.length - 1];
+  const todayStr = today();
+  const dateMap = getCalendarTodosByDate(monthStart, monthEnd);
+
+  const dowLabels = ['日','月','火','水','木','金','土'];
+  const headerCells = dowLabels.map((l, i) => {
+    const cls = i === 0 ? ' sun' : i === 6 ? ' sat' : '';
+    return `<div class="cal-grid-header-cell${cls}">${l}</div>`;
+  }).join('');
+
+  const grid = days.map(dateStr => {
+    const dt = new Date(dateStr);
+    const isOtherMonth = (dt.getFullYear() !== year || dt.getMonth() + 1 !== month);
+    return htmlCalendarDayCell(dateStr, dt, isOtherMonth, dateMap[dateStr] || [], todayStr);
+  }).join('');
+
+  // リスト絞り込みセレクト（メモタイプは除外）
+  const selectableLists = lists.filter(l => l.type !== 'memo');
+  const listSelect = selectableLists.length > 1
+    ? `<select class="cal-list-select" data-a="calendar-filter-list">
+        <option value="">全リスト</option>
+        ${selectableLists.map(l => `<option value="${l.id}"${l.id === calendarFilterListId ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}
+      </select>`
+    : '';
+
+  const doneBtnCls = calendarShowDone ? 'cal-tool-btn active' : 'cal-tool-btn';
+  const doneBtn = `<button class="${doneBtnCls}" data-a="calendar-toggle-done" title="完了済みタスクの表示切替">完了済み: ${calendarShowDone ? 'ON' : 'OFF'}</button>`;
+
+  const dateModeSelect = `<select class="cal-list-select" data-a="calendar-date-mode" title="セルに表示する日付の種類">
+    <option value="due"${calendarDateMode === 'due' ? ' selected' : ''}>📅 終了日</option>
+    <option value="start"${calendarDateMode === 'start' ? ' selected' : ''}>▶ 開始日</option>
+    <option value="both"${calendarDateMode === 'both' ? ' selected' : ''}>▶+📅 両方</option>
+  </select>`;
+
+  const legend = `
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:#b91c1c"></span>超過</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:#f59e0b"></span>今日</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:#10b981"></span>今週中</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:#0369a1"></span>来週以降</span>
+  `;
+
+  // 詳細パネル
+  const detailBody = calendarSelectedDate
+    ? htmlCalendarDayDetail(calendarSelectedDate, dateMap[calendarSelectedDate] || [])
+    : `<div class="cal-detail-empty-state">📅<br><br>日付をクリックすると<br>その日のタスク一覧を表示します</div>`;
+
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal cal-modal-wrap" data-modal-inner>
+      <div class="modal-header">
+        <span class="modal-title">
+          <span style="display:inline-flex;width:16px;height:16px;vertical-align:-3px;margin-right:4px;">${I.cal}</span>
+          カレンダー（${year}年${month}月）
+        </span>
+        <button class="modal-close" data-a="modal-close">${I.x}</button>
+      </div>
+      <div class="modal-body">
+        <div class="cal-toolbar">
+          <div class="cal-nav-group">
+            <button class="cal-nav-btn" data-a="calendar-nav-prev" title="前月">${I.chevLeft}</button>
+            <span class="cal-month-label">${year}年${month}月</span>
+            <button class="cal-nav-btn" data-a="calendar-nav-next" title="翌月">${I.chevRight}</button>
+          </div>
+          <button class="cal-today-btn" data-a="calendar-jump-today">今日</button>
+          ${dateModeSelect}
+          ${listSelect}
+          ${doneBtn}
+          <div class="cal-legend">${legend}</div>
+        </div>
+        <div class="cal-content">
+          <div class="cal-main-area">
+            <div class="cal-grid-header">${headerCells}</div>
+            <div class="cal-grid-scroll">
+              <div class="cal-grid">${grid}</div>
+            </div>
+          </div>
+          <div class="cal-detail-panel">
+            <div class="cal-detail-panel-body">${detailBody}</div>
+          </div>
+        </div>
+      </div>
+      ${htmlCalendarCellMenu()}
+    </div>
+  </div>`;
+}
+
+function htmlCalendarDayCell(dateStr, dt, isOtherMonth, dayEntries, todayStr) {
+  const dow = dt.getDay();
+  const isToday = dateStr === todayStr;
+  const nhName = NATIONAL_HOLIDAYS[dateStr];
+  const isSelected = calendarSelectedDate === dateStr;
+
+  const classes = ['cal-day-cell'];
+  if (isOtherMonth) classes.push('other-month');
+  if (isToday) classes.push('today');
+  if (nhName) classes.push('holiday');
+  else if (dow === 0) classes.push('sun');
+  else if (dow === 6) classes.push('sat');
+  if (isSelected) classes.push('selected');
+
+  const dayNum = dt.getDate();
+  const labelHtml = nhName
+    ? `<span class="cal-day-holiday-name" title="${esc(nhName)}">${esc(nhName)}</span>`
+    : '';
+  const dayNumHtml = `<div class="cal-day-number"><span>${dayNum}</span>${labelHtml}</div>`;
+
+  const MAX_CHIPS = 4;
+  const weekEnd = endOfWeekYmd();
+  const chips = dayEntries.map(entry => {
+    const t = entry.todo;
+    const kind = entry.kind; // 'due' | 'start' | 'both'
+    const doneCls = t.completed ? ' done' : '';
+    let cls = '';
+    if (kind === 'start') {
+      // 開始日チップ: 開始日と今日の比較で配色（start-past / start-td / start-fu）
+      const past = t.startDate < todayStr;
+      const tdy  = t.startDate === todayStr;
+      cls = ' kind-start' + (past ? ' start-past' : tdy ? ' start-td' : '');
+    } else {
+      // 終了日 or 両方: 終了日と今日の比較で配色
+      const d = t.dueDate;
+      const overdue   = !t.completed && d && d < todayStr;
+      const isDueTdy  = !t.completed && d === todayStr;
+      const isFar     = !t.completed && d && d > weekEnd;
+      cls = overdue ? ' overdue' : isDueTdy ? ' today' : isFar ? ' far' : '';
+    }
+    const lst = lists.find(l => l.id === t.listId);
+    const listName = lst ? lst.name : '';
+    const kindLabel = kind === 'start' ? '開始' : kind === 'both' ? '開始＝終了' : '終了';
+    const tip = `${kindLabel}: ${t.text}${listName ? `（${listName}）` : ''}`;
+    return `<div class="cal-todo-chip${cls}${doneCls}" title="${esc(tip)}">${calChipIconHtml(kind, t.completed)}<span class="chip-text">${esc(t.text)}</span></div>`;
+  });
+  const shownChips = chips.slice(0, MAX_CHIPS).join('');
+  const overflow = chips.length > MAX_CHIPS
+    ? `<div class="cal-overflow-badge">+${chips.length - MAX_CHIPS}</div>`
+    : '';
+
+  return `<div class="${classes.join(' ')}" data-a="calendar-day-click" data-date="${dateStr}">
+    ${dayNumHtml}${shownChips}${overflow}
+  </div>`;
+}
+
+function htmlCalendarDayDetail(dateStr, dayEntries) {
+  const dt = new Date(dateStr);
+  const dowLabels = ['日','月','火','水','木','金','土'];
+  const nhName = NATIONAL_HOLIDAYS[dateStr];
+  const todayStr = today();
+  const nhBadge = nhName ? `<span style="color:#ef4444;font-size:12px;font-weight:600;">${esc(nhName)}</span>` : '';
+  const title = `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日（${dowLabels[dt.getDay()]}）${nhBadge}`;
+
+  // リストごとにグルーピング
+  const groups = new Map(); // listId -> { list, items[{ todo, kind }] }
+  for (const entry of dayEntries) {
+    const lid = entry.todo.listId;
+    if (!groups.has(lid)) {
+      const lst = lists.find(l => l.id === lid);
+      groups.set(lid, { list: lst, items: [] });
+    }
+    groups.get(lid).items.push(entry);
+  }
+
+  const weekEnd = endOfWeekYmd();
+  const groupHtml = [...groups.values()].map(g => {
+    const listName = g.list ? g.list.name : '(リスト不明)';
+    const itemRows = g.items.map(entry => {
+      const t = entry.todo;
+      const kind = entry.kind;
+      let cls = '';
+      if (t.completed) {
+        cls = 'done';
+      } else if (kind === 'start') {
+        // 開始日行: 開始日と今日の比較
+        const past = t.startDate < todayStr;
+        const tdy  = t.startDate === todayStr;
+        if (past) cls = 'start-past';
+        else if (tdy) cls = 'today';
+        else cls = 'far';
+      } else {
+        // 終了日 or 両方: 終了日と今日の比較
+        const d = t.dueDate;
+        if (d && d < todayStr) cls = 'overdue';
+        else if (d === todayStr) cls = 'today';
+        else if (d && d > weekEnd) cls = 'far';
+      }
+      const iconHtml = calChipIconHtml(kind, t.completed);
+      // 開始日・終了日チップ（持っていれば表示）。M/D に短縮。
+      const fmtMd = d => d ? d.slice(5).replace('-', '/') : '';
+      const startChip = t.startDate
+        ? `<span class="dt-chip dt-start" title="開始日: ${esc(t.startDate)}"><span class="chip-ico">${I.play}</span>${fmtMd(t.startDate)}</span>`
+        : '';
+      const dueChip = t.dueDate
+        ? `<span class="dt-chip dt-due" title="終了日: ${esc(t.dueDate)}"><span class="chip-ico">${I.cal}</span>${fmtMd(t.dueDate)}</span>`
+        : '';
+      const sep = (t.startDate && t.dueDate) ? '<span class="dt-sep">〜</span>' : '';
+      const datesHtml = (startChip || dueChip)
+        ? `<span class="cal-detail-todo-dates">${startChip}${sep}${dueChip}</span>`
+        : '';
+      // 詳細メモ・フォルダ/URL ボタン（持っていれば表示）。クリックは既存ハンドラ memo-show / folder-open に委譲
+      const memoBtn = t.detail
+        ? `<button class="cal-todo-action${memoPopupId === t.id ? ' memo-active' : ''}" data-a="memo-show" data-id="${t.id}" title="メモを表示">${I.memo}</button>`
+        : '';
+      const folderBtn = t.folderPath
+        ? `<button class="cal-todo-action" data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button>`
+        : '';
+      return `<div class="cal-detail-todo-row ${cls}" data-a="calendar-jump-to-todo" data-list-id="${t.listId}" data-todo-id="${t.id}" title="ダブルクリックでこのタスクのリストへ移動">
+        <span class="cal-detail-mark">${iconHtml}</span>
+        <span class="cal-detail-todo-text">${esc(t.text)}</span>
+        ${memoBtn}${folderBtn}
+        ${datesHtml}
+      </div>`;
+    }).join('');
+    return `<div class="cal-detail-todo-group">
+      <div class="cal-detail-todo-group-hd">${esc(listName)}（${g.items.length}）</div>
+      ${itemRows}
+    </div>`;
+  }).join('');
+
+  const totalCount = dayEntries.length;
+  return `
+    <div class="cal-detail-title">${title}</div>
+    <div class="cal-detail-section-title">タスク (${totalCount})</div>
+    ${totalCount ? groupHtml : '<div class="cal-detail-empty">この日に対象のタスクはありません</div>'}
+    ${totalCount ? '<div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.5;">※ タスクをダブルクリックするとそのリストへ移動します</div>' : ''}
+  `;
+}
+
+// カレンダーの詳細パネル行ダブルクリックで該当タスクのリストへジャンプ。
+// ジャンプ直後にハイライトを掛け、画面内にスクロールする。
+function jumpFromCalendarToTodo(listId, todoId) {
+  if (!listId || !lists.find(l => l.id === listId)) return;
+  selectedListId = listId;
+  localStorage.setItem('todo-app-selected-list', selectedListId);
+  highlightTodoId = todoId;
+  if (_highlightTimer) { clearTimeout(_highlightTimer); _highlightTimer = null; }
+  closeModal(); // 内部で render() を呼ぶので、ハイライトクラスは初回描画から付く
+  // ハイライト対象を画面内へスクロール（描画完了後）
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`.todo-item[data-id="${todoId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  _highlightTimer = setTimeout(() => {
+    highlightTodoId = null;
+    _highlightTimer = null;
+    // 再描画してハイライトクラスを除去（アニメーションは既に終了済み）
+    render();
+  }, 1800);
+}
+
+// メモポップアップだけを DOM 直接更新（ちらつき防止）。
+// カレンダー表示中などに全体 render() を避けたいときに使う。
+function updateMemoPopupInDom() {
+  const existing = document.getElementById('memo-popup');
+  if (existing) existing.remove();
+  const popupHtml = htmlMemoPopup();
+  if (popupHtml) {
+    const app = document.getElementById('app');
+    if (app) app.insertAdjacentHTML('beforeend', popupHtml);
+  }
+}
+
+// 日セル右クリックメニュー HTML（タスク一覧 → クリックで該当リストへジャンプ）
+function htmlCalendarCellMenu() {
+  if (!calendarCellMenu) return '';
+  const { date, x, y } = calendarCellMenu;
+  // 現在の date-mode に合わせてその日のタスクを抽出
+  const dateMap = getCalendarTodosByDate(date, date);
+  const entries = dateMap[date] || [];
+  const dt = new Date(date);
+  const dowLabels = ['日','月','火','水','木','金','土'];
+  const title = `${dt.getFullYear()}/${dt.getMonth()+1}/${dt.getDate()}（${dowLabels[dt.getDay()]}）`;
+  // 画面端で見切れないように位置を調整
+  const MENU_W = 320, MENU_H = 280;
+  let left = x;
+  let top  = y;
+  if (left + MENU_W > window.innerWidth  - 8) left = window.innerWidth  - MENU_W - 8;
+  if (top  + MENU_H > window.innerHeight - 8) top  = Math.max(8, window.innerHeight - MENU_H - 8);
+  if (left < 8) left = 8;
+  if (top  < 8) top  = 8;
+  const todayStr = today();
+  const weekEnd = endOfWeekYmd();
+  const items = entries.map(entry => {
+    const t = entry.todo;
+    const kind = entry.kind;
+    let cls = '';
+    if (t.completed) {
+      cls = 'done';
+    } else if (kind === 'start') {
+      const past = t.startDate < todayStr;
+      const tdy  = t.startDate === todayStr;
+      cls = past ? 'done' : tdy ? 'today' : 'far';
+    } else {
+      const d = t.dueDate;
+      if (d && d < todayStr) cls = 'overdue';
+      else if (d === todayStr) cls = 'today';
+      else if (d && d > weekEnd) cls = 'far';
+    }
+    const lst = lists.find(l => l.id === t.listId);
+    const listName = lst ? lst.name : '';
+    const iconHtml = calChipIconHtml(kind, t.completed);
+    return `<div class="cal-cell-menu-item ${cls}" data-a="cal-cell-menu-jump" data-list-id="${t.listId}" data-todo-id="${t.id}" title="クリックでこのタスクのリストへ移動">
+      <span class="cmi-icon">${iconHtml}</span>
+      <span class="cmi-text">${esc(t.text)}</span>
+      <span class="cmi-list" title="${esc(listName)}">${esc(listName)}</span>
+    </div>`;
+  }).join('');
+  const body = entries.length
+    ? items
+    : '<div class="cal-cell-menu-empty">この日のタスクはありません</div>';
+  return `<div class="cal-cell-menu" style="left:${left}px; top:${top}px;">
+    <div class="cal-cell-menu-hd">${esc(title)}　タスク (${entries.length})</div>
+    ${body}
+  </div>`;
+}
+
+// カレンダーモーダルだけを差し替える専用 render（ちらつき防止）。
+// .modal-overlay と .modal 要素自体は保持し、内部の innerHTML だけを更新する。
+function renderCalendarModal() {
+  const modalEl = document.querySelector('.modal.cal-modal-wrap');
+  if (!modalEl) { render(); return; }
+  const tmp = document.createElement('div');
+  tmp.innerHTML = htmlCalendarModal();
+  const newModal = tmp.querySelector('.modal');
+  if (!newModal) { render(); return; }
+  modalEl.innerHTML = newModal.innerHTML;
 }
 
 // ── Sidebar HTML ───────────────────────────────────────
@@ -2120,7 +2831,7 @@ function htmlMain() {
           ? `<button class="sub-toggle${expanded ? ' expanded' : ''}" data-a="toggle-collapse" data-id="${t.id}" title="${expanded ? '折りたたむ' : '展開する'}">${chevronRight}</button>`
           : `<span class="sub-toggle-placeholder"></span>`;
 
-        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}${isSub ? ' is-sub' : ''}" data-id="${t.id}"${isSub ? ' data-sub="1"' : ''}>
+        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}${isSub ? ' is-sub' : ''}${highlightTodoId === t.id ? ' cal-highlight' : ''}" data-id="${t.id}"${isSub ? ' data-sub="1"' : ''}>
           <div class="drag-handle" data-a="drag-handle" data-id="${t.id}" draggable="${!editing && !hasTouch}">${I.grip}</div>
           ${togglePart}
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
@@ -2258,6 +2969,7 @@ function htmlModal() {
   if (modalMode === 'git-merge')     return htmlGitMergeModal();
   if (modalMode === 'git-error')     return htmlGitErrorModal();
   if (modalMode === 'notify-config') return htmlNotifyConfigModal();
+  if (modalMode === 'calendar')      return htmlCalendarModal();
   const isExport = modalMode === 'export';
   const title = isExport ? 'エクスポート' : 'インポート';
   const actionLabel = isExport ? 'エクスポート' : 'インポート';
@@ -2670,6 +3382,7 @@ function html() {
       </div>
       <div class="header-right">
         <button class="sidebar-toggle-btn${sidebarOpen ? ' active' : ''}" data-a="toggle-sidebar" aria-label="リスト">${I.menu}</button>
+        <button class="header-icon-btn" data-a="open-calendar" title="カレンダー" aria-label="カレンダー">${I.cal}</button>
         ${isTauriEnv() ? '' : `<button class="header-icon-btn${getNotifyPermission() === 'default' ? ' has-dot' : ''}" data-a="open-notify-config" title="通知（バッジ）設定" aria-label="通知設定">${I.bell}</button>`}
         <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
       </div>
@@ -3030,6 +3743,8 @@ function closeModal() {
   modalMode = null; modalLists = []; modalAllChecked = false; importPayload = null;
   gitConfigDraft = null; gitConfigTestResult = null;
   gitErrorPayload = null;
+  calendarSelectedDate = null;
+  calendarCellMenu = null;
   // gitMergeData は明示的にキャンセル/確定したときのみクリアするため、ここではクリアしない
   render();
 }
@@ -3792,9 +4507,24 @@ function clearDragOver() { setDragOver(null); }
 
 // ── Event handlers ─────────────────────────────────────
 document.addEventListener('click', e => {
+  // カレンダー日セル右クリックメニューを外クリックで閉じる
+  if (calendarCellMenu && !e.target.closest('.cal-cell-menu')) {
+    // メニュー外をクリック → メニュー閉じる。クリック自体は他のアクションに継続させる
+    calendarCellMenu = null;
+    renderCalendarModal();
+    // 他の data-a 処理に進ませるため return しない
+  }
   // メモポップアップを外クリックで閉じる
   if (memoPopupId && !e.target.closest('#memo-popup') && !e.target.closest('[data-a="memo-show"]')) {
-    memoPopupId = null; memoPopupPos = null; render(); return;
+    memoPopupId = null; memoPopupPos = null;
+    if (modalMode === 'calendar') {
+      // カレンダー表示中は全体再描画せず、ポップアップ要素のみ削除（ちらつき防止）
+      renderCalendarModal();    // メモボタンの .memo-active 状態を反映
+      updateMemoPopupInDom();
+    } else {
+      render();
+    }
+    return;
   }
 
   // デスクトップ: 日付入力エリアクリック時にfocusしてピッカーを開く（focusinで処理）
@@ -3858,7 +4588,14 @@ document.addEventListener('click', e => {
         const btn = e.target.closest('[data-a="memo-show"]');
         if (btn) { const r = btn.getBoundingClientRect(); memoPopupPos = { top: r.top, bottom: r.bottom, left: r.left, right: r.right }; }
       }
-      render(); break;
+      if (modalMode === 'calendar') {
+        // カレンダー表示中は全体再描画せず、カレンダーモーダルとポップアップだけ更新（ちらつき防止）
+        renderCalendarModal();
+        updateMemoPopupInDom();
+      } else {
+        render();
+      }
+      break;
     }
     case 'toggle-link-type': e.stopPropagation(); editLinkType = editLinkType === 'folder' ? 'url' : 'folder'; render(); break;
     case 'folder-open': {
@@ -3975,6 +4712,63 @@ document.addEventListener('click', e => {
       gitMergeBulk(choice);
       break;
     }
+    case 'open-calendar': {
+      // 今日が含まれる月で開き、今日を初期選択に
+      if (!modalMode || modalMode !== 'calendar') {
+        const n = new Date();
+        calendarYear = n.getFullYear();
+        calendarMonth = n.getMonth() + 1;
+        calendarSelectedDate = today();
+      }
+      modalMode = 'calendar';
+      render();
+      break;
+    }
+    case 'calendar-nav-prev': {
+      let y = calendarYear, m = calendarMonth - 1;
+      if (m < 1) { m = 12; y -= 1; }
+      calendarYear = y; calendarMonth = m;
+      calendarSelectedDate = null;   // 月を変えたら前の選択は解除
+      renderCalendarModal();
+      break;
+    }
+    case 'calendar-nav-next': {
+      let y = calendarYear, m = calendarMonth + 1;
+      if (m > 12) { m = 1; y += 1; }
+      calendarYear = y; calendarMonth = m;
+      calendarSelectedDate = null;
+      renderCalendarModal();
+      break;
+    }
+    case 'calendar-jump-today': {
+      const n = new Date();
+      calendarYear = n.getFullYear();
+      calendarMonth = n.getMonth() + 1;
+      calendarSelectedDate = today();
+      renderCalendarModal();
+      break;
+    }
+    case 'calendar-day-click': {
+      const d = el.dataset.date;
+      if (!d) break;
+      // 同じ日を再クリックでも選択解除しない（常に選択にする）
+      calendarSelectedDate = d;
+      renderCalendarModal();
+      break;
+    }
+    case 'cal-cell-menu-jump': {
+      const lid = el.dataset.listId;
+      const tid = el.dataset.todoId;
+      calendarCellMenu = null;
+      jumpFromCalendarToTodo(lid, tid);
+      break;
+    }
+    case 'calendar-toggle-done': {
+      calendarShowDone = !calendarShowDone;
+      renderCalendarModal();
+      break;
+    }
+    // 'calendar-jump-to-todo' は dblclick で処理（クリックでは何もしない）
     case 'modal-close':     closeModal(); break;
     case 'modal-overlay':
       // モーダル内から始めたドラッグが枠外で離れた場合は閉じない
@@ -4068,6 +4862,13 @@ document.addEventListener('mousedown', e => {
   if (e.target.closest('.text-wrap, .list-nav-item .list-content')) e.preventDefault();
 });
 document.addEventListener('dblclick', e => {
+  // カレンダー詳細パネルのタスク行: ダブルクリックで該当タスクのリストへ移動
+  // ただし行内のアクションボタン（メモ / フォルダ / URL）上のダブルクリックは無視
+  const calRow = e.target.closest('.cal-detail-todo-row');
+  if (calRow && calRow.dataset.a === 'calendar-jump-to-todo' && !e.target.closest('.cal-todo-action')) {
+    jumpFromCalendarToTodo(calRow.dataset.listId, calRow.dataset.todoId);
+    return;
+  }
   const todoItem = e.target.closest('.todo-item');
   if (todoItem) {
     if (e.target.closest('.cb-wrap') || e.target.closest('.item-del')) return;
@@ -4092,10 +4893,19 @@ document.addEventListener('dblclick', e => {
     const elapsed = now - lastTap;
     const sameTarget = lastTarget && (
       target === lastTarget || target.closest('.todo-item') === lastTarget.closest('.todo-item') ||
-      target.closest('.list-nav-item') === lastTarget.closest('.list-nav-item')
+      target.closest('.list-nav-item') === lastTarget.closest('.list-nav-item') ||
+      target.closest('.cal-detail-todo-row') === lastTarget.closest('.cal-detail-todo-row')
     );
     if (elapsed < DOUBLE_TAP_MS && sameTarget) {
       // ダブルタップ確定
+      // カレンダー詳細パネル行: 該当タスクへジャンプ
+      const calRow = target.closest('.cal-detail-todo-row');
+      if (calRow && calRow.dataset.a === 'calendar-jump-to-todo' && !target.closest('.cal-todo-action')) {
+        e.preventDefault();
+        jumpFromCalendarToTodo(calRow.dataset.listId, calRow.dataset.todoId);
+        lastTap = 0; lastTarget = null;
+        return;
+      }
       const todoItem = target.closest('.todo-item');
       if (todoItem && !target.closest('.cb-wrap') && !target.closest('.item-del') && !target.closest('.drag-handle')) {
         e.preventDefault();
@@ -4126,6 +4936,21 @@ document.addEventListener('focusin', e => {
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 document.addEventListener('change', e => {
+  // カレンダー: リスト絞り込みセレクト
+  if (e.target.closest('[data-a="calendar-filter-list"]')) {
+    calendarFilterListId = e.target.value || null;
+    renderCalendarModal();
+    return;
+  }
+  // カレンダー: 日付モード切替（終了日 / 開始日 / 両方）
+  if (e.target.closest('[data-a="calendar-date-mode"]')) {
+    const v = e.target.value;
+    if (v === 'due' || v === 'start' || v === 'both') {
+      calendarDateMode = v;
+      renderCalendarModal();
+    }
+    return;
+  }
   if (e.target.id === 'ei-date') {
     const val = e.target.value;
     editDue = val;
@@ -4509,6 +5334,23 @@ document.addEventListener('drop', e => {
 document.addEventListener('contextmenu', e => {
   // 入力欄（textarea/input）ではブラウザ標準メニューを維持
   if (e.target.matches('textarea, input')) return;
+  // カレンダー表示中：日セル右クリック → タスク一覧ポップアップ
+  if (modalMode === 'calendar') {
+    const cell = e.target.closest('.cal-day-cell');
+    if (cell && cell.dataset.date) {
+      e.preventDefault();
+      calendarCellMenu = { date: cell.dataset.date, x: e.clientX, y: e.clientY };
+      renderCalendarModal();
+      return;
+    }
+    // カレンダー内のセル外を右クリック → メニューを閉じる
+    if (calendarCellMenu) {
+      e.preventDefault();
+      calendarCellMenu = null;
+      renderCalendarModal();
+    }
+    return;
+  }
   e.preventDefault();
   // iOS Safari の長押しで先に発生したテキスト選択を解除（メニュー後に残るのを防止）
   try {

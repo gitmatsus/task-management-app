@@ -2682,9 +2682,12 @@ function htmlSidebar() {
 
   return `<div class="sidebar-col${sidebarOpen ? ' open' : ''}" id="sidebar-col">
     <div class="card">
-      <div class="sidebar-hd"><span>リスト</span><button class="stats-toggle${showListStats ? ' active' : ''}" data-a="toggle-stats" title="${showListStats ? 'ステータス非表示' : 'ステータス表示'}">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-      </button></div>
+      <div class="sidebar-hd"><span>リスト</span><span style="display:inline-flex;gap:2px;">
+        <button class="stats-toggle" data-a="sort-lists-by-date" title="日付順に並べる（最古の dueDate を持つリストを上へ）">${I.sortCal}</button>
+        <button class="stats-toggle${showListStats ? ' active' : ''}" data-a="toggle-stats" title="${showListStats ? 'ステータス非表示' : 'ステータス表示'}">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </button>
+      </span></div>
       <ul class="list-nav">${items}</ul>
       ${expandBtn}
       <div class="list-add-area">${addArea}</div>
@@ -3546,15 +3549,65 @@ function toggleTodo(id) {
 function sortByDate() {
   const lid = selectedListId;
   const mine = todos.filter(x => x.listId === lid);
-  const dateCmp = (a, b) => {
-    if (!a.dueDate && !b.dueDate) return 0;
-    if (!a.dueDate) return 1;   // 日付なしは末尾
-    if (!b.dueDate) return -1;
-    return a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
+  // 親IDごとのサブ一覧
+  const subsByParent = new Map();
+  mine.forEach(t => {
+    if (t.parentId) {
+      if (!subsByParent.has(t.parentId)) subsByParent.set(t.parentId, []);
+      subsByParent.get(t.parentId).push(t);
+    }
+  });
+  // メインの「ソート用日付」: own dueDate ?? サブの最古 dueDate ?? null
+  const effDate = (t) => {
+    if (t.dueDate) return t.dueDate;
+    const subs = subsByParent.get(t.id) || [];
+    const subDates = subs.map(s => s.dueDate).filter(Boolean).sort();
+    return subDates[0] || null;
   };
-  const sorted = [...mine].sort(dateCmp);
+  const cmp = (a, b) => {
+    const da = effDate(a);
+    const db = effDate(b);
+    if (!da && !db) return 0;
+    if (!da) return 1;   // 日付なしは末尾
+    if (!db) return -1;
+    return da < db ? -1 : da > db ? 1 : 0;
+  };
+  // メインだけ並び替え、各メイン直下にサブを並べる（サブ内の順序は維持）
+  const mainsSorted = mine.filter(t => !t.parentId).sort(cmp);
+  const result = [];
+  mainsSorted.forEach(m => {
+    result.push(m);
+    const subs = subsByParent.get(m.id) || [];
+    result.push(...subs);
+  });
+  // 親が同リスト内にない孤児サブを末尾に追加
+  const placed = new Set(result.map(t => t.id));
+  mine.forEach(t => { if (!placed.has(t.id)) result.push(t); });
+
   let si = 0;
-  todos = todos.map(t => t.listId === lid ? sorted[si++] : t);
+  todos = todos.map(t => t.listId === lid ? result[si++] : t);
+  save(); render();
+}
+
+// リスト（左ペイン）を「リスト内の最古 dueDate（未完了タスク）」でソート。
+// 未完了タスクの dueDate が無いリストは末尾へ。
+function sortListsByDate() {
+  const listEffDate = (lid) => {
+    const dates = todos
+      .filter(t => t.listId === lid && !t.completed && t.dueDate)
+      .map(t => t.dueDate)
+      .sort();
+    return dates[0] || null;
+  };
+  const cmp = (a, b) => {
+    const da = listEffDate(a.id);
+    const db = listEffDate(b.id);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return da < db ? -1 : da > db ? 1 : 0;
+  };
+  lists.sort(cmp);
   save(); render();
 }
 function startEdit(id) {
@@ -4609,6 +4662,7 @@ document.addEventListener('click', e => {
     case 'toggle-sidebar': sidebarOpen = !sidebarOpen; render(); break;
     case 'toggle':       e.stopPropagation(); toggleTodo(id); break;
     case 'sort-by-date': e.stopPropagation(); sortByDate(); break;
+    case 'sort-lists-by-date': e.stopPropagation(); sortListsByDate(); break;
     case 'toggle-all-collapse': {
       e.stopPropagation();
       const mainsWithSubs = currentTodos().filter(t => !t.parentId && hasSubs(t.id));

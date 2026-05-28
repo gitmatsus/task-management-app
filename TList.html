@@ -1656,7 +1656,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 // ── State ──────────────────────────────────────────────
 let todos = [], trash = [], lists = [], selectedListId = '';
@@ -1798,6 +1798,8 @@ function load() {
     if (typeof s.listExpanded         === 'boolean') listExpanded         = s.listExpanded;
     if (typeof s.taskFilter           === 'string')  taskFilter           = s.taskFilter;
   } catch { /* ignore */ }
+  // 起動時に繰り返しタスクの完了状態をリセット（次回発生日へ進める）
+  applyRecurringResets();
 }
 function save() {
   localStorage.setItem('todo-app-todos',  JSON.stringify(todos));
@@ -1893,20 +1895,20 @@ function getPeriodKey(date, recurrence) {
   if (recurrence.type === 'weekly')  return isoWeekKey(date);
   return null;
 }
-// 繰り返しタスクの周期境界をまたいだものを未完了に戻し、dueDate を次回発生日に進める
+// 繰り返しタスクで「完了済み」のものを次回発生日へ進めて未完了に戻す。
+// 周期境界に関係なく、呼ばれたら常にリセットする（イベント駆動：
+//   load() / selectList() / visibilitychange(visible) / applyExportPayloadInPlace()）。
+// チェック直後のリスト切替・アプリ再起動・別アプリから復帰のたびに次の予定が見える
+// ように動作させるための仕様。完了直後の達成感はチェック時のアニメーションで担保する。
 function applyRecurringResets() {
   const now = new Date();
   let changed = false;
   todos.forEach(t => {
-    if (!t.recurrence?.type || !t.completed || !t.completedAt) return;
-    const cKey = getPeriodKey(new Date(t.completedAt), t.recurrence);
-    const nKey = getPeriodKey(now, t.recurrence);
-    if (cKey && nKey && cKey !== nKey) {
-      t.completed = false;
-      t.completedAt = undefined;
-      if (t.dueDate) t.dueDate = advanceRecurrenceDate(t.recurrence, t.dueDate, now);
-      changed = true;
-    }
+    if (!t.recurrence?.type || !t.completed) return;
+    if (t.dueDate) t.dueDate = advanceRecurrenceDate(t.recurrence, t.dueDate, now);
+    t.completed = false;
+    t.completedAt = undefined;
+    changed = true;
   });
   if (changed) save();
   return changed;
@@ -3461,7 +3463,9 @@ function html() {
 
 // ── Render ─────────────────────────────────────────────
 function render() {
-  applyRecurringResets();
+  // 注: applyRecurringResets() は render では呼ばない。チェック直後に即リセットされて
+  // しまうため、リスト切替・アプリ起動・visibilitychange(visible) のイベント駆動で
+  // のみ実行する。
   const sy = window.scrollY;
   document.getElementById('app').innerHTML = html();
   window.scrollTo(0, sy);
@@ -3664,6 +3668,9 @@ function reorderList(fromId, toId) {
 // ── List Actions ───────────────────────────────────────
 function selectList(id) {
   if (selectedListId === id) return;
+  // 他リストへ切り替える瞬間に、完了済みの繰り返しタスクを次回発生日へ進めて未完了に戻す
+  // （戻ってきた時に「次の予定」が見えるようにする）
+  applyRecurringResets();
   selectedListId = id;
   showTrash = false; editId = null; subInputParentId = null; taskFilter = 'all';
   if (isMobile()) sidebarOpen = false; // モバイルではリスト選択後サイドバーを閉じる
@@ -3869,6 +3876,8 @@ function applyExportPayloadInPlace(payload) {
   trash    = (payload.trash || []).map(t => ({ ...t }));
   repairAfterLoad();
   if (!lists.find(l => l.id === selectedListId)) selectedListId = lists[0]?.id || '';
+  // Git Pull / インポート / マージ反映後も、完了済み繰り返しタスクを次回発生日へ進める
+  applyRecurringResets();
   save();
 }
 
@@ -5441,6 +5450,14 @@ document.addEventListener('contextmenu', e => {
   // 別の場所でメニューが開いている場合は閉じる
   if (ctxMenuTodoId || ctxMenuListId) {
     ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; render();
+  }
+});
+
+// アプリが再表示（タブ切替・別アプリから復帰・iOS PWA を再フォーカス）された時に
+// 完了済み繰り返しタスクを次回発生日へ進めて未完了に戻す
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (applyRecurringResets()) render();
   }
 });
 

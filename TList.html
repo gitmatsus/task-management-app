@@ -226,6 +226,8 @@
       background:var(--sidebar-pill-bg); color:var(--sidebar-pill-text);
       cursor:default;
     }
+    /* 複数の緊急ピル（超過 + 今日）を横並びで隙間少なめに表示する箱 */
+    .list-count-pill-wrap { display:inline-flex; gap:2px; flex-shrink:0; align-items:center; }
     .list-count-pill.sel { background:var(--sidebar-act-pill-bg); color:var(--sidebar-act-pill-text); }
     /* 緊急度カラー: 超過=赤、今日=黄、今週中=緑、来週以降=水色（選択中も上書き） */
     .list-count-pill.urgent-ov, .list-count-pill.urgent-ov.sel { background:#fecaca; color:#b91c1c; }
@@ -2597,14 +2599,23 @@ function htmlSidebar() {
       ${s.noDate   > 0 ? `<span class="dot dot-nd">${s.noDate}</span>`       : ''}
       ${s.done     > 0 ? `<span class="dot dot-dn">${s.done}</span>`               : ''}
     </div>` : '';
-    const tier = isMemo
-      ? { cls:'', n:s.total,    title:'件数' }
-      : s.overdue  > 0 ? { cls:'urgent-ov',  n:s.overdue,  title:`超過${s.overdue}件` }
-      : s.dueToday > 0 ? { cls:'urgent-td',  n:s.dueToday, title:`今日${s.dueToday}件` }
+    // 緊急タスク（超過 + 今日）が両方ある時は両方表示。それ以外は単一の tier を表示。
+    // 目的: 赤系（超過）と橙系（今日）の件数を一目で把握できるようにする。
+    const urgentPills = [];
+    if (!isMemo) {
+      if (s.overdue  > 0) urgentPills.push({ cls:'urgent-ov', n:s.overdue,  title:`超過${s.overdue}件` });
+      if (s.dueToday > 0) urgentPills.push({ cls:'urgent-td', n:s.dueToday, title:`今日${s.dueToday}件` });
+    }
+    const fallbackTier = isMemo
+      ? { cls:'', n:s.total, title:'件数' }
       : s.dueWeek  > 0 ? { cls:'urgent-fu',  n:s.dueWeek,  title:`今週中${s.dueWeek}件` }
       : s.weekPlus > 0 ? { cls:'urgent-far', n:s.weekPlus, title:`来週以降${s.weekPlus}件` }
       :                  { cls:'',           n:s.active,   title:`未完了${s.active}件` };
-    const pillCls = `list-count-pill${isSel ? ' sel' : ''}${tier.cls ? ' ' + tier.cls : ''}`;
+    const pillsArr = urgentPills.length > 0 ? urgentPills : [fallbackTier];
+    const pillsHtml = pillsArr.map(p => {
+      const cls = `list-count-pill${isSel ? ' sel' : ''}${p.cls ? ' ' + p.cls : ''}`;
+      return `<span class="${cls}" title="${p.title}">${p.n}</span>`;
+    }).join('');
     const typeIcon = `<span class="list-type-icon${isMemo ? ' memo-type' : ''}">${isMemo ? I.notepad : I.clip}</span>`;
     const nameRow = isEditing
       ? `<input id="list-rename-inp" class="list-rename-input" type="text" value="${esc(editingListName)}" autocomplete="off">
@@ -2613,7 +2624,7 @@ function htmlSidebar() {
            メモ
          </label>`
       : `${typeIcon}<span class="list-item-name">${esc(lst.name)}</span>
-         <span class="${pillCls}" title="${tier.title}">${tier.n}</span>`;
+         <span class="list-count-pill-wrap">${pillsHtml}</span>`;
 
     return `<li class="list-nav-item${isSel ? ' active' : ''}" data-a="select-list" data-id="${lst.id}">
       <div class="list-drag-handle" draggable="${!isEditing && !('ontouchstart' in window)}">${I.grip}</div>

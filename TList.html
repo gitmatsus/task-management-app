@@ -155,7 +155,13 @@
 
     /* ── 2-column layout ── */
     .layout { display:flex; gap:16px; align-items:flex-start; }
-    .sidebar-col { width:208px; flex-shrink:0; }
+    .sidebar-col {
+      width:208px; flex-shrink:0;
+      /* スクロールしても画面内に貼り付いて空白にならないようにする。
+         サイドバーが長い場合はサイドバー内だけスクロール */
+      position:sticky; top:16px; align-self:flex-start;
+      max-height:calc(100vh - 32px); overflow-y:auto;
+    }
     .main-col { flex:1; min-width:0; }
 
     /* ── Card ── */
@@ -289,6 +295,36 @@
     html.dark .list-card-icon.memo-icon { background:rgba(245,158,11,.75); }
     .list-card-icon svg { width:14px; height:14px; }
     .list-card-name { font-size:15px; font-weight:700; color:var(--t1); }
+
+    /* ── 「今日のToDo」特別項目・集約ビュー ── */
+    .today-nav-item { margin-bottom:4px; padding-bottom:10px; border-bottom:1px dashed var(--divider); }
+    .today-nav-item .list-type-icon.today-type { color:#f59e0b; opacity:1; }
+    .today-nav-item.active .list-item-name { color:#d97706; }
+    html.dark .today-nav-item.active .list-item-name { color:#fbbf24; }
+    /* ドラッグ不可。実リスト項目とアイコン位置を揃えるための不可視スペーサー */
+    .today-drag-spacer { opacity:0 !important; pointer-events:none; cursor:default; }
+    .list-card-icon.today-card-icon { background:rgba(245,158,11,.9); box-shadow:0 1px 3px rgba(245,158,11,.3); color:#fff; }
+    html.dark .list-card-icon.today-card-icon { background:rgba(245,158,11,.8); }
+    .today-view-body { padding:12px 20px 4px; }
+    .today-view-hint { font-size:11px; color:var(--t3); margin-top:10px; line-height:1.5; }
+    /* 流用元（カレンダー詳細パネル）は狭い枠向けに小さめ。通常 ToDo リスト（14px）に
+       合わせて、today-view-body 配下だけ文字・行間を拡大する（カレンダー側は不変）。 */
+    .today-view-body .cal-detail-todo-row { font-size:14px; gap:8px; padding:6px 8px; }
+    .today-view-body .cal-detail-todo-group-hd { font-size:12px; padding:4px 0; }
+    .today-view-body .cal-detail-empty { font-size:14px; padding:8px 0; }
+    .today-row-list {
+      flex:0 0 96px; width:96px; box-sizing:border-box; text-align:center;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      font-size:11px; font-weight:600; color:var(--t2);
+      background:var(--filter-bg); padding:2px 8px; border-radius:9999px;
+    }
+    /* 行の日付バッジ（通常 ToDo と同じ due-badge 配色）を右端に寄せる */
+    .today-row-due { margin-left:auto; flex-shrink:0; }
+    .today-row-due .due-badge { font-size:11px; padding:2px 7px; }
+    /* 並び順切替ボタン（アイコン＋ラベル） */
+    .today-mode-btn { gap:4px; font-family:inherit; font-size:11px; font-weight:600; }
+    .today-mode-btn svg { width:14px; height:14px; }
+    .today-mode-label { line-height:1; }
     .sort-btns {
       margin-left:auto; display:flex; align-items:center; gap:2px;
     }
@@ -1180,7 +1216,7 @@
 
       /* レイアウト：縦積みに変更 */
       .layout { flex-direction:column; gap:12px; }
-      .sidebar-col { width:100%; }
+      .sidebar-col { width:100%; position:static; max-height:none; overflow:visible; }
       .main-col { width:100%; }
 
       /* サイドバー：デフォルト非表示、開いたら上に展開 */
@@ -1661,6 +1697,8 @@
 const APP_VERSION = '1.2.0';
 
 // ── State ──────────────────────────────────────────────
+// 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
+const TODAY_LIST_ID = '__today__';
 let todos = [], trash = [], lists = [], selectedListId = '';
 let showTrash = false;
 let showCompletedSection = false; // 完了セクションの開閉（セッション単位）
@@ -1682,6 +1720,7 @@ let ctxMenuListId = null; // リスト用右クリックメニュー対象
 let ctxSubmenuOpen = false; // 「サブに登録」サブメニューの展開状態（モバイル用、デスクトップはhover）
 let subInputParentId = null; // サブタスク入力モード時の親タスクID
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
+let todayViewMode = 'date'; // 「今日のToDo」ビューの並び: 'date'=日付順 / 'list'=リスト毎
 let editStartDate = '';
 let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
 let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
@@ -1789,7 +1828,7 @@ function load() {
   repairAfterLoad();
   // 全データ読み込み後に選択リストを復元
   const savedListId = localStorage.getItem('todo-app-selected-list');
-  selectedListId = (savedListId && lists.find(l => l.id === savedListId))
+  selectedListId = (savedListId && (savedListId === TODAY_LIST_ID || lists.find(l => l.id === savedListId)))
     ? savedListId : lists[0].id;
   // UI 状態の復元（折りたたみ・展開状態・フィルター等）
   try {
@@ -1799,6 +1838,7 @@ function load() {
     if (typeof s.showCompletedSection === 'boolean') showCompletedSection = s.showCompletedSection;
     if (typeof s.listExpanded         === 'boolean') listExpanded         = s.listExpanded;
     if (typeof s.taskFilter           === 'string')  taskFilter           = s.taskFilter;
+    if (s.todayViewMode === 'date' || s.todayViewMode === 'list') todayViewMode = s.todayViewMode;
   } catch { /* ignore */ }
   // 起動時に繰り返しタスクの完了状態をリセット（次回発生日へ進める）
   applyRecurringResets();
@@ -1819,6 +1859,7 @@ function saveUiState() {
       showCompletedSection,
       listExpanded,
       taskFilter,
+      todayViewMode,
     }));
     // 選択中リストも render のたびに保存（リスト切り替えだけでも次回起動時に復元できるよう）
     if (selectedListId) {
@@ -2472,10 +2513,16 @@ function htmlCalendarDayDetail(dateStr, dayEntries) {
 // カレンダーの詳細パネル行ダブルクリックで該当タスクのリストへジャンプ。
 // ジャンプ直後にハイライトを掛け、画面内にスクロールする。
 // 折りたたまれた親タスク / 完了セクションは自動展開してターゲットを必ず可視化する。
-function jumpFromCalendarToTodo(listId, todoId) {
+// タスクへジャンプする共通処理。対象リストへ切り替え、折りたたみ/完了セクションを
+// 開いてターゲットを可視化し、ハイライト＋スクロールする。
+// afterRender: 描画をどう行うか（カレンダーはモーダルを閉じつつ描画、それ以外は render）
+function jumpToTodo(listId, todoId, afterRender) {
   if (!listId || !lists.find(l => l.id === listId)) return;
   selectedListId = listId;
   localStorage.setItem('todo-app-selected-list', selectedListId);
+  // フィルターやゴミ箱表示でターゲットが隠れないよう解除する
+  taskFilter = 'all'; showTrash = false;
+  if (isMobile()) sidebarOpen = false;
   // 折りたたまれていてハイライトが見えないケースを解消する
   const target = todos.find(t => t.id === todoId);
   if (target) {
@@ -2490,7 +2537,7 @@ function jumpFromCalendarToTodo(listId, todoId) {
   }
   highlightTodoId = todoId;
   if (_highlightTimer) { clearTimeout(_highlightTimer); _highlightTimer = null; }
-  closeModal(); // 内部で render() を呼ぶので、ハイライトクラスは初回描画から付く
+  if (afterRender) afterRender(); else render(); // ハイライトクラスは初回描画から付く
   // ハイライト対象を画面内へスクロール（描画完了後）
   requestAnimationFrame(() => {
     const el = document.querySelector(`.todo-item[data-id="${todoId}"]`);
@@ -2502,6 +2549,10 @@ function jumpFromCalendarToTodo(listId, todoId) {
     // 再描画してハイライトクラスを除去（アニメーションは既に終了済み）
     render();
   }, 1800);
+}
+function jumpFromCalendarToTodo(listId, todoId) {
+  // モーダル（カレンダー）を閉じつつ通常リスト表示へジャンプ
+  jumpToTodo(listId, todoId, () => closeModal());
 }
 
 // メモポップアップだけを DOM 直接更新（ちらつき防止）。
@@ -2648,6 +2699,34 @@ function htmlSidebar() {
     visibleItems = allItems.filter((_, i) => visible.has(i));
   }
   const items = visibleItems.join('');
+
+  // 特別項目「今日のToDo」: 全リスト（メモ除く）の超過+今日を集約する仮想リスト。
+  // 件数バッジは他リストと同様に「超過（赤）」「今日（橙）」で色分けして表示する。
+  const isTodaySel = selectedListId === TODAY_LIST_ID;
+  let todayOverdue = 0, todayDue = 0;
+  for (const l of lists) {
+    if (l.type === 'memo') continue;
+    const st = listStats(l.id);
+    todayOverdue += st.overdue;
+    todayDue     += st.dueToday;
+  }
+  const todayPills = [];
+  if (todayOverdue > 0) todayPills.push({ cls:'urgent-ov', n:todayOverdue, title:`超過${todayOverdue}件` });
+  if (todayDue     > 0) todayPills.push({ cls:'urgent-td', n:todayDue,     title:`今日${todayDue}件` });
+  const todayPill = todayPills.map(p =>
+    `<span class="list-count-pill${isTodaySel ? ' sel' : ''} ${p.cls}" title="${p.title}">${p.n}</span>`
+  ).join('');
+  const todayNavItem = `<li class="list-nav-item today-nav-item${isTodaySel ? ' active' : ''}" data-a="select-today" title="全リストの超過・今日のタスクをまとめて表示">
+    <div class="list-drag-handle today-drag-spacer">${I.grip}</div>
+    <div class="list-content">
+      <div class="list-item-row">
+        <span class="list-type-icon today-type">${I.sun}</span>
+        <span class="list-item-name">今日のToDo</span>
+        <span class="list-count-pill-wrap">${todayPill}</span>
+      </div>
+    </div>
+  </li>`;
+
   const hiddenCount = allItems.length - (needCollapse && !listExpanded ? visibleItems.length : allItems.length);
   const chevronSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>`;
   const expandBtn = needCollapse
@@ -2699,7 +2778,7 @@ function htmlSidebar() {
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </button>
       </span></div>
-      <ul class="list-nav">${items}</ul>
+      <ul class="list-nav">${todayNavItem}${items}</ul>
       ${expandBtn}
       <div class="list-add-area">${addArea}</div>
       <div class="io-area">
@@ -2751,6 +2830,8 @@ function htmlGitSyncArea() {
 
 // ── Main content HTML ──────────────────────────────────
 function htmlMain() {
+  // 特別リスト「今日のToDo」は専用の集約ビューを表示
+  if (selectedListId === TODAY_LIST_ID) return htmlTodayView();
   const selList = lists.find(l => l.id === selectedListId) || lists[0];
   const isMemoList = selList?.type === 'memo';
   const c = listStats(selectedListId);
@@ -3029,6 +3110,80 @@ function htmlMain() {
       </div>
     </div>
     ${trashPanel}
+  </div>`;
+}
+
+// ── 「今日のToDo」集約ビュー ─────────────────────────────
+// 全リスト（メモ除く）の未完了かつ「超過」または「今日が期日」のタスクを集約表示。
+// 各行はダブルクリック/ダブルタップで実リストへジャンプ（calendar-jump-to-todo を流用）。
+function htmlTodayView() {
+  const t = today();
+  const memoIds = new Set(lists.filter(l => l.type === 'memo').map(l => l.id));
+  const listName = id => (lists.find(l => l.id === id)?.name) || '(不明なリスト)';
+  const byDue = (a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
+  const items = todos
+    .filter(x => !x.completed && !memoIds.has(x.listId) && x.dueDate && x.dueDate <= t)
+    .sort(byDue);
+  const overdue  = items.filter(x => x.dueDate < t);
+  const dueToday = items.filter(x => x.dueDate === t);
+
+  // 行。日付は通常 ToDo と同じ dueBadge（超過=赤 / 今日=橙）で色分けし判別できるようにする。
+  // showList=false のとき（リスト毎モード）はリスト名バッジを省く。
+  const row = (x, showList) => {
+    const memoBtn = x.detail
+      ? `<button class="cal-todo-action${memoPopupId === x.id ? ' memo-active' : ''}" data-a="memo-show" data-id="${x.id}" title="メモを表示">${I.memo}</button>`
+      : '';
+    const folderBtn = x.folderPath
+      ? `<button class="cal-todo-action" data-a="folder-open" data-id="${x.id}" title="${esc(x.folderPath)}">${x.linkType === 'url' ? I.link : I.folder}</button>`
+      : '';
+    const listBadge = showList
+      ? `<span class="today-row-list" title="${esc(listName(x.listId))}">${esc(listName(x.listId))}</span>`
+      : '';
+    return `<div class="cal-detail-todo-row" data-a="calendar-jump-to-todo" data-list-id="${x.listId}" data-todo-id="${x.id}" title="ダブルクリックでこのタスクへ移動">
+      ${listBadge}
+      <span class="cal-detail-todo-text">${esc(x.text)}</span>
+      ${memoBtn}${folderBtn}
+      <span class="today-row-due">${dueBadge(x.dueDate)}</span>
+    </div>`;
+  };
+
+  const total = items.length;
+  let body;
+  if (!total) {
+    body = `<div class="cal-detail-empty">超過・今日のタスクはありません 🎉</div>`;
+  } else if (todayViewMode === 'list') {
+    // リスト毎: 実リストの並び順でグループ化し、各グループ内は日付順
+    const groups = lists
+      .filter(l => l.type !== 'memo' && items.some(x => x.listId === l.id))
+      .map(l => `<div class="cal-detail-todo-group">
+        <div class="cal-detail-todo-group-hd">${esc(l.name)}（${items.filter(x => x.listId === l.id).length}）</div>
+        ${items.filter(x => x.listId === l.id).sort(byDue).map(x => row(x, false)).join('')}
+      </div>`).join('');
+    body = `${groups}<div class="today-view-hint">※ タスクをダブルクリックすると、そのタスクのリストへ移動します</div>`;
+  } else {
+    // 日付順: 全件を日付の古い順にフラット表示（リスト名バッジ付き）
+    body = `${items.map(x => row(x, true)).join('')}<div class="today-view-hint">※ タスクをダブルクリックすると、そのタスクのリストへ移動します</div>`;
+  }
+
+  const modeLabel = todayViewMode === 'list' ? 'リスト毎' : '日付順';
+  const modeToggle = `<div class="sort-btns">
+    <button class="sort-btn action-btn today-mode-btn" data-a="toggle-today-mode" title="並び順を切替（現在: ${modeLabel}）">
+      ${todayViewMode === 'list' ? I.clip : I.sortCal}<span class="today-mode-label">${modeLabel}</span>
+    </button>
+  </div>`;
+
+  return `<div class="main-col">
+    <div class="card">
+      <div class="list-card-hd">
+        <div class="list-card-icon today-card-icon">${I.sun}</div>
+        <span class="list-card-name">今日のToDo</span>
+        ${modeToggle}
+      </div>
+      <div class="today-view-body">${body}</div>
+      <div class="footer">
+        <span class="remaining">超過 <strong>${overdue.length}</strong> ・ 今日 <strong>${dueToday.length}</strong> 件</span>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -3568,27 +3723,49 @@ function sortByDate() {
       subsByParent.get(t.parentId).push(t);
     }
   });
-  // メインの「ソート用日付」: own dueDate ?? サブの最古 dueDate ?? null
+  // メインが「完了扱い」か: 自身完了 かつ 未完了サブなし（表示の完了セクションと同基準）
+  const mainDone = (t) => t.completed && !(subsByParent.get(t.id) || []).some(s => !s.completed);
+  // メインの「ソート用日付」: 自身の dueDate と未完了サブの dueDate をまとめた最古
+  // （グループ全体で一番古い期日を持つメインを最上部に。完了済みサブの古い期日で
+  //   浮上しないよう、サブは未完了のみを見る）
   const effDate = (t) => {
-    if (t.dueDate) return t.dueDate;
-    const subs = subsByParent.get(t.id) || [];
-    const subDates = subs.map(s => s.dueDate).filter(Boolean).sort();
-    return subDates[0] || null;
+    const dates = [];
+    if (t.dueDate) dates.push(t.dueDate);
+    (subsByParent.get(t.id) || []).forEach(s => {
+      if (!s.completed && s.dueDate) dates.push(s.dueDate);
+    });
+    dates.sort();
+    return dates[0] || null;
   };
-  const cmp = (a, b) => {
-    const da = effDate(a);
-    const db = effDate(b);
+  // 期日（dueDate）昇順・日付なしは末尾
+  const byDue = (da, db) => {
     if (!da && !db) return 0;
-    if (!da) return 1;   // 日付なしは末尾
+    if (!da) return 1;
     if (!db) return -1;
     return da < db ? -1 : da > db ? 1 : 0;
   };
-  // メインだけ並び替え、各メイン直下にサブを並べる（サブ内の順序は維持）
-  const mainsSorted = mine.filter(t => !t.parentId).sort(cmp);
+  // 完了日（completedAt）の新しい順
+  const byCompletedDesc = (a, b) => {
+    const ca = a.completedAt || '', cb = b.completedAt || '';
+    return ca === cb ? 0 : (ca > cb ? -1 : 1);
+  };
+  // メイン比較: 未完了→上（期日順）／ 完了→末尾（完了日の新しい順）
+  const cmpMain = (a, b) => {
+    const ad = mainDone(a), bd = mainDone(b);
+    if (ad !== bd) return ad ? 1 : -1;
+    return ad ? byCompletedDesc(a, b) : byDue(effDate(a), effDate(b));
+  };
+  // サブ比較: 未完了→上（期日順）／ 完了→末尾（完了日の新しい順）
+  const cmpSub = (a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return a.completed ? byCompletedDesc(a, b) : byDue(a.dueDate, b.dueDate);
+  };
+  // メインを並び替え、各メイン直下のサブも並べる（完了は末尾）
+  const mainsSorted = mine.filter(t => !t.parentId).sort(cmpMain);
   const result = [];
   mainsSorted.forEach(m => {
     result.push(m);
-    const subs = subsByParent.get(m.id) || [];
+    const subs = (subsByParent.get(m.id) || []).slice().sort(cmpSub);
     result.push(...subs);
   });
   // 親が同リスト内にない孤児サブを末尾に追加
@@ -3738,6 +3915,17 @@ function selectList(id) {
   selectedListId = id;
   showTrash = false; editId = null; subInputParentId = null; taskFilter = 'all';
   if (isMobile()) sidebarOpen = false; // モバイルではリスト選択後サイドバーを閉じる
+  render();
+}
+// 「今日のToDo」仮想リストへ切り替え
+function selectTodayList() {
+  if (selectedListId !== TODAY_LIST_ID) {
+    // 他リストから切り替える瞬間に、完了済みの繰り返しタスクを次回発生日へ進める
+    applyRecurringResets();
+  }
+  selectedListId = TODAY_LIST_ID;
+  showTrash = false; editId = null; subInputParentId = null; taskFilter = 'all';
+  if (isMobile()) sidebarOpen = false;
   render();
 }
 function startRenameList(id) {
@@ -3939,7 +4127,7 @@ function applyExportPayloadInPlace(payload) {
   todos    = (payload.todos || []).map(t => ({ ...t }));
   trash    = (payload.trash || []).map(t => ({ ...t }));
   repairAfterLoad();
-  if (!lists.find(l => l.id === selectedListId)) selectedListId = lists[0]?.id || '';
+  if (selectedListId !== TODAY_LIST_ID && !lists.find(l => l.id === selectedListId)) selectedListId = lists[0]?.id || '';
   // Git Pull / インポート / マージ反映後も、完了済み繰り返しタスクを次回発生日へ進める
   applyRecurringResets();
   save();
@@ -4777,6 +4965,8 @@ document.addEventListener('click', e => {
     case 'del-trash':    deleteFromTrash(id); break;
     case 'empty':        emptyTrash(); break;
     case 'select-list':  selectList(id); break;
+    case 'select-today': selectTodayList(); break;
+    case 'toggle-today-mode': todayViewMode = (todayViewMode === 'list') ? 'date' : 'list'; render(); break;
     case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;
     case 'toggle-list-type': e.stopPropagation(); editingListType = editingListType === 'todo' ? 'memo' : 'todo'; render(); break;
     case 'start-add-list': addingList = true; newListName = ''; render(); break;

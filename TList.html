@@ -318,8 +318,9 @@
       font-size:11px; font-weight:600; color:var(--t2);
       background:var(--filter-bg); padding:2px 8px; border-radius:9999px;
     }
-    /* 行の日付バッジ（通常 ToDo と同じ due-badge 配色）を右端に寄せる */
-    .today-row-due { margin-left:auto; flex-shrink:0; }
+    /* 行の日付バッジ（通常 ToDo と同じ due-badge 配色）を右端に寄せる。
+       進行中の行は開始日バッジ＋終了日バッジの2つを並べる */
+    .today-row-due { margin-left:auto; flex-shrink:0; display:inline-flex; align-items:center; gap:4px; }
     .today-row-due .due-badge { font-size:11px; padding:2px 7px; }
     /* 並び順切替ボタン（アイコン＋ラベル） */
     .today-mode-btn { gap:4px; font-family:inherit; font-size:11px; font-weight:600; }
@@ -1694,7 +1695,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 // ── State ──────────────────────────────────────────────
 // 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
@@ -3114,7 +3115,9 @@ function htmlMain() {
 }
 
 // ── 「今日のToDo」集約ビュー ─────────────────────────────
-// 全リスト（メモ除く）の未完了かつ「超過」または「今日が期日」のタスクを集約表示。
+// 全リスト（メモ除く）の未完了タスクのうち、次のいずれかを集約表示：
+//   ・超過（終了日 < 今日） ・今日が期日（終了日 = 今日）
+//   ・進行中（開始日 ≤ 今日 < 終了日 … 開始日〜終了日の期間に今日を含む）
 // 各行はダブルクリック/ダブルタップで実リストへジャンプ（calendar-jump-to-todo を流用）。
 function htmlTodayView() {
   const t = today();
@@ -3122,12 +3125,18 @@ function htmlTodayView() {
   const listName = id => (lists.find(l => l.id === id)?.name) || '(不明なリスト)';
   const byDue = (a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
   const items = todos
-    .filter(x => !x.completed && !memoIds.has(x.listId) && x.dueDate && x.dueDate <= t)
+    .filter(x => {
+      if (x.completed || memoIds.has(x.listId) || !x.dueDate) return false;
+      if (x.dueDate <= t) return true;               // 超過 or 今日
+      return !!x.startDate && x.startDate <= t;       // 進行中（期間に今日を含む）
+    })
     .sort(byDue);
-  const overdue  = items.filter(x => x.dueDate < t);
-  const dueToday = items.filter(x => x.dueDate === t);
+  const overdue    = items.filter(x => x.dueDate < t);
+  const dueToday   = items.filter(x => x.dueDate === t);
+  const inProgress = items.filter(x => x.dueDate > t);
 
-  // 行。日付は通常 ToDo と同じ dueBadge（超過=赤 / 今日=橙）で色分けし判別できるようにする。
+  // 行。日付は通常 ToDo と同じ dueBadge（超過=赤 / 今日=橙 / それ以降=緑・青）で色分け。
+  // 進行中（終了日が未来）の行は開始日バッジも添えて「期間に今日を含む」ことを示す。
   // showList=false のとき（リスト毎モード）はリスト名バッジを省く。
   const row = (x, showList) => {
     const memoBtn = x.detail
@@ -3139,18 +3148,20 @@ function htmlTodayView() {
     const listBadge = showList
       ? `<span class="today-row-list" title="${esc(listName(x.listId))}">${esc(listName(x.listId))}</span>`
       : '';
+    // 進行中（終了日 > 今日）は開始日バッジも表示
+    const startHtml = (x.dueDate > t && x.startDate) ? startBadge(x.startDate) : '';
     return `<div class="cal-detail-todo-row" data-a="calendar-jump-to-todo" data-list-id="${x.listId}" data-todo-id="${x.id}" title="ダブルクリックでこのタスクへ移動">
       ${listBadge}
       <span class="cal-detail-todo-text">${esc(x.text)}</span>
       ${memoBtn}${folderBtn}
-      <span class="today-row-due">${dueBadge(x.dueDate)}</span>
+      <span class="today-row-due">${startHtml}${dueBadge(x.dueDate)}</span>
     </div>`;
   };
 
   const total = items.length;
   let body;
   if (!total) {
-    body = `<div class="cal-detail-empty">超過・今日のタスクはありません 🎉</div>`;
+    body = `<div class="cal-detail-empty">今日対応するタスクはありません 🎉</div>`;
   } else if (todayViewMode === 'list') {
     // リスト毎: 実リストの並び順でグループ化し、各グループ内は日付順
     const groups = lists
@@ -3181,7 +3192,7 @@ function htmlTodayView() {
       </div>
       <div class="today-view-body">${body}</div>
       <div class="footer">
-        <span class="remaining">超過 <strong>${overdue.length}</strong> ・ 今日 <strong>${dueToday.length}</strong> 件</span>
+        <span class="remaining">超過 <strong>${overdue.length}</strong> ・ 今日 <strong>${dueToday.length}</strong> ・ 進行中 <strong>${inProgress.length}</strong> 件</span>
       </div>
     </div>
   </div>`;

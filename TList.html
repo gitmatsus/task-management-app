@@ -305,6 +305,8 @@
     .today-drag-spacer { opacity:0 !important; pointer-events:none; cursor:default; }
     .list-card-icon.today-card-icon { background:rgba(245,158,11,.9); box-shadow:0 1px 3px rgba(245,158,11,.3); color:#fff; }
     html.dark .list-card-icon.today-card-icon { background:rgba(245,158,11,.8); }
+    .today-filters { margin:12px 20px 0; }
+    .today-filters .filter-btn { flex-direction:row; gap:6px; padding:6px 8px; }
     .today-view-body { padding:12px 20px 4px; }
     .today-view-hint { font-size:11px; color:var(--t3); margin-top:10px; line-height:1.5; }
     /* 流用元（カレンダー詳細パネル）は狭い枠向けに小さめ。通常 ToDo リスト（14px）に
@@ -1695,7 +1697,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 // ── State ──────────────────────────────────────────────
 // 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
@@ -1722,6 +1724,7 @@ let ctxSubmenuOpen = false; // 「サブに登録」サブメニューの展開�
 let subInputParentId = null; // サブタスク入力モード時の親タスクID
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let todayViewMode = 'date'; // 「今日のToDo」ビューの並び: 'date'=日付順 / 'list'=リスト毎
+let todayFilter = 'all';    // 「今日のToDo」ビューの絞り込み: 'all' / 'urgent'(超過+今日) / 'progress'(進行中)
 let editStartDate = '';
 let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
 let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
@@ -1840,6 +1843,7 @@ function load() {
     if (typeof s.listExpanded         === 'boolean') listExpanded         = s.listExpanded;
     if (typeof s.taskFilter           === 'string')  taskFilter           = s.taskFilter;
     if (s.todayViewMode === 'date' || s.todayViewMode === 'list') todayViewMode = s.todayViewMode;
+    if (s.todayFilter === 'all' || s.todayFilter === 'urgent' || s.todayFilter === 'progress') todayFilter = s.todayFilter;
   } catch { /* ignore */ }
   // 起動時に繰り返しタスクの完了状態をリセット（次回発生日へ進める）
   applyRecurringResets();
@@ -1861,6 +1865,7 @@ function saveUiState() {
       listExpanded,
       taskFilter,
       todayViewMode,
+      todayFilter,
     }));
     // 選択中リストも render のたびに保存（リスト切り替えだけでも次回起動時に復元できるよう）
     if (selectedListId) {
@@ -3158,23 +3163,41 @@ function htmlTodayView() {
     </div>`;
   };
 
+  // 絞り込み（すべて / 超過＋今日 / 進行中）を適用
+  const shown = todayFilter === 'urgent'   ? items.filter(x => x.dueDate <= t)
+              : todayFilter === 'progress' ? inProgress
+              :                              items;
+
   const total = items.length;
   let body;
   if (!total) {
     body = `<div class="cal-detail-empty">今日対応するタスクはありません 🎉</div>`;
+  } else if (!shown.length) {
+    body = `<div class="cal-detail-empty">この条件に該当するタスクはありません</div>`;
   } else if (todayViewMode === 'list') {
     // リスト毎: 実リストの並び順でグループ化し、各グループ内は日付順
     const groups = lists
-      .filter(l => l.type !== 'memo' && items.some(x => x.listId === l.id))
+      .filter(l => l.type !== 'memo' && shown.some(x => x.listId === l.id))
       .map(l => `<div class="cal-detail-todo-group">
-        <div class="cal-detail-todo-group-hd">${esc(l.name)}（${items.filter(x => x.listId === l.id).length}）</div>
-        ${items.filter(x => x.listId === l.id).sort(byDue).map(x => row(x, false)).join('')}
+        <div class="cal-detail-todo-group-hd">${esc(l.name)}（${shown.filter(x => x.listId === l.id).length}）</div>
+        ${shown.filter(x => x.listId === l.id).sort(byDue).map(x => row(x, false)).join('')}
       </div>`).join('');
     body = `${groups}<div class="today-view-hint">※ タスクをダブルクリックすると、そのタスクのリストへ移動します</div>`;
   } else {
     // 日付順: 全件を日付の古い順にフラット表示（リスト名バッジ付き）
-    body = `${items.map(x => row(x, true)).join('')}<div class="today-view-hint">※ タスクをダブルクリックすると、そのタスクのリストへ移動します</div>`;
+    body = `${shown.map(x => row(x, true)).join('')}<div class="today-view-hint">※ タスクをダブルクリックすると、そのタスクのリストへ移動します</div>`;
   }
+
+  // 絞り込みチップ（通常リストと同じ .filters / .filter-btn を流用）
+  const fchip = (key, label, n) => `<button class="filter-btn${todayFilter === key ? ' active' : ''}" data-a="today-filter" data-filter="${key}">
+    <span class="filter-label">${label}</span>
+    <span class="count-pill">${n}</span>
+  </button>`;
+  const filterBar = total ? `<div class="filters today-filters">
+    ${fchip('all', 'すべて', items.length)}
+    ${fchip('urgent', '超過＋今日', overdue.length + dueToday.length)}
+    ${fchip('progress', '進行中', inProgress.length)}
+  </div>` : '';
 
   const modeLabel = todayViewMode === 'list' ? 'リスト毎' : '日付順';
   const modeToggle = `<div class="sort-btns">
@@ -3190,6 +3213,7 @@ function htmlTodayView() {
         <span class="list-card-name">今日のToDo</span>
         ${modeToggle}
       </div>
+      ${filterBar}
       <div class="today-view-body">${body}</div>
       <div class="footer">
         <span class="remaining">超過 <strong>${overdue.length}</strong> ・ 今日 <strong>${dueToday.length}</strong> ・ 進行中 <strong>${inProgress.length}</strong> 件</span>
@@ -4978,6 +5002,7 @@ document.addEventListener('click', e => {
     case 'select-list':  selectList(id); break;
     case 'select-today': selectTodayList(); break;
     case 'toggle-today-mode': todayViewMode = (todayViewMode === 'list') ? 'date' : 'list'; render(); break;
+    case 'today-filter': { const f = el.dataset.filter; if (f) { todayFilter = f; render(); } break; }
     case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;
     case 'toggle-list-type': e.stopPropagation(); editingListType = editingListType === 'todo' ? 'memo' : 'todo'; render(); break;
     case 'start-add-list': addingList = true; newListName = ''; render(); break;

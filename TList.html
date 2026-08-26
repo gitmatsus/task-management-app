@@ -305,8 +305,6 @@
     .today-drag-spacer { opacity:0 !important; pointer-events:none; cursor:default; }
     .list-card-icon.today-card-icon { background:rgba(245,158,11,.9); box-shadow:0 1px 3px rgba(245,158,11,.3); color:#fff; }
     html.dark .list-card-icon.today-card-icon { background:rgba(245,158,11,.8); }
-    .today-filters { margin:12px 20px 0; }
-    .today-filters .filter-btn { flex-direction:row; gap:6px; padding:6px 8px; }
     .today-view-body { padding:12px 20px 4px; }
     .today-view-hint { font-size:11px; color:var(--t3); margin-top:10px; line-height:1.5; }
     /* 流用元（カレンダー詳細パネル）は狭い枠向けに小さめ。通常 ToDo リスト（14px）に
@@ -3188,15 +3186,14 @@ function htmlTodayView() {
     body = `${shown.map(x => row(x, true)).join('')}<div class="today-view-hint">※ タスクをダブルクリックすると、そのタスクのリストへ移動します</div>`;
   }
 
-  // 絞り込みチップ（通常リストと同じ .filters / .filter-btn を流用）
-  const fchip = (key, label, n) => `<button class="filter-btn${todayFilter === key ? ' active' : ''}" data-a="today-filter" data-filter="${key}">
-    <span class="filter-label">${label}</span>
-    <span class="count-pill">${n}</span>
-  </button>`;
-  const filterBar = total ? `<div class="filters today-filters">
+  // 絞り込みチップ（通常リストの絞り込みと同じ .task-filter-chip で統一）
+  // labelHtml は絵文字アイコンを含む HTML を許可（超過＋今日は各語の前にアイコンを付ける）
+  const ic = e => `<span class="chip-ic">${e}</span>`;
+  const fchip = (key, labelHtml, n) => `<button class="task-filter-chip${todayFilter === key ? ' active' : ''}" data-a="today-filter" data-filter="${key}">${labelHtml} (${n})</button>`;
+  const filterBar = total ? `<div class="task-filters today-filters">
     ${fchip('all', 'すべて', items.length)}
-    ${fchip('urgent', '超過＋今日', overdue.length + dueToday.length)}
-    ${fchip('progress', '進行中', inProgress.length)}
+    ${fchip('urgent', `${ic('⚡')}今日(${ic('🔥')}超過含)`, overdue.length + dueToday.length)}
+    ${fchip('progress', `${ic('▶️')}進行中`, inProgress.length)}
   </div>` : '';
 
   const modeLabel = todayViewMode === 'list' ? 'リスト毎' : '日付順';

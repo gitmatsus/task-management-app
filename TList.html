@@ -4180,6 +4180,42 @@ function executeExport() {
   URL.revokeObjectURL(url);
   closeModal();
 }
+// 既存のエクスポートと同じ JSON を、指定プレフィックス＋日時のファイル名でダウンロードする。
+// Pull 前バックアップ等で流用（復元は通常のインポートで可能）。
+function downloadBackup(prefix) {
+  const payload = buildExportPayload(null, { includeTimestamp: true });
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const n = new Date();
+  const p2 = v => String(v).padStart(2, '0');
+  const ts = `${n.getFullYear()}${p2(n.getMonth()+1)}${p2(n.getDate())}-${p2(n.getHours())}${p2(n.getMinutes())}${p2(n.getSeconds())}`;
+  a.download = `${prefix}-${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Pull 直前のバックアップ：ローカルに未同期の変更がある時だけ、現在のデータを
+// エクスポート（ダウンロード）して退避する。誤 Pull 時は通常のインポートで戻せる。
+// 戻り値: バックアップを作成したら true。
+function backupBeforePullIfNeeded() {
+  try {
+    const baseline = getGitBaseline();
+    const ours = buildExportPayload(null, { includeTimestamp: false });
+    // baseline があり、現在の内容が baseline と一致（＝未同期変更なし）ならバックアップ不要
+    if (baseline && payloadsEquivalent(ours, baseline)) return false;
+    downloadBackup('tasks-backup');
+    showToast('💾 未同期の変更をバックアップしました（ダウンロード）');
+    return true;
+  } catch (e) {
+    console.warn('backup before pull failed:', e);
+    return false;
+  }
+}
+
 function openImportModal() {
   const input = document.createElement('input');
   input.type = 'file'; input.accept = '.json';
@@ -5032,7 +5068,14 @@ document.addEventListener('click', e => {
       render();
       break;
     }
-    case 'git-pull':        gitPull(); break;
+    case 'git-pull':
+      // 誤操作防止：手動 Pull は確認してから実行（Push フロー内の自動 Pull には確認を出さない）
+      if (confirm('Pull（リモートの取り込み）を実行しますか？\n\nリモートの変更をローカルに取り込みます。\nローカルに未同期の変更がある場合は、念のため現在のデータをバックアップ（ダウンロード）してから実行します。\n誤って取り込んだ場合は、そのファイルをインポートすれば元に戻せます。')) {
+        // ローカル変更がある時だけバックアップ（エクスポート）してから Pull
+        backupBeforePullIfNeeded();
+        gitPull();
+      }
+      break;
     case 'git-push':        gitPush(); break;
     case 'git-config-test': gitConfigTest(); break;
     case 'git-baseline-reset': {

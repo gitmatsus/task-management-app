@@ -505,6 +505,17 @@
     .cb-wrap { display:flex; align-items:center; padding:12px 14px 12px 6px; flex-shrink:0; }
     .memo-item .cb-wrap { display:none; }
     .memo-item .text-wrap { padding-left:6px; }
+    /* 見出し行: チェックボックスを隠し、分類ラベルとして強調 */
+    .todo-item.heading-item .cb-wrap { display:none; }
+    .todo-item.heading-item .text-wrap { padding-left:6px; }
+    .todo-item.heading-item .todo-text { font-weight:700; }
+    .todo-item.heading-item { background:var(--filter-bg); }
+    .heading-progress {
+      display:inline-flex; align-items:center; white-space:nowrap;
+      font-size:11px; font-weight:700; color:var(--t2);
+      background:var(--card); border:1px solid var(--divider);
+      padding:1px 8px; border-radius:9999px;
+    }
     .cb {
       width:20px; height:20px; border-radius:50%; border:2px solid #d1d5db;
       background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center;
@@ -1695,7 +1706,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 
 // ── State ──────────────────────────────────────────────
 // 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
@@ -1973,7 +1984,8 @@ function currentTrash() { return trash.filter(x => x.listId === selectedListId);
 function listStats(lid) {
   const t = today();
   const weekEnd = endOfWeekYmd();
-  const lst = todos.filter(x => x.listId === lid);
+  // 見出し（分類ラベル）はタスクとして数えない
+  const lst = todos.filter(x => x.listId === lid && !x.isHeading);
   const active = lst.filter(x => !x.completed);
   return {
     total:    lst.length,
@@ -2865,7 +2877,7 @@ function htmlMain() {
   // フィルター適用後の残件数（フッター用）
   const filteredActiveCount = isMemoList
     ? c.total
-    : currentTodos().filter(t => !t.completed && matchFilter(t)).length;
+    : currentTodos().filter(t => !t.completed && !t.isHeading && matchFilter(t)).length;
 
   const chevronRight = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`;
   const renderItem = t => {
@@ -2961,7 +2973,7 @@ function htmlMain() {
         const sameDay = t.startDate && t.dueDate && t.startDate === t.dueDate;
         let badge = '';
         let startBadgeHtml = '';
-        if (!t.completed && !editing) {
+        if (!t.completed && !editing && !t.isHeading) {
           if (sameDay) {
             badge = `<div class="due-wrap">${sameDayBadge(t.dueDate)}</div>`;
           } else {
@@ -2978,7 +2990,7 @@ function htmlMain() {
           if (t.recurrence.type === 'monthly') return '毎月' + (t.recurrence.day === 'last' ? '末日' : (t.recurrence.day ?? 1) + '日');
           return '';
         })();
-        const recurrenceBadgeHtml = (recLbl && !editing)
+        const recurrenceBadgeHtml = (recLbl && !editing && !t.isHeading)
           ? `<div class="due-wrap"><span class="due-badge recurrence-badge" title="繰り返し: ${recLbl}">🔁 ${recLbl}</span></div>`
           : '';
 
@@ -2986,7 +2998,15 @@ function htmlMain() {
           ? `<button class="sub-toggle${expanded ? ' expanded' : ''}" data-a="toggle-collapse" data-id="${t.id}" title="${expanded ? '折りたたむ' : '展開する'}">${chevronRight}</button>`
           : `<span class="sub-toggle-placeholder"></span>`;
 
-        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}${isSub ? ' is-sub' : ''}${highlightTodoId === t.id ? ' cal-highlight' : ''}" data-id="${t.id}"${isSub ? ' data-sub="1"' : ''}>
+        // 見出し行（isHeading）: チェック不可の分類ラベル。配下サブの進捗を表示
+        const isHeadingRow = t.isHeading && !isSub;
+        const headingProgress = (isHeadingRow && hasSub) ? (() => {
+          const subs = subTodosOf(t.id);
+          const done = subs.filter(s => s.completed).length;
+          return `<div class="due-wrap"><span class="heading-progress" title="完了 ${done} / ${subs.length}">${done}/${subs.length}</span></div>`;
+        })() : '';
+
+        return `<li class="todo-item${isMemoList ? ' memo-item' : ''}${isSub ? ' is-sub' : ''}${isHeadingRow ? ' heading-item' : ''}${highlightTodoId === t.id ? ' cal-highlight' : ''}" data-id="${t.id}"${isSub ? ' data-sub="1"' : ''}>
           <div class="drag-handle" data-a="drag-handle" data-id="${t.id}" draggable="${!editing && !hasTouch}">${I.grip}</div>
           ${togglePart}
           <div class="cb-wrap"><div class="cb${t.completed?' checked':''}" data-a="toggle" data-id="${t.id}">${t.completed?I.check:''}</div></div>
@@ -2994,6 +3014,7 @@ function htmlMain() {
           ${t.detail && !editing ? `<div class="item-memo"><button data-a="memo-show" data-id="${t.id}"${memoPopupId === t.id ? ' class="active"' : ''}>${I.memo}</button></div>` : ''}
           ${t.folderPath && !editing && (t.linkType === 'url' || !hasTouch) ? `<div class="item-folder"><button data-a="folder-open" data-id="${t.id}" title="${esc(t.folderPath)}">${t.linkType === 'url' ? I.link : I.folder}</button></div>` : ''}
           ${!isSub && !editing ? `<div class="item-add-sub"><button data-a="add-sub-init" data-id="${t.id}" title="サブタスクを追加">${I.plus}</button></div>` : ''}
+          ${headingProgress}
           ${startBadgeHtml}
           ${recurrenceBadgeHtml}
           ${badge}
@@ -3129,7 +3150,7 @@ function htmlTodayView() {
   const byDue = (a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
   const items = todos
     .filter(x => {
-      if (x.completed || memoIds.has(x.listId) || !x.dueDate) return false;
+      if (x.completed || x.isHeading || memoIds.has(x.listId) || !x.dueDate) return false;
       if (x.dueDate <= t) return true;               // 超過 or 今日
       return !!x.startDate && x.startDate <= t;       // 進行中（期間に今日を含む）
     })
@@ -3558,9 +3579,14 @@ function htmlCtxMenu() {
       </li>` : '';
     // サブをメインに昇格（現在サブの場合）
     const promoteItem = t.parentId ? `<li class="ctx-menu-item" data-a="ctx-promote" data-id="${t.id}">⬆️<span>メインに昇格</span></li>` : '';
+    // 見出し化トグル（メインタスクのみ）: チェック不可の分類ラベルにする / 解除する
+    const headingItem = !t.parentId
+      ? `<li class="ctx-menu-item" data-a="ctx-toggle-heading" data-id="${t.id}">${t.isHeading ? `☑️<span>見出しを解除</span>` : `🏷️<span>見出しにする</span>`}</li>`
+      : '';
     return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
       <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
         <li class="ctx-menu-item" data-a="ctx-edit" data-id="${t.id}">${editIconSvg}<span>編集</span></li>
+        ${headingItem}
         ${submenuHtml}
         ${promoteItem}
         <li class="ctx-menu-item ctx-menu-danger" data-a="ctx-delete" data-id="${t.id}">${I.trash}<span>削除</span></li>
@@ -3725,12 +3751,27 @@ function addTodo(form) {
   save(); render();
   (document.getElementById('todo-inp') || document.getElementById('todo-inp-mobile'))?.focus();
 }
+// 見出し（分類ラベル）化のトグル。メインタスクのみ対象。
+// 見出しにすると完了状態は持たない（誤って完了済みだった場合は未完了へ戻す）。
+function toggleHeading(id) {
+  const t = todos.find(x => x.id === id);
+  if (!t || t.parentId) return; // サブは対象外
+  if (t.isHeading) {
+    delete t.isHeading;
+  } else {
+    t.isHeading = true;
+    t.completed = false;
+    t.completedAt = undefined;
+  }
+  save(); render();
+}
 function toggleTodo(id) {
   const idx = todos.findIndex(x => x.id === id);
   if (idx < 0) return;
   const t = todos[idx];
   const selList = lists.find(l => l.id === t.listId);
   if (selList?.type === 'memo') return;
+  if (t.isHeading) return; // 見出しは完了操作しない
   t.completed = !t.completed;
   if (t.completed) t.completedAt = Date.now();
   else t.completedAt = undefined;
@@ -5190,6 +5231,7 @@ document.addEventListener('click', e => {
       const t = todos.find(x => x.id === tid);
       if (t && pid && pid !== t.parentId) {
         t.parentId = pid;
+        delete t.isHeading; // サブに降りたら見出しフラグは無効化
         // 配列内で「親の最後のサブの直後」に移動
         const dragIdx = todos.findIndex(x => x.id === tid);
         if (dragIdx >= 0) {
@@ -5210,6 +5252,12 @@ document.addEventListener('click', e => {
       const tid = id;
       ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
       promoteSubToMain(tid);
+      break;
+    }
+    case 'ctx-toggle-heading': {
+      const tid = id;
+      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
+      toggleHeading(tid);
       break;
     }
     case 'add-sub-init': {
@@ -5527,6 +5575,7 @@ document.addEventListener('drop', e => {
       if (isSubZone && targetTodo && dragTodo && !targetTodo.parentId && !hasSubs(dragTodoId)) {
         // ターゲットのサブにする（サブ有りメインはサブ化拒否）
         dragTodo.parentId = targetId;
+        delete dragTodo.isHeading; // サブに降りたら見出しフラグは無効化
         // 配列内で「親の最後のサブの直後」に移動して、表示順が常に末尾になるよう固定
         const dragIdx = todos.findIndex(x => x.id === dragTodoId);
         if (dragIdx >= 0) {

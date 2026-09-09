@@ -869,6 +869,17 @@
     }
     .modal-btn-primary:hover { background:rgba(99,102,241,.9); }
     .modal-btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+    .modal-btn-primary.modal-btn-danger { background:#dc2626; box-shadow:0 1px 2px rgba(220,38,38,.25); }
+    .modal-btn-primary.modal-btn-danger:hover { background:#b91c1c; }
+    /* インポート方式の選択（追加 / 置き換え） */
+    .import-mode-bar { display:flex; gap:6px; padding:2px 0 8px; }
+    .import-mode-bar .task-filter-chip { flex:1; justify-content:center; }
+    .import-mode-warn {
+      font-size:11px; line-height:1.4; color:#b91c1c;
+      background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.25);
+      border-radius:8px; padding:6px 8px; margin-bottom:8px;
+    }
+    html.dark .import-mode-warn { color:#fca5a5; background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.35); }
 
     /* ── Sidebar IO buttons ── */
     .io-area { padding:8px; border-top:1px solid var(--divider); display:flex; gap:4px; }
@@ -1706,7 +1717,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 
 // ── State ──────────────────────────────────────────────
 // 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
@@ -1720,6 +1731,7 @@ let editingListId = null, editingListName = '', editingListType = 'todo';
 let addingList = false, newListName = '';
 let dragTodoId = null, dragTrashId = null, dragListId = null, dragOverEl = null;
 let modalMode = null, modalLists = [], modalAllChecked = false, importPayload = null;
+let importMode = 'add'; // インポート方式: 'add'=既存に追記 / 'replace'=全消去して取り込む
 let fileDragOver = false;
 let listTrash = [], showListTrash = false;
 let sidebarOpen = false; // モバイル用サイドバー開閉状態
@@ -3250,9 +3262,18 @@ function htmlModal() {
   if (modalMode === 'calendar')      return htmlCalendarModal();
   const isExport = modalMode === 'export';
   const title = isExport ? 'エクスポート' : 'インポート';
-  const actionLabel = isExport ? 'エクスポート' : 'インポート';
+  const isReplace = !isExport && importMode === 'replace';
+  const actionLabel = isExport ? 'エクスポート' : (isReplace ? '置き換えて取り込む' : 'インポート');
   const selectedCount = modalLists.filter(l => l.checked).length;
   const checkSvg = I.check;
+
+  // インポート方式の選択（追加 / 置き換え）。エクスポートでは出さない。
+  const importModeBar = isExport ? '' : `
+    <div class="import-mode-bar">
+      <button class="task-filter-chip${importMode === 'add' ? ' active' : ''}" data-a="import-mode" data-mode="add">追加（既存に追記）</button>
+      <button class="task-filter-chip${importMode === 'replace' ? ' active' : ''}" data-a="import-mode" data-mode="replace">🗑️ 置き換え（全消去）</button>
+    </div>
+    ${isReplace ? '<div class="import-mode-warn">⚠️ 現在の全リスト・タスク・ゴミ箱を削除してから、選択した内容を取り込みます。</div>' : ''}`;
 
   const allRow = `<div class="modal-check-row select-all" data-a="modal-toggle-all">
     <div class="modal-cb${modalAllChecked ? ' checked' : ''}">${checkSvg}</div>
@@ -3276,10 +3297,10 @@ function htmlModal() {
         <span class="modal-title">${title}</span>
         <button class="modal-close" data-a="modal-close">${I.x}</button>
       </div>
-      <div class="modal-body">${allRow}${rows}</div>
+      <div class="modal-body">${importModeBar}${allRow}${rows}</div>
       <div class="modal-footer">
         <button class="modal-btn-cancel" data-a="modal-close">キャンセル</button>
-        <button class="modal-btn-primary" data-a="modal-confirm" ${selectedCount === 0 ? 'disabled' : ''}>${actionLabel} (${selectedCount})</button>
+        <button class="modal-btn-primary${isReplace ? ' modal-btn-danger' : ''}" data-a="modal-confirm" ${selectedCount === 0 ? 'disabled' : ''}>${actionLabel} (${selectedCount})</button>
       </div>
     </div>
   </div>`;
@@ -4148,9 +4169,11 @@ function renderModal() {
   const selectedCount = modalLists.filter(l => l.checked).length;
   const btn = document.querySelector('[data-a="modal-confirm"]');
   if (btn) {
-    const label = modalMode === 'export' ? 'エクスポート' : 'インポート';
+    const isReplace = modalMode !== 'export' && importMode === 'replace';
+    const label = modalMode === 'export' ? 'エクスポート' : (isReplace ? '置き換えて取り込む' : 'インポート');
     btn.textContent = `${label} (${selectedCount})`;
     btn.disabled = selectedCount === 0;
+    btn.classList.toggle('modal-btn-danger', isReplace);
   }
 }
 function toggleModalAll() {
@@ -4275,6 +4298,7 @@ function processImportFile(text) {
     if (!validateImportData(data)) { alert('無効なファイル形式です。'); return; }
     importPayload = data;
     modalMode = 'import';
+    importMode = 'add'; // 既定は「追加」
     modalLists = data.lists.map(l => ({
       id: l.id, name: l.name, checked: true,
       todoCount: (data.todos || []).filter(t => t.listId === l.id).length,
@@ -4293,6 +4317,13 @@ function validateImportData(data) {
 function executeImport() {
   const selectedIds = new Set(modalLists.filter(l => l.checked).map(l => l.id));
   if (selectedIds.size === 0 || !importPayload) return;
+  // 置き換えモード: 確認のうえ、現在の全データを消してから取り込む
+  if (importMode === 'replace') {
+    if (!confirm('現在の全リスト・タスク・ゴミ箱を削除して、選択した内容で置き換えます。\nこの操作は元に戻せません。実行しますか？')) return;
+    lists = [];
+    todos = [];
+    trash = [];
+  }
   const idMap = new Map();
   const existingNames = new Set(lists.map(l => l.name));
   for (const l of importPayload.lists) {
@@ -5212,6 +5243,7 @@ document.addEventListener('click', e => {
       break;
     case 'modal-toggle-all': toggleModalAll(); break;
     case 'modal-toggle':    toggleModalItem(id); break;
+    case 'import-mode':     { const m = el.dataset.mode; if (m === 'add' || m === 'replace') { importMode = m; render(); } break; }
     case 'modal-confirm':   if (modalMode === 'export') executeExport(); else executeImport(); break;
     case 'toggle-list-trash': toggleListTrash(); break;
     case 'toggle-stats': toggleListStats(); break;

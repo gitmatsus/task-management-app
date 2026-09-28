@@ -137,10 +137,15 @@
     }
     .header-icon-btn:hover { border-color:#818cf8; color:#6366f1; }
     .header-icon-btn svg { width:16px; height:16px; }
-    .header-icon-btn.has-dot::after {
+    /* 要対応の印（iPhone で通知が未設定のとき、メニュー／設定ボタンに付ける） */
+    .header-icon-btn.has-dot::after, .sidebar-toggle-btn.has-dot::after {
       content:''; position:absolute; top:6px; right:6px;
       width:8px; height:8px; border-radius:50%; background:#ef4444;
       box-shadow:0 0 0 2px var(--card);
+    }
+    .sidebar-toggle-btn { position:relative; }
+    .settings-open-btn.has-dot::after {
+      content:''; width:7px; height:7px; border-radius:50%; background:#ef4444; margin-left:2px;
     }
 
     /* モバイル用サイドバー開閉ボタン */
@@ -326,6 +331,188 @@
     .today-mode-btn { gap:4px; font-family:inherit; font-size:11px; font-weight:600; }
     .today-mode-btn svg { width:14px; height:14px; }
     .today-mode-label { line-height:1; }
+    /* 今日のToDo / 今日の予定 タブ */
+    .today-tabs { display:inline-flex; gap:2px; padding:2px; border-radius:9px; background:var(--filter-bg); }
+    .today-tab {
+      display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border:none; border-radius:7px;
+      background:transparent; color:var(--t2); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;
+    }
+    .today-tab:hover { color:var(--t1); }
+    .today-tab.active { background:var(--card); color:var(--t1); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+    .today-tab-cnt { font-size:11px; font-weight:700; color:var(--t3); }
+    .today-tab.active .today-tab-cnt { color:#d97706; }
+    html.dark .today-tab.active .today-tab-cnt { color:#fbbf24; }
+    .plan-add-btn svg { width:12px !important; height:12px !important; }
+    .plan-in-mark { font-size:11px; flex-shrink:0; opacity:.8; }
+
+    /* ── 設定モーダル ── */
+    .settings-group-hd { font-size:12px; font-weight:700; color:var(--t2); margin-bottom:2px; }
+    .settings-row {
+      display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px;
+      border:1px solid var(--input-border); background:var(--input-bg); cursor:pointer;
+    }
+    .settings-row:hover { border-color:#a5b4fc; }
+    .settings-text { flex:1; min-width:0; }
+    .settings-title { font-size:14px; font-weight:600; color:var(--t1); }
+    .settings-desc { font-size:12px; color:var(--t2); margin-top:2px; line-height:1.5; }
+    .settings-switch {
+      position:relative; flex-shrink:0; width:40px; height:22px; border-radius:9999px;
+      background:#d1d5db; transition:background .15s;
+    }
+    html.dark .settings-switch { background:#4b5563; }
+    .settings-switch.on, html.dark .settings-switch.on { background:#6366f1; }
+    .settings-knob {
+      position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%;
+      background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:transform .15s;
+    }
+    .settings-switch.on .settings-knob { transform:translateX(18px); }
+    .settings-note { font-size:11px; color:var(--t3); }
+    .settings-value { flex-shrink:0; font-size:12px; color:var(--t2); white-space:nowrap; }
+    .settings-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#ef4444; margin-left:6px; vertical-align:middle; }
+
+    /* ── カレンダー内の「今日の予定」履歴 ── */
+    .cal-plan-mark {
+      margin-left:auto; font-size:9px; line-height:1; padding:1px 3px; border-radius:4px;
+      background:rgba(245,158,11,.14); color:#b45309; white-space:nowrap;
+    }
+    .cal-plan-mark.all-done { background:rgba(16,185,129,.14); color:#047857; }
+    html.dark .cal-plan-mark { color:#fbbf24; }
+    html.dark .cal-plan-mark.all-done { color:#34d399; }
+    .cal-plan-hd { display:flex; align-items:center; gap:6px; text-transform:none; }
+    .cal-plan-open {
+      margin-left:auto; font-size:10px; font-family:inherit; padding:2px 8px; border-radius:6px; cursor:pointer;
+      border:1px solid var(--input-border); background:var(--card); color:var(--t2);
+    }
+    .cal-plan-open:hover { color:#6366f1; border-color:#a5b4fc; }
+    .cal-plan-list { display:flex; flex-direction:column; gap:1px; margin-bottom:8px; }
+    .cal-plan-row { display:flex; align-items:center; gap:6px; padding:3px 6px; font-size:12px; color:var(--t1); border-radius:4px; }
+    .cal-plan-row.done { background:rgba(16,185,129,.07); }
+    .cal-plan-row.done .cal-plan-check { color:#10b981; }
+    .cal-plan-memo {
+      margin:0 6px 2px 48px; font-size:11px; color:var(--t2); line-height:1.5;
+      white-space:pre-wrap; word-break:break-word;
+    }
+    .cal-plan-slot { flex-shrink:0; font-size:10px; color:var(--t3); width:26px; }
+    .cal-plan-check { flex-shrink:0; width:10px; text-align:center; color:#6366f1; font-weight:700; }
+    .cal-plan-est { flex-shrink:0; font-size:10px; color:var(--t3); }
+
+    /* ── 今日の予定（時間割） ── */
+    .plan-body { display:flex; flex-direction:column; gap:10px; }
+    .plan-date-nav { display:flex; align-items:center; gap:6px; }
+    .plan-date-label { font-size:14px; font-weight:700; color:var(--t1); min-width:92px; text-align:center; }
+    .plan-date-label.is-today { color:#d97706; }
+    html.dark .plan-date-label.is-today { color:#fbbf24; }
+    .plan-btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:3px;
+      height:24px; padding:0 8px; border-radius:6px; border:1px solid var(--input-border);
+      background:var(--card); color:var(--t2); font-size:11px; font-family:inherit; cursor:pointer; white-space:nowrap;
+      transition:background .12s,color .12s,border-color .12s;
+    }
+    .plan-btn:hover:not(:disabled) { color:#6366f1; border-color:#a5b4fc; }
+    .plan-btn:disabled { opacity:.35; cursor:default; }
+    .plan-btn svg { width:12px; height:12px; }
+    .plan-btn.active, .plan-btn-primary { background:#6366f1; border-color:#6366f1; color:#fff; }
+    .plan-btn.active:hover:not(:disabled), .plan-btn-primary:hover:not(:disabled) { color:#fff; background:#4f46e5; border-color:#4f46e5; }
+    .plan-btn-complete { color:#059669; border-color:rgba(16,185,129,.4); }
+    html.dark .plan-btn-complete { color:#34d399; }
+    .plan-btn-del:hover:not(:disabled) { color:#dc2626 !important; border-color:#fca5a5 !important; }
+    .plan-input {
+      flex:1; min-width:0; height:30px; padding:0 10px; border-radius:8px;
+      border:1px solid var(--input-border); background:var(--input-bg); color:var(--t1);
+      font-size:14px; font-family:inherit; outline:none;
+    }
+    .plan-input:focus { border-color:#818cf8; }
+    .plan-add { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+    .plan-est {
+      height:24px; padding:0 4px; border-radius:6px; border:1px solid var(--input-border);
+      background:var(--input-bg); color:var(--t2); font-size:11px; font-family:inherit; cursor:pointer;
+    }
+    .plan-add .plan-est { height:30px; font-size:13px; }
+    .plan-picker { border:1px dashed var(--input-border); border-radius:10px; padding:8px; display:flex; flex-direction:column; gap:6px; }
+    .plan-picker-hint { font-size:11px; color:var(--t3); line-height:1.5; padding:0 2px; }
+    .plan-picker-list { max-height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+    .plan-pick-row { display:flex; align-items:center; gap:6px; padding:4px 6px; border-radius:6px; font-size:13px; }
+    .plan-pick-row:hover { background:var(--item-hover); }
+    .plan-carry {
+      display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+      background:rgba(245,158,11,.1); color:var(--t1); font-size:13px;
+    }
+    .plan-carry > span { flex:1; min-width:180px; }
+    .plan-section { display:flex; flex-direction:column; gap:2px; }
+    .plan-section-hd {
+      display:flex; align-items:baseline; gap:10px; padding:4px 2px;
+      border-bottom:1px solid var(--divider); margin-bottom:2px;
+    }
+    .plan-section-name { font-size:13px; font-weight:700; color:var(--t1); }
+    .plan-section-meta { font-size:11px; color:var(--t3); }
+    .plan-empty { font-size:13px; color:var(--t3); padding:6px 4px; }
+    .plan-row { display:flex; align-items:flex-start; gap:8px; padding:6px 6px; border-radius:6px; font-size:14px; }
+    .plan-row:hover { background:var(--item-hover); }
+    .plan-row > .cb { margin-top:1px; }
+    .plan-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+    .plan-line { display:flex; align-items:center; gap:8px; min-height:22px; }
+    .plan-text { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--t1); }
+    /* 済: 後から読み返せるよう取り消し線は使わず、緑のチェックと淡い緑の背景で示す */
+    .plan-row.done { background:rgba(16,185,129,.07); }
+    .plan-row.done:hover { background:rgba(16,185,129,.12); }
+    /* 通常の ToDo（丸）と区別するため、予定のチェックは四角 */
+    .cb.plan-cb { border-radius:5px; }
+    .cb.plan-cb.checked { background:#10b981; border-color:#10b981; }
+    .plan-src {
+      flex-shrink:0; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      font-size:11px; font-weight:600; color:var(--t2); background:var(--filter-bg);
+      padding:2px 8px; border-radius:9999px;
+    }
+    /* タスク以外の予定もリスト名と同じ見た目（藍色は「タスク完了」専用にするため使わない） */
+    .plan-done-at { flex-shrink:0; font-size:11px; font-weight:600; color:#059669; white-space:nowrap; }
+    html.dark .plan-done-at { color:#34d399; }
+    .plan-est-chip { flex-shrink:0; font-size:11px; color:var(--t2); white-space:nowrap; }
+    .plan-memo {
+      font-size:12px; color:var(--t2); line-height:1.5; white-space:pre-wrap; word-break:break-word;
+      padding:3px 8px; border-radius:6px; background:var(--filter-bg); cursor:text;
+    }
+    .plan-memo:hover { color:var(--t1); }
+    .plan-memo-edit { display:flex; flex-direction:column; gap:4px; }
+    .plan-memo-inp { height:auto; min-height:52px; padding:6px 10px; resize:vertical; line-height:1.5; }
+    .plan-memo-actions { display:flex; align-items:center; gap:6px; justify-content:flex-end; }
+    .plan-memo-hint { margin-right:auto; font-size:11px; color:var(--t3); }
+    .plan-btn-more { font-size:14px; font-weight:700; letter-spacing:1px; }
+    /* 予定の右クリック（⋯）メニュー */
+    .plan-menu { width:236px; }
+    .plan-menu-label { padding:6px 10px 2px; font-size:11px; font-weight:700; color:var(--t2); }
+    .plan-menu-ests { display:flex; flex-wrap:wrap; gap:4px; padding:4px 8px 6px; }
+    .plan-menu-est {
+      padding:3px 7px; border-radius:6px; border:1px solid var(--input-border); background:var(--input-bg);
+      color:var(--t2); font-size:11px; font-family:inherit; cursor:pointer;
+    }
+    .plan-menu-est:hover { color:#6366f1; border-color:#a5b4fc; }
+    .plan-menu-est.active { background:#6366f1; border-color:#6366f1; color:#fff; }
+    .ctx-menu-sep { height:1px; margin:4px 6px; background:var(--divider); }
+    .ctx-menu-item.ctx-menu-muted { color:var(--t3); cursor:default; }
+    .ctx-menu-item.ctx-menu-muted:hover { background:none; }
+    .plan-tag { flex-shrink:0; font-size:10px; padding:1px 6px; border-radius:9999px; background:var(--filter-bg); color:var(--t2); white-space:nowrap; }
+    /* タスク自体の完了は、通常 ToDo の完了チェック・サイドバーの完了件数と同じ藍色。
+       （緑＝今日の予定の「済」と区別する） */
+    .plan-tag-done { background:rgba(99,102,241,.14); color:#4f46e5; font-weight:600; }
+    html.dark .plan-tag-done { background:rgba(99,102,241,.25); color:#a5b4fc; }
+    .plan-tag-lost { background:rgba(239,68,68,.1); color:#dc2626; }
+    .plan-row-tools { display:inline-flex; align-items:center; gap:3px; flex-shrink:0; }
+    .plan-row-tools .plan-btn { height:22px; padding:0 6px; }
+    @media (hover:hover) {
+      .plan-row-tools .plan-btn:not(.plan-btn-complete) { opacity:.45; }
+      .plan-row:hover .plan-row-tools .plan-btn { opacity:1; }
+    }
+    @media (max-width:640px) {
+      .plan-line { flex-wrap:wrap; row-gap:2px; gap:6px; }
+      .plan-text { flex-basis:100%; white-space:normal; }
+      .plan-memo-hint { display:none; }
+      .plan-pick-row .today-row-list { display:none; }
+      .today-tab { padding:4px 8px; font-size:12px; }
+      .plan-add .plan-input { flex-basis:100%; }
+      /* iOS Safari はフォーム要素が 16px 未満だとフォーカス時に自動ズームするため揃える */
+      .plan-input, .plan-est, .plan-add .plan-est { font-size:16px; }
+      .plan-est { height:28px; }
+    }
     .sort-btns {
       margin-left:auto; display:flex; align-items:center; gap:2px;
     }
@@ -1141,6 +1328,10 @@
     .move-popup-item:active { background:rgba(99,102,241,.1); }
     .move-popup-item-name { flex:1; font-size:14px; font-weight:500; color:var(--t1); }
     .move-popup-item-count { font-size:11px; color:var(--t3); }
+    /* 「今日の予定に追加」は移動先リストと区切って先頭に置く */
+    .move-popup-plan { border-bottom:1px solid var(--divider); border-radius:10px 10px 0 0; margin-bottom:4px; }
+    .move-popup-plan.is-added { cursor:default; }
+    .move-popup-plan.is-added .move-popup-item-name { color:var(--t3); }
     .move-popup-item-icon { color:#6366f1; flex-shrink:0; }
     .move-popup-item-icon svg { width:16px; height:16px; }
 
@@ -1250,6 +1441,8 @@
       .input-section { display:none; }
       .input-bar-mobile { display:block; }
       .main-col { padding-bottom:calc(80px + env(safe-area-inset-bottom)); }
+      /* 今日のToDo / 今日の予定では下部の入力バーを出さないので余白も詰める */
+      .main-col.today-col { padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
 
       /* フィルター */
       .filters-section { padding:12px 14px 4px; }
@@ -1717,7 +1910,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.5.0';
 
 // ── State ──────────────────────────────────────────────
 // 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
@@ -1746,6 +1939,29 @@ let subInputParentId = null; // サブタスク入力モード時の親タスク
 let taskFilter = 'all'; // タスクフィルター: all/week/actionable/overdue/today
 let todayViewMode = 'date'; // 「今日のToDo」ビューの並び: 'date'=日付順 / 'list'=リスト毎
 let todayFilter = 'all';    // 「今日のToDo」ビューの絞り込み: 'all' / 'urgent'(超過+今日) / 'progress'(進行中)
+let todayTab = 'todo';      // 「今日のToDo」ビューのタブ: 'todo'=今日のToDo / 'plan'=今日の予定
+// ── 今日の予定（時間割） ────────────────────────────────
+// 日付付きのフラット配列。タスク本体とは独立に「その日の分をやったか」を持つ。
+// { id, date:'YYYY-MM-DD', slot:'am'|'pm', order, todoId?, text, estimate?(時間), done, doneAt?, createdAt, carriedFrom?, carried? }
+let dayPlan = [];
+let planDate = null;        // 表示中の予定日（null=今日。非永続）
+let planPickerOpen = false; // 「タスクから追加」パネルの開閉
+let planSearch = '';        // 候補パネルの検索語
+let planMenuId = null;      // 右クリック（⋯）メニュー対象の予定ID（位置は ctxMenuPos を共用）
+let planMemoEditId = null, planMemoDraft = ''; // メモ編集中の予定IDと下書き
+const PLAN_KEEP_DAYS = 180; // これより古い予定は load 時に削除
+const PLAN_ESTIMATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+
+// ── アプリ設定（機能の表示/非表示。端末ごとの好みなので Git 同期しない） ──
+const DEFAULT_APP_SETTINGS = { showDayPlan: true, showGitSync: true };
+let appSettings = { ...DEFAULT_APP_SETTINGS };
+function loadAppSettings() {
+  try { appSettings = { ...DEFAULT_APP_SETTINGS, ...JSON.parse(localStorage.getItem('todo-app-settings') || '{}') }; }
+  catch { appSettings = { ...DEFAULT_APP_SETTINGS }; }
+}
+function saveAppSettings() {
+  try { localStorage.setItem('todo-app-settings', JSON.stringify(appSettings)); } catch { /* ignore */ }
+}
 let editStartDate = '';
 let collapsedIds = new Set(); // セッション単位の折りたたみ状態（永続化しない）
 let expandedDoneSubs = new Set(); // 親IDごとの「完了サブ」セクションの展開状態（セッション単位）
@@ -1792,6 +2008,11 @@ function isStandalonePWA() {
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
   if (window.navigator.standalone === true) return true;
   return false;
+}
+// iPhone（Safari / ホーム画面アプリ）で通知が未設定＝バッジが出ない状態か。
+// 設定ボタン等に赤い点を付けて気づけるようにする（PC ブラウザでは付けない）。
+function needsNotifySetup() {
+  return !isTauriEnv() && isIOSSafari() && getNotifyPermission() === 'default';
 }
 async function requestNotifyPermission() {
   if (!('Notification' in window)) return 'unsupported';
@@ -1850,7 +2071,10 @@ function load() {
   try { todos = JSON.parse(localStorage.getItem('todo-app-todos') || '[]'); } catch { todos = []; }
   try { trash = JSON.parse(localStorage.getItem('todo-app-trash') || '[]'); } catch { trash = []; }
   try { listTrash = JSON.parse(localStorage.getItem('todo-app-list-trash') || '[]'); } catch { listTrash = []; }
+  try { dayPlan = JSON.parse(localStorage.getItem('todo-app-day-plan') || '[]'); } catch { dayPlan = []; }
+  loadAppSettings();
   repairAfterLoad();
+  prunePlan();
   // 全データ読み込み後に選択リストを復元
   const savedListId = localStorage.getItem('todo-app-selected-list');
   selectedListId = (savedListId && (savedListId === TODAY_LIST_ID || lists.find(l => l.id === savedListId)))
@@ -1865,6 +2089,7 @@ function load() {
     if (typeof s.taskFilter           === 'string')  taskFilter           = s.taskFilter;
     if (s.todayViewMode === 'date' || s.todayViewMode === 'list') todayViewMode = s.todayViewMode;
     if (s.todayFilter === 'all' || s.todayFilter === 'urgent' || s.todayFilter === 'progress') todayFilter = s.todayFilter;
+    if (s.todayTab === 'todo' || s.todayTab === 'plan') todayTab = s.todayTab;
   } catch { /* ignore */ }
   // 起動時に繰り返しタスクの完了状態をリセット（次回発生日へ進める）
   applyRecurringResets();
@@ -1874,6 +2099,7 @@ function save() {
   localStorage.setItem('todo-app-trash',  JSON.stringify(trash));
   localStorage.setItem('todo-app-lists',  JSON.stringify(lists));
   localStorage.setItem('todo-app-list-trash', JSON.stringify(listTrash));
+  localStorage.setItem('todo-app-day-plan', JSON.stringify(dayPlan));
   localStorage.setItem('todo-app-selected-list', selectedListId);
 }
 // UI 表示状態（展開・折りたたみ・フィルター等）の永続化
@@ -1887,6 +2113,7 @@ function saveUiState() {
       taskFilter,
       todayViewMode,
       todayFilter,
+      todayTab,
     }));
     // 選択中リストも render のたびに保存（リスト切り替えだけでも次回起動時に復元できるよう）
     if (selectedListId) {
@@ -2210,6 +2437,7 @@ const I = {
   bell:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`,
   chevLeft:  `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>`,
   chevRight: `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`,
+  gear:    `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
 };
 
 // ── 国民の祝日（2025〜2030）──────────────────────────
@@ -2416,7 +2644,13 @@ function htmlCalendarDayCell(dateStr, dt, isOtherMonth, dayEntries, todayStr) {
   const labelHtml = nhName
     ? `<span class="cal-day-holiday-name" title="${esc(nhName)}">${esc(nhName)}</span>`
     : '';
-  const dayNumHtml = `<div class="cal-day-number"><span>${dayNum}</span>${labelHtml}</div>`;
+  // 「今日の予定」がある日は 📋 済/件数 を表示（履歴の目印）
+  const planItems = appSettings.showDayPlan ? dayPlan.filter(p => p.date === dateStr) : [];
+  const planDone = planItems.filter(p => p.done).length;
+  const planMark = planItems.length
+    ? `<span class="cal-plan-mark${planDone === planItems.length ? ' all-done' : ''}" title="今日の予定: 済 ${planDone}/${planItems.length}">📋${planDone}/${planItems.length}</span>`
+    : '';
+  const dayNumHtml = `<div class="cal-day-number"><span>${dayNum}</span>${labelHtml}${planMark}</div>`;
 
   const MAX_CHIPS = 4;
   const weekEnd = endOfWeekYmd();
@@ -2532,10 +2766,39 @@ function htmlCalendarDayDetail(dateStr, dayEntries) {
   const totalCount = dayEntries.length;
   return `
     <div class="cal-detail-title">${title}</div>
+    ${htmlCalendarDayPlan(dateStr)}
     <div class="cal-detail-section-title">タスク (${totalCount})</div>
     ${totalCount ? groupHtml : '<div class="cal-detail-empty">この日に対象のタスクはありません</div>'}
     ${totalCount ? '<div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.5;">※ タスクをダブルクリックするとそのリストへ移動します</div>' : ''}
   `;
+}
+
+// カレンダー詳細パネル内の「今日の予定」（その日の時間割の履歴）
+function htmlCalendarDayPlan(dateStr) {
+  if (!appSettings.showDayPlan) return '';
+  const items = [...planSlotItems(dateStr, 'am'), ...planSlotItems(dateStr, 'pm')];
+  const openBtn = `<button class="cal-plan-open" data-a="calendar-open-plan" data-date="${dateStr}">${items.length ? '予定を開く' : '予定を作る'}</button>`;
+  if (!items.length) {
+    // 今日以降だけ「予定を作る」導線を出す（過去の空の日は何も出さない）
+    return dateStr >= today()
+      ? `<div class="cal-detail-section-title cal-plan-hd">この日の予定 (0)${openBtn}</div>`
+      : '';
+  }
+  const done = items.filter(p => p.done).length;
+  const sumH = items.reduce((s, p) => s + (p.estimate || 0), 0);
+  const rows = items.map(p => {
+    const t = planTodo(p);
+    return `<div class="cal-plan-row${p.done ? ' done' : ''}">
+      <span class="cal-plan-slot">${p.slot === 'am' ? '午前' : '午後'}</span>
+      <span class="cal-plan-check">${p.done ? '✓' : '・'}</span>
+      <span class="cal-detail-todo-text">${esc(planText(p))}</span>
+      ${t && t.completed ? '<span class="plan-tag plan-tag-done">完了</span>' : ''}
+      ${p.estimate ? `<span class="cal-plan-est">${formatHours(p.estimate)}</span>` : ''}
+    </div>
+    ${p.memo ? `<div class="cal-plan-memo">📝 ${esc(p.memo)}</div>` : ''}`;
+  }).join('');
+  return `<div class="cal-detail-section-title cal-plan-hd">この日の予定（済 ${done}/${items.length}${sumH ? `・目安 ${formatHours(sumH)}` : ''}）${openBtn}</div>
+    <div class="cal-plan-list">${rows}</div>`;
 }
 
 // カレンダーの詳細パネル行ダブルクリックで該当タスクのリストへジャンプ。
@@ -2816,13 +3079,16 @@ function htmlSidebar() {
       ${htmlGitSyncArea()}
       ${trashToggle}
       ${listTrashSection}
+      <div class="sidebar-trash-toggle">
+        <button class="list-add-btn settings-open-btn${needsNotifySetup() ? ' has-dot' : ''}" data-a="open-app-settings">${I.gear}設定</button>
+      </div>
     </div>
   </div>`;
 }
 
 // ── Git 同期エリア（サイドバー）──────────────────────────
 function htmlGitSyncArea() {
-  if (!isTauriEnv()) return '';
+  if (!isTauriEnv() || !appSettings.showGitSync) return '';
   const cfg = getGitConfig();
   if (!cfg.enabled) {
     // 未設定時は設定ボタンのみ
@@ -3155,18 +3421,291 @@ function htmlMain() {
 //   ・超過（終了日 < 今日） ・今日が期日（終了日 = 今日）
 //   ・進行中（開始日 ≤ 今日 < 終了日 … 開始日〜終了日の期間に今日を含む）
 // 各行はダブルクリック/ダブルタップで実リストへジャンプ（calendar-jump-to-todo を流用）。
-function htmlTodayView() {
+// 「今日のToDo」の集約対象（メモリスト・見出し・完了を除く、超過／今日／進行中）を日付順で返す
+function collectTodayTodos() {
   const t = today();
   const memoIds = new Set(lists.filter(l => l.type === 'memo').map(l => l.id));
-  const listName = id => (lists.find(l => l.id === id)?.name) || '(不明なリスト)';
-  const byDue = (a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
-  const items = todos
+  return todos
     .filter(x => {
       if (x.completed || x.isHeading || memoIds.has(x.listId) || !x.dueDate) return false;
       if (x.dueDate <= t) return true;               // 超過 or 今日
       return !!x.startDate && x.startDate <= t;       // 進行中（期間に今日を含む）
     })
-    .sort(byDue);
+    .sort((a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0);
+}
+
+// ── 今日の予定（時間割） ────────────────────────────────
+function planDateYmd() { return planDate || today(); }
+function defaultPlanSlot() { return new Date().getHours() < 12 ? 'am' : 'pm'; }
+function planSlotItems(date, slot) {
+  return dayPlan
+    .filter(p => p.date === date && p.slot === slot)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt || 0) - (b.createdAt || 0));
+}
+// 予定に紐づく実タスク（削除済みなら null）
+function planTodo(p) { return p.todoId ? (todos.find(t => t.id === p.todoId) || null) : null; }
+function planText(p) {
+  const t = planTodo(p);
+  return String(t ? t.text : (p.text || '')).split('\n')[0];
+}
+function formatHours(h) {
+  if (!h) return '0h';
+  if (h < 1) return `${Math.round(h * 60)}分`;
+  return `${Math.round(h * 100) / 100}h`;
+}
+// 保持期間を過ぎた予定を削除
+function prunePlan() {
+  const limit = addDaysYmd(today(), -PLAN_KEEP_DAYS);
+  dayPlan = dayPlan.filter(p => p && p.id && p.date && p.date >= limit);
+}
+function addPlanItem({ date, slot, todoId, text }) {
+  date = date || planDateYmd();
+  slot = slot === 'pm' ? 'pm' : 'am';
+  const t = todoId ? todos.find(x => x.id === todoId) : null;
+  const body = (t ? t.text : (text || '')).trim();
+  if (!body) return null;
+  const siblings = planSlotItems(date, slot);
+  const item = {
+    id: crypto.randomUUID(), date, slot,
+    order: siblings.length ? (siblings[siblings.length - 1].order ?? 0) + 1 : 0,
+    text: body.split('\n')[0], done: false, createdAt: Date.now(),
+  };
+  if (t) item.todoId = t.id;
+  dayPlan.push(item);
+  return item;
+}
+function planHasTodo(date, todoId) { return dayPlan.some(p => p.date === date && p.todoId === todoId); }
+// 同じ枠内で並び順を 0..n-1 に振り直してから、指定項目を上下に1つ動かす
+function movePlanItem(id, dir) {
+  const p = dayPlan.find(x => x.id === id);
+  if (!p) return;
+  const arr = planSlotItems(p.date, p.slot);
+  arr.forEach((x, i) => { x.order = i; });
+  const i = arr.indexOf(p), j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  arr[i].order = j; arr[j].order = i;
+}
+function togglePlanSlot(id) {
+  const p = dayPlan.find(x => x.id === id);
+  if (!p) return;
+  const to = p.slot === 'am' ? 'pm' : 'am';
+  const dest = planSlotItems(p.date, to);
+  p.slot = to;
+  p.order = dest.length ? (dest[dest.length - 1].order ?? 0) + 1 : 0;
+}
+// 持ち越し候補: 表示日より前の、未済・未持ち越しの予定
+function planCarryCandidates(date) {
+  return dayPlan.filter(p => p.date < date && !p.done && !p.carried);
+}
+function carryOverPlan(date, doCopy) {
+  const cands = planCarryCandidates(date).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.order ?? 0) - (b.order ?? 0));
+  let n = 0;
+  cands.forEach(p => {
+    p.carried = true;
+    if (!doCopy) return;
+    const t = planTodo(p);
+    if (p.todoId && (!t || t.completed)) return;          // タスクが完了/削除済みなら持ち越さない
+    if (p.todoId && planHasTodo(date, p.todoId)) return;  // 既に予定に入っている
+    const item = addPlanItem({ date, slot: p.slot, todoId: t ? t.id : undefined, text: p.text });
+    if (item) {
+      if (p.estimate) item.estimate = p.estimate;
+      item.carriedFrom = p.date;
+      n++;
+    }
+  });
+  return n;
+}
+
+function openPlanMenu(id, x, y) {
+  ctxMenuTodoId = null; ctxMenuListId = null; ctxSubmenuOpen = false;
+  planMenuId = id; ctxMenuPos = { x, y };
+  render();
+}
+function closePlanMenu() { planMenuId = null; ctxMenuPos = null; }
+function commitPlanMemo() {
+  const p = dayPlan.find(x => x.id === planMemoEditId);
+  const inp = document.getElementById('plan-memo-inp');
+  if (p) {
+    const v = (inp ? inp.value : planMemoDraft).trim();
+    if (v) p.memo = v; else delete p.memo;
+    save();
+  }
+  planMemoEditId = null; planMemoDraft = '';
+  render();
+}
+
+function addFreePlanFromInput() {
+  const inp = document.getElementById('plan-add-inp');
+  const slot = document.getElementById('plan-add-slot')?.value || defaultPlanSlot();
+  if (!inp || !inp.value.trim()) return;
+  if (addPlanItem({ date: planDateYmd(), slot, text: inp.value })) {
+    save(); render();
+    // 連続入力できるよう、枠の選択を保ったまま入力欄へ戻す
+    const s = document.getElementById('plan-add-slot'); if (s) s.value = slot;
+    document.getElementById('plan-add-inp')?.focus();
+  }
+}
+
+function htmlTodayTabs(todoCount) {
+  // 「今日の予定」を使わない設定ならタブを出さず、従来どおりの見出しにする
+  if (!appSettings.showDayPlan) return `<span class="list-card-name">今日のToDo</span>`;
+  const d = today();
+  const planItems = dayPlan.filter(p => p.date === d);
+  const planDone = planItems.filter(p => p.done).length;
+  const tab = (key, label, cnt) => `<button class="today-tab${todayTab === key ? ' active' : ''}" data-a="today-tab" data-tab="${key}">${label}<span class="today-tab-cnt">${cnt}</span></button>`;
+  return `<div class="today-tabs">
+    ${tab('todo', '今日のToDo', todoCount)}
+    ${tab('plan', '今日の予定', planItems.length ? `${planDone}/${planItems.length}` : '0')}
+  </div>`;
+}
+
+function htmlPlanView() {
+  const d = planDateYmd();
+  const isToday = d === today();
+  const listName = id => (lists.find(l => l.id === id)?.name) || '';
+  const [yy, mm, dd] = d.split('-').map(Number);
+  const wd = WEEKDAY_LABELS[new Date(yy, mm - 1, dd).getDay()];
+  const all = dayPlan.filter(p => p.date === d);
+  const sumH = arr => arr.reduce((s, p) => s + (p.estimate || 0), 0);
+
+  // 行に常時出すのは「チェック・本文・並び替え・⋯」だけ。目安時間・メモ・午前/午後の移動・
+  // タスク完了・予定から外す は右クリック（または ⋯）メニューに集約して誤操作を防ぐ。
+  const hm = ts => { const d = new Date(ts); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  const row = (p, idx, len) => {
+    const t = planTodo(p);
+    const lost = p.todoId && !t;
+    const taskDone = t && t.completed;
+    // 出どころ（リスト名 or 「予定」）はバッジ群の先頭に同じ見た目で出す
+    const srcBadge = t
+      ? `<span class="plan-src" title="リスト: ${esc(listName(t.listId))}">${esc(listName(t.listId))}</span>`
+      : `<span class="plan-src plan-src-free" title="タスク以外の予定">予定</span>`;
+    const tag = lost ? '<span class="plan-tag plan-tag-lost">削除済み</span>'
+              : taskDone ? '<span class="plan-tag plan-tag-done">タスク完了</span>' : '';
+    const carried = p.carriedFrom ? `<span class="plan-tag" title="${esc(p.carriedFrom)} から持ち越し">↪ ${Number(p.carriedFrom.slice(5, 7))}/${Number(p.carriedFrom.slice(8))}</span>` : '';
+    const est = p.estimate ? `<span class="plan-est-chip" title="目安時間（右クリックで変更）">⏱ ${formatHours(p.estimate)}</span>` : '';
+    const doneAt = (p.done && p.doneAt) ? `<span class="plan-done-at" title="チェックした時刻">✓ ${hm(p.doneAt)}</span>` : '';
+    const memo = planMemoEditId === p.id
+      ? `<div class="plan-memo-edit">
+          <textarea id="plan-memo-inp" class="plan-input plan-memo-inp" rows="2" placeholder="メモ（進み具合・気づきなど）">${esc(planMemoDraft)}</textarea>
+          <div class="plan-memo-actions">
+            <span class="plan-memo-hint">Ctrl+Enter で保存 / Esc で取消</span>
+            <button class="plan-btn" data-a="plan-memo-cancel">取消</button>
+            <button class="plan-btn plan-btn-primary" data-a="plan-memo-save" data-id="${p.id}">保存</button>
+          </div>
+        </div>`
+      : p.memo ? `<div class="plan-memo" data-a="plan-memo-edit" data-id="${p.id}" title="クリックでメモを編集">📝 ${esc(p.memo)}</div>` : '';
+    return `<div class="plan-row${p.done ? ' done' : ''}" data-id="${p.id}"${t ? ` data-list-id="${t.listId}" data-todo-id="${t.id}"` : ''} title="${t ? 'ダブルクリックで元のタスクへ移動 / ' : ''}右クリックでメニュー">
+      <div class="cb plan-cb${p.done ? ' checked' : ''}" data-a="plan-toggle" data-id="${p.id}" title="今日の分を終えたらチェック（タスクの完了とは別）">${p.done ? I.check : ''}</div>
+      <div class="plan-main">
+        <div class="plan-line">
+          <span class="plan-text">${esc(planText(p))}</span>
+          ${srcBadge}${tag}${carried}${est}${doneAt}
+        </div>
+        ${memo}
+      </div>
+      <span class="plan-row-tools">
+        <button class="plan-btn" data-a="plan-move" data-dir="-1" data-id="${p.id}" title="上へ"${idx === 0 ? ' disabled' : ''}>↑</button>
+        <button class="plan-btn" data-a="plan-move" data-dir="1" data-id="${p.id}" title="下へ"${idx === len - 1 ? ' disabled' : ''}>↓</button>
+        <button class="plan-btn plan-btn-more" data-a="plan-menu" data-id="${p.id}" title="メニュー（目安時間・メモ・移動・削除など）">⋯</button>
+      </span>
+    </div>`;
+  };
+
+  const section = (slot, label) => {
+    const arr = planSlotItems(d, slot);
+    const done = arr.filter(p => p.done).length;
+    return `<div class="plan-section">
+      <div class="plan-section-hd">
+        <span class="plan-section-name">${label}</span>
+        <span class="plan-section-meta">目安 ${formatHours(sumH(arr))} ・ 済 ${done}/${arr.length}</span>
+      </div>
+      ${arr.length ? arr.map((p, i) => row(p, i, arr.length)).join('') : '<div class="plan-empty">予定はありません</div>'}
+    </div>`;
+  };
+
+  // 持ち越しバナー（今日を表示しているときだけ）
+  const carry = isToday ? planCarryCandidates(d) : [];
+  const carryBar = carry.length ? `<div class="plan-carry">
+      <span>前回までの未済の予定が <strong>${carry.length}</strong> 件あります</span>
+      <button class="plan-btn plan-btn-primary" data-a="plan-carry" data-copy="1">今日に持ち越す</button>
+      <button class="plan-btn" data-a="plan-carry" data-copy="0">持ち越さない</button>
+    </div>` : '';
+
+  // タスクから追加（候補: 今日のToDo。検索語があれば全タスクから検索）
+  let picker = '';
+  if (planPickerOpen) {
+    const q = planSearch.trim().toLowerCase();
+    const memoIds = new Set(lists.filter(l => l.type === 'memo').map(l => l.id));
+    const cands = (q
+      ? todos.filter(x => !x.completed && !x.isHeading && !memoIds.has(x.listId) && x.text.toLowerCase().includes(q))
+      : collectTodayTodos()
+    ).filter(x => !planHasTodo(d, x.id)).slice(0, 50);
+    picker = `<div class="plan-picker">
+      <input id="plan-search" class="plan-input" type="text" placeholder="🔍 タスク名で検索（今日のToDo以外のタスクも探せます）" value="${esc(planSearch)}" autocomplete="off">
+      <div class="plan-picker-hint">${q
+        ? `全リストの未完了タスクから検索しています（${cands.length}件）`
+        : '下は今日のToDo（超過・今日・進行中）です。それ以外のタスクは上の検索欄で探すか、各リストでタスクを右クリック（スマホは長押し）→「今日の予定に追加」でも追加できます。'}</div>
+      <div class="plan-picker-list">
+        ${cands.length ? cands.map(x => `<div class="plan-pick-row">
+          <span class="today-row-list">${esc(listName(x.listId))}</span>
+          <span class="plan-text">${esc(String(x.text).split('\n')[0])}</span>
+          ${x.dueDate ? `<span class="today-row-due">${dueBadge(x.dueDate)}</span>` : ''}
+          <button class="plan-btn" data-a="plan-add-todo" data-slot="am" data-id="${x.id}">＋午前</button>
+          <button class="plan-btn" data-a="plan-add-todo" data-slot="pm" data-id="${x.id}">＋午後</button>
+        </div>`).join('') : `<div class="plan-empty">${q ? '該当するタスクはありません' : '追加できる今日のToDoはありません'}</div>`}
+      </div>
+    </div>`;
+  }
+
+  const slotDef = defaultPlanSlot();
+  const addBar = `<div class="plan-add">
+      <input id="plan-add-inp" class="plan-input" type="text" placeholder="タスク以外の予定を追加（例: 定例会議）" autocomplete="off">
+      <select id="plan-add-slot" class="plan-est">
+        <option value="am"${slotDef === 'am' ? ' selected' : ''}>午前</option>
+        <option value="pm"${slotDef === 'pm' ? ' selected' : ''}>午後</option>
+      </select>
+      <button class="plan-btn plan-btn-primary" data-a="plan-add-free">追加</button>
+      <button class="plan-btn${planPickerOpen ? ' active' : ''}" data-a="plan-picker-toggle">${planPickerOpen ? '閉じる' : 'タスクから追加'}</button>
+    </div>`;
+
+  const dateNav = `<div class="plan-date-nav">
+      <button class="plan-btn" data-a="plan-date" data-dir="-1" title="前日">${I.chevLeft}</button>
+      <span class="plan-date-label${isToday ? ' is-today' : ''}">${mm}/${dd}（${wd}）${isToday ? ' 今日' : ''}</span>
+      <button class="plan-btn" data-a="plan-date" data-dir="1" title="翌日">${I.chevRight}</button>
+      ${isToday ? '' : '<button class="plan-btn" data-a="plan-date" data-dir="0">今日へ</button>'}
+    </div>`;
+
+  return `${dateNav}${carryBar}${addBar}${picker}
+    ${section('am', '午前')}
+    ${section('pm', '午後')}
+    <div class="today-view-hint">※ チェックは「今日の分が終わった」印で、タスク自体は完了になりません。目安時間・メモ・午前/午後の移動・タスクの完了・予定から外す は、右クリックまたは「⋯」のメニューから行えます。</div>`;
+}
+function htmlPlanFooter() {
+  const all = dayPlan.filter(p => p.date === planDateYmd());
+  const sumH = arr => arr.reduce((s, p) => s + (p.estimate || 0), 0);
+  return `<div class="footer">
+    <span class="remaining">予定 <strong>${all.length}</strong> 件 ・ 済 <strong>${all.filter(p => p.done).length}</strong> ・ 目安 <strong>${formatHours(sumH(all))}</strong>（残り ${formatHours(sumH(all.filter(p => !p.done)))}）</span>
+  </div>`;
+}
+
+function htmlTodayView() {
+  const t = today();
+  const listName = id => (lists.find(l => l.id === id)?.name) || '(不明なリスト)';
+  const byDue = (a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
+  const items = collectTodayTodos();
+
+  if (todayTab === 'plan' && appSettings.showDayPlan) {
+    return `<div class="main-col today-col">
+      <div class="card">
+        <div class="list-card-hd">
+          <div class="list-card-icon today-card-icon">${I.sun}</div>
+          ${htmlTodayTabs(items.length)}
+        </div>
+        <div class="today-view-body plan-body">${htmlPlanView()}</div>
+        ${htmlPlanFooter()}
+      </div>
+    </div>`;
+  }
   const overdue    = items.filter(x => x.dueDate < t);
   const dueToday   = items.filter(x => x.dueDate === t);
   const inProgress = items.filter(x => x.dueDate > t);
@@ -3186,10 +3725,15 @@ function htmlTodayView() {
       : '';
     // 進行中（終了日 > 今日）は開始日バッジも表示
     const startHtml = (x.dueDate > t && x.startDate) ? startBadge(x.startDate) : '';
+    // 今日の予定へ追加（追加済みなら印のみ）
+    const planBtn = !appSettings.showDayPlan ? ''
+      : planHasTodo(t, x.id)
+      ? `<span class="plan-in-mark" title="今日の予定に追加済み">📋</span>`
+      : `<button class="cal-todo-action plan-add-btn" data-a="today-plan-add" data-id="${x.id}" title="今日の予定に追加">${I.plus}</button>`;
     return `<div class="cal-detail-todo-row" data-a="calendar-jump-to-todo" data-list-id="${x.listId}" data-todo-id="${x.id}" title="ダブルクリックでこのタスクへ移動">
       ${listBadge}
       <span class="cal-detail-todo-text">${esc(x.text)}</span>
-      ${memoBtn}${folderBtn}
+      ${memoBtn}${folderBtn}${planBtn}
       <span class="today-row-due">${startHtml}${dueBadge(x.dueDate)}</span>
     </div>`;
   };
@@ -3236,11 +3780,11 @@ function htmlTodayView() {
     </button>
   </div>`;
 
-  return `<div class="main-col">
+  return `<div class="main-col today-col">
     <div class="card">
       <div class="list-card-hd">
         <div class="list-card-icon today-card-icon">${I.sun}</div>
-        <span class="list-card-name">今日のToDo</span>
+        ${htmlTodayTabs(items.length)}
         ${modeToggle}
       </div>
       ${filterBar}
@@ -3259,6 +3803,7 @@ function htmlModal() {
   if (modalMode === 'git-merge')     return htmlGitMergeModal();
   if (modalMode === 'git-error')     return htmlGitErrorModal();
   if (modalMode === 'notify-config') return htmlNotifyConfigModal();
+  if (modalMode === 'app-settings')  return htmlAppSettingsModal();
   if (modalMode === 'calendar')      return htmlCalendarModal();
   const isExport = modalMode === 'export';
   const title = isExport ? 'エクスポート' : 'インポート';
@@ -3273,7 +3818,7 @@ function htmlModal() {
       <button class="task-filter-chip${importMode === 'add' ? ' active' : ''}" data-a="import-mode" data-mode="add">追加（既存に追記）</button>
       <button class="task-filter-chip${importMode === 'replace' ? ' active' : ''}" data-a="import-mode" data-mode="replace">🗑️ 置き換え（全消去）</button>
     </div>
-    ${isReplace ? '<div class="import-mode-warn">⚠️ 現在の全リスト・タスク・ゴミ箱を削除してから、選択した内容を取り込みます。</div>' : ''}`;
+    ${isReplace ? '<div class="import-mode-warn">⚠️ 現在の全リスト・タスク・ゴミ箱・今日の予定を削除してから、選択した内容を取り込みます。</div>' : ''}`;
 
   const allRow = `<div class="modal-check-row select-all" data-a="modal-toggle-all">
     <div class="modal-cb${modalAllChecked ? ' checked' : ''}">${checkSvg}</div>
@@ -3378,6 +3923,10 @@ function htmlGitMergeModal() {
   if (!gitMergeData) return '';
   const fmt = (v) => {
     if (!v) return '<span class="opt-content deleted">（削除されています）</span>';
+    if (v.slot !== undefined && v.date !== undefined) {
+      const est = v.estimate ? ` 目安${formatHours(v.estimate)}` : '';
+      return `<span class="opt-content">${esc(String(v.text || '').split('\n')[0])}${v.done ? ' [済]' : ''}${esc(`\n${v.date} ${v.slot === 'am' ? '午前' : '午後'}${est}`)}</span>`;
+    }
     if (v.text !== undefined) {
       const dueStr = v.dueDate ? `\n期限: ${v.dueDate}` : '';
       const status = v.completed ? ' [完了]' : '';
@@ -3388,7 +3937,7 @@ function htmlGitMergeModal() {
     }
     return `<span class="opt-content">${esc(JSON.stringify(v))}</span>`;
   };
-  const kindLabel = (k) => k === 'lists' ? 'リスト' : k === 'todos' ? 'タスク' : 'ゴミ箱';
+  const kindLabel = (k) => k === 'lists' ? 'リスト' : k === 'todos' ? 'タスク' : k === 'dayPlan' ? '予定' : 'ゴミ箱';
   const items = gitMergeData.conflicts.map((c, i) => {
     const r = gitMergeData.resolutions[i];
     const opts = [
@@ -3437,6 +3986,50 @@ function htmlGitMergeModal() {
       <div class="modal-footer">
         <button class="modal-btn-cancel" data-a="git-merge-cancel">キャンセル</button>
         <button class="modal-btn-primary" data-a="git-merge-confirm">マージを確定</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// 設定モーダル: 使わない機能を隠してシンプルにする（データは消さない）
+function htmlAppSettingsModal() {
+  const row = (key, title, desc) => `<div class="settings-row" data-a="toggle-setting" data-key="${key}">
+      <div class="settings-text">
+        <div class="settings-title">${title}</div>
+        <div class="settings-desc">${desc}</div>
+      </div>
+      <span class="settings-switch${appSettings[key] ? ' on' : ''}" role="switch" aria-checked="${appSettings[key] ? 'true' : 'false'}"><span class="settings-knob"></span></span>
+    </div>`;
+  const gitRow = isTauriEnv()
+    ? row('showGitSync', 'Git 同期', 'サイドバーに Pull / Push と同期設定を表示します。オフにしても設定内容は残ります。')
+    : '';
+  // 通知（バッジ）: iPhone のホーム画面アイコンに件数バッジを出すための設定。Tauri 版はタスクバーに自動表示されるので出さない
+  const perm = getNotifyPermission();
+  const permLabel = perm === 'granted' ? '許可済み' : perm === 'denied' ? 'ブロック中' : perm === 'unsupported' ? '非対応' : '未設定';
+  const notifyRow = isTauriEnv() ? '' : `
+    <div class="settings-group-hd">その他</div>
+    <div class="settings-row" data-a="open-notify-config">
+      <div class="settings-text">
+        <div class="settings-title">🔔 通知（バッジ）${needsNotifySetup() ? '<span class="settings-dot"></span>' : ''}</div>
+        <div class="settings-desc">iPhone でホーム画面のアイコンに「超過＋今日」の件数バッジを表示するための設定です。</div>
+      </div>
+      <span class="settings-value">${permLabel} ›</span>
+    </div>`;
+  return `<div class="modal-overlay" data-a="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⚙ 設定</span>
+        <button class="modal-close" data-a="modal-close">${I.x}</button>
+      </div>
+      <div class="git-modal-body">
+        <div class="settings-group-hd">表示する機能</div>
+        ${row('showDayPlan', '今日の予定', '「今日のToDo」に「今日の予定」タブを表示し、カレンダーに予定の履歴を表示します。オフにしても予定のデータは残ります。')}
+        ${gitRow}
+        ${notifyRow}
+        <div class="settings-note">この設定はこの端末だけに保存されます（Git 同期されません）。</div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-primary" data-a="modal-close">閉じる</button>
       </div>
     </div>
   </div>`;
@@ -3516,6 +4109,7 @@ function htmlNotifyConfigModal() {
         <div class="git-info-box">バッジ表示条件: <b>期限切れ + 今日が期限</b> の未完了タスク件数</div>
       </div>
       <div class="modal-footer">
+        <button class="modal-btn-cancel" data-a="open-app-settings">‹ 設定に戻る</button>
         <button class="modal-btn-primary" data-a="modal-close">閉じる</button>
       </div>
     </div>
@@ -3553,8 +4147,21 @@ function htmlMovePopup() {
         <span class="move-popup-item-icon">${upSvg}</span>
         <span class="move-popup-item-name">⬆️ メインに昇格</span>
       </li>` : '';
-  if (!otherLists.length && !promoteItem) return '';
-  const items = otherLists.map(l => {
+  // モバイルの長押しメニューからも「今日の予定に追加」できるように（右クリックメニューと同条件）
+  const isMemoTask = lists.find(l => l.id === t.listId)?.type === 'memo';
+  const planItem = (appSettings.showDayPlan && !t.isHeading && !t.completed && !isMemoTask)
+    ? (planHasTodo(today(), t.id)
+        ? `<li class="move-popup-item move-popup-plan is-added">
+            <span class="move-popup-item-icon">📋</span>
+            <span class="move-popup-item-name">今日の予定に追加済み</span>
+          </li>`
+        : `<li class="move-popup-item move-popup-plan" data-a="ctx-add-to-plan" data-id="${t.id}">
+            <span class="move-popup-item-icon">📋</span>
+            <span class="move-popup-item-name">今日の予定に追加</span>
+          </li>`)
+    : '';
+  if (!otherLists.length && !promoteItem && !planItem) return '';
+  const items = planItem + otherLists.map(l => {
     const s = listStats(l.id);
     return `<li class="move-popup-item" data-a="move-to-list" data-list-id="${l.id}" data-todo-id="${t.id}">
       <span class="move-popup-item-icon">${arrowSvg}</span>
@@ -3565,7 +4172,7 @@ function htmlMovePopup() {
   return `<div class="move-popup-overlay" data-a="close-move-popup">
     <div class="move-popup" data-a="move-popup-body">
       <div class="move-popup-header">
-        <span class="move-popup-title">タスクを移動</span>
+        <span class="move-popup-title">${planItem ? 'タスクの操作' : 'タスクを移動'}</span>
         <button class="modal-close" data-a="close-move-popup">${I.x}</button>
       </div>
       <div class="move-popup-task">${esc(t.text)}</div>
@@ -3578,6 +4185,31 @@ function htmlMovePopup() {
 const editIconSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>`;
 function htmlCtxMenu() {
   if (!ctxMenuPos) return '';
+  // 今日の予定の項目メニュー
+  if (planMenuId) {
+    const p = dayPlan.find(x => x.id === planMenuId);
+    if (!p) return '';
+    const t = planTodo(p);
+    const MENU_W = 236, MENU_H = 330;
+    const x = Math.max(8, Math.min(ctxMenuPos.x, window.innerWidth - MENU_W - 8));
+    const y = Math.max(8, Math.min(ctxMenuPos.y, window.innerHeight - MENU_H - 8));
+    const estChips = [null, ...PLAN_ESTIMATES].map(h =>
+      `<button class="plan-menu-est${(p.estimate || null) === h ? ' active' : ''}" data-a="plan-set-estimate" data-id="${p.id}" data-h="${h ?? ''}">${h ? formatHours(h) : 'なし'}</button>`
+    ).join('');
+    return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
+      <ul class="ctx-menu plan-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
+        <li class="plan-menu-label">⏱ 目安時間</li>
+        <li class="plan-menu-ests" data-a="ctx-menu-body">${estChips}</li>
+        <li class="ctx-menu-sep"></li>
+        <li class="ctx-menu-item" data-a="plan-memo-edit" data-id="${p.id}">📝<span>${p.memo ? 'メモを編集' : 'メモを書く'}</span></li>
+        <li class="ctx-menu-item" data-a="plan-slot" data-id="${p.id}">${p.slot === 'am' ? '🌇<span>午後へ移動</span>' : '🌅<span>午前へ移動</span>'}</li>
+        ${t ? `<li class="ctx-menu-item" data-a="plan-open-task" data-id="${p.id}">↗<span>元のタスクを開く</span></li>` : ''}
+        ${t && !t.completed ? `<li class="ctx-menu-item" data-a="plan-complete-task" data-id="${p.id}">✅<span>タスクも完了にする</span></li>` : ''}
+        <li class="ctx-menu-sep"></li>
+        <li class="ctx-menu-item ctx-menu-danger" data-a="plan-remove" data-id="${p.id}">${I.x}<span>予定から外す</span></li>
+      </ul>
+    </div>`;
+  }
   // タスク用メニュー
   if (ctxMenuTodoId) {
     const t = todos.find(x => x.id === ctxMenuTodoId);
@@ -3604,9 +4236,17 @@ function htmlCtxMenu() {
     const headingItem = !t.parentId
       ? `<li class="ctx-menu-item" data-a="ctx-toggle-heading" data-id="${t.id}">${t.isHeading ? `☑️<span>見出しを解除</span>` : `🏷️<span>見出しにする</span>`}</li>`
       : '';
+    // 今日の予定に追加（見出し・完了済み・メモリストのタスクは対象外。設定でオフなら出さない）
+    const isMemoTask = lists.find(l => l.id === t.listId)?.type === 'memo';
+    const planItem = (appSettings.showDayPlan && !t.isHeading && !t.completed && !isMemoTask)
+      ? (planHasTodo(today(), t.id)
+          ? `<li class="ctx-menu-item ctx-menu-muted">📋<span>今日の予定に追加済み</span></li>`
+          : `<li class="ctx-menu-item" data-a="ctx-add-to-plan" data-id="${t.id}">📋<span>今日の予定に追加</span></li>`)
+      : '';
     return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
       <ul class="ctx-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
         <li class="ctx-menu-item" data-a="ctx-edit" data-id="${t.id}">${editIconSvg}<span>編集</span></li>
+        ${planItem}
         ${headingItem}
         ${submenuHtml}
         ${promoteItem}
@@ -3685,9 +4325,8 @@ function html() {
         </div>
       </div>
       <div class="header-right">
-        <button class="sidebar-toggle-btn${sidebarOpen ? ' active' : ''}" data-a="toggle-sidebar" aria-label="リスト">${I.menu}</button>
+        <button class="sidebar-toggle-btn${sidebarOpen ? ' active' : ''}${needsNotifySetup() ? ' has-dot' : ''}" data-a="toggle-sidebar" aria-label="リスト">${I.menu}</button>
         <button class="header-icon-btn" data-a="open-calendar" title="カレンダー" aria-label="カレンダー">${I.cal}</button>
-        ${isTauriEnv() ? '' : `<button class="header-icon-btn${getNotifyPermission() === 'default' ? ' has-dot' : ''}" data-a="open-notify-config" title="通知（バッジ）設定" aria-label="通知設定">${I.bell}</button>`}
         <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
       </div>
     </div>
@@ -3695,13 +4334,13 @@ function html() {
       ${htmlSidebar()}
       ${htmlMain()}
     </div>
-    <div class="input-bar-mobile">
+    ${selectedListId === TODAY_LIST_ID ? '' : `<div class="input-bar-mobile">
       <form class="input-row${subInputParentId ? ' sub-mode' : ''}" data-a="add">
         <textarea id="todo-inp-mobile" class="todo-input" rows="1" placeholder="${subInputParentId ? `「${esc((todos.find(x=>x.id===subInputParentId)||{}).text||'')}」のサブタスクを入力...` : '新しいタスクを入力...'}" autocomplete="off"></textarea>
         ${subInputParentId ? `<button type="button" class="cancel-sub-btn" data-a="cancel-sub-input" title="キャンセル">${I.x}</button>` : ''}
         <button type="submit" class="add-btn">追加</button>
       </form>
-    </div>
+    </div>`}
     ${htmlModal()}
     ${htmlMovePopup()}
     ${htmlMemoPopup()}
@@ -4198,7 +4837,8 @@ function buildExportPayload(selectedIdsOrNull, opts = {}) {
   const { includeTimestamp = true } = opts;
   const stripInternal = t => { const { _trashedWithParent, ...rest } = t; return rest; };
   const ts = includeTimestamp ? { exportedAt: new Date().toISOString() } : {};
-  if (selectedIdsOrNull) {
+  // 全リストを選んだ時だけ「今日の予定」も含める（一部リストだけでは予定の参照先が欠けるため）
+  if (selectedIdsOrNull && !lists.every(l => selectedIdsOrNull.has(l.id))) {
     return {
       version: 1,
       ...ts,
@@ -4213,6 +4853,7 @@ function buildExportPayload(selectedIdsOrNull, opts = {}) {
     lists: lists.map(l => ({ ...l })),
     todos: todos.map(stripInternal),
     trash: trash.map(stripInternal),
+    dayPlan: dayPlan.map(p => ({ ...p })),
   };
 }
 
@@ -4222,6 +4863,8 @@ function applyExportPayloadInPlace(payload) {
   lists    = (payload.lists || []).map(l => ({ ...l }));
   todos    = (payload.todos || []).map(t => ({ ...t }));
   trash    = (payload.trash || []).map(t => ({ ...t }));
+  // 旧バージョンの tasks.json（dayPlan なし）ではローカルの予定を保持する
+  if (Array.isArray(payload.dayPlan)) dayPlan = payload.dayPlan.map(p => ({ ...p }));
   repairAfterLoad();
   if (selectedListId !== TODAY_LIST_ID && !lists.find(l => l.id === selectedListId)) selectedListId = lists[0]?.id || '';
   // Git Pull / インポート / マージ反映後も、完了済み繰り返しタスクを次回発生日へ進める
@@ -4323,6 +4966,7 @@ function executeImport() {
     lists = [];
     todos = [];
     trash = [];
+    dayPlan = [];
   }
   const idMap = new Map();
   const existingNames = new Set(lists.map(l => l.name));
@@ -4372,6 +5016,17 @@ function executeImport() {
     delete newItem.parentId;
     delete newItem._trashedWithParent;
     trash.push(newItem);
+  }
+  // 置き換え時は「今日の予定」も復元（タスクIDは新IDへ付け替え、見つからなければタスク以外の予定として残す）
+  if (importMode === 'replace' && Array.isArray(importPayload.dayPlan)) {
+    importPayload.dayPlan.forEach(p => {
+      if (!p || !p.date) return;
+      const n = { ...p, id: crypto.randomUUID() };
+      const nt = p.todoId ? todoIdMap.get(p.todoId) : null;
+      if (nt) n.todoId = nt; else delete n.todoId;
+      dayPlan.push(n);
+    });
+    prunePlan();
   }
   if (orphanCount > 0) showToast(`⚠️ 親が見つからないサブタスク ${orphanCount} 件をメインに変換しました`);
   save();
@@ -4533,7 +5188,7 @@ function gitConfigSave() {
 
 async function refreshGitStatus() {
   const cfg = getGitConfig();
-  if (!cfg.enabled || !cfg.repoPath || !isTauriEnv()) {
+  if (!cfg.enabled || !cfg.repoPath || !isTauriEnv() || !appSettings.showGitSync) {
     if (gitStatusCache) { gitStatusCache = null; render(); }
     return;
   }
@@ -4778,16 +5433,26 @@ async function writeAndCommit(cfg, payload, message) {
 }
 
 function emptyPayload() {
-  return { version: 1, lists: [], todos: [], trash: [] };
+  return { version: 1, lists: [], todos: [], trash: [], dayPlan: [] };
 }
 
 // ── 3-way マージ ─────────────────────────────────────────
 // 「意味のあるフィールド」だけを比較対象にする（exportedAt や内部フラグは除外）
 const MEANINGFUL_FIELDS_TODO = [
   'text', 'completed', 'createdAt', 'listId', 'dueDate', 'startDate',
-  'completedAt', 'folderPath', 'linkType', 'detail', 'parentId', 'recurrence',
+  'completedAt', 'folderPath', 'linkType', 'detail', 'parentId', 'recurrence', 'isHeading',
 ];
 const MEANINGFUL_FIELDS_LIST = ['name', 'createdAt', 'type'];
+const MEANINGFUL_FIELDS_PLAN = [
+  'date', 'slot', 'order', 'todoId', 'text', 'estimate', 'done', 'doneAt', 'createdAt', 'carriedFrom', 'carried', 'memo',
+];
+// マージ・比較の対象カテゴリ（dayPlan は旧バージョンの tasks.json には存在しない）
+const SYNC_CATEGORIES = [
+  { key: 'lists',   fields: MEANINGFUL_FIELDS_LIST },
+  { key: 'todos',   fields: MEANINGFUL_FIELDS_TODO },
+  { key: 'trash',   fields: MEANINGFUL_FIELDS_TODO },
+  { key: 'dayPlan', fields: MEANINGFUL_FIELDS_PLAN },
+];
 
 function recordEqual(a, b, fields) {
   if (!a && !b) return true;
@@ -4802,11 +5467,7 @@ function recordEqual(a, b, fields) {
 
 // 2 つの payload が「リスト/タスク/ゴミ箱の内容として」実質的に同じかを判定
 function payloadsEquivalent(a, b) {
-  for (const { key, fields } of [
-    { key: 'lists', fields: MEANINGFUL_FIELDS_LIST },
-    { key: 'todos', fields: MEANINGFUL_FIELDS_TODO },
-    { key: 'trash', fields: MEANINGFUL_FIELDS_TODO },
-  ]) {
+  for (const { key, fields } of SYNC_CATEGORIES) {
     const aArr = a[key] || [], bArr = b[key] || [];
     if (aArr.length !== bArr.length) return false;
     const aMap = new Map(aArr.map(x => [x.id, x]));
@@ -4820,18 +5481,14 @@ function payloadsEquivalent(a, b) {
 }
 
 function mergeThreeWay(base, ours, theirs) {
-  const merged = { version: 1, lists: [], todos: [], trash: [] };
+  const merged = { version: 1, lists: [], todos: [], trash: [], dayPlan: [] };
   const conflicts = [];
 
-  const categories = [
-    { key: 'lists', fields: MEANINGFUL_FIELDS_LIST },
-    { key: 'todos', fields: MEANINGFUL_FIELDS_TODO },
-    { key: 'trash', fields: MEANINGFUL_FIELDS_TODO },
-  ];
-  for (const { key, fields } of categories) {
+  for (const { key, fields } of SYNC_CATEGORIES) {
+    // 相手側にカテゴリ自体が無い（旧バージョンが書いた tasks.json）場合は「base から変更なし」とみなす
     const baseMap   = new Map((base[key]   || []).map(x => [x.id, x]));
-    const oursMap   = new Map((ours[key]   || []).map(x => [x.id, x]));
-    const theirsMap = new Map((theirs[key] || []).map(x => [x.id, x]));
+    const oursMap   = new Map((ours[key]   ?? base[key] ?? []).map(x => [x.id, x]));
+    const theirsMap = new Map((theirs[key] ?? base[key] ?? []).map(x => [x.id, x]));
     const allIds = new Set([...baseMap.keys(), ...oursMap.keys(), ...theirsMap.keys()]);
 
     for (const id of allIds) {
@@ -4876,6 +5533,7 @@ function buildMergedWithResolutions(autoMerged, conflicts, resolutions) {
     lists: autoMerged.lists.map(x => ({ ...x })),
     todos: autoMerged.todos.map(x => ({ ...x })),
     trash: autoMerged.trash.map(x => ({ ...x })),
+    dayPlan: (autoMerged.dayPlan || []).map(x => ({ ...x })),
   };
   for (let i = 0; i < conflicts.length; i++) {
     const c = conflicts[i];
@@ -5108,12 +5766,143 @@ document.addEventListener('click', e => {
     case 'select-today': selectTodayList(); break;
     case 'toggle-today-mode': todayViewMode = (todayViewMode === 'list') ? 'date' : 'list'; render(); break;
     case 'today-filter': { const f = el.dataset.filter; if (f) { todayFilter = f; render(); } break; }
+    case 'today-tab': {
+      const tb = el.dataset.tab;
+      if (tb === 'todo' || tb === 'plan') { todayTab = tb; if (tb === 'plan') planDate = null; render(); }
+      break;
+    }
+    case 'today-plan-add': {
+      e.stopPropagation();
+      const slot = defaultPlanSlot();
+      if (!planHasTodo(today(), id) && addPlanItem({ date: today(), slot, todoId: id })) {
+        save(); render();
+        showToast(`📋 今日の予定（${slot === 'am' ? '午前' : '午後'}）に追加しました`);
+      }
+      break;
+    }
+    case 'plan-toggle': {
+      const p = dayPlan.find(x => x.id === id);
+      if (!p) break;
+      p.done = !p.done;
+      if (p.done) p.doneAt = Date.now(); else delete p.doneAt;
+      save(); render();
+      break;
+    }
+    case 'plan-complete-task': {
+      closePlanMenu();
+      const p = dayPlan.find(x => x.id === id);
+      const t = p && planTodo(p);
+      if (!t || t.completed) { render(); break; }
+      p.done = true; p.doneAt = p.doneAt || Date.now();
+      toggleTodo(t.id); // save + render
+      showToast('✅ タスクも完了にしました');
+      break;
+    }
+    case 'plan-move':   movePlanItem(id, parseInt(el.dataset.dir, 10)); save(); render(); break;
+    case 'plan-slot':   closePlanMenu(); togglePlanSlot(id); save(); render(); break;
+    case 'plan-remove': {
+      closePlanMenu();
+      dayPlan = dayPlan.filter(x => x.id !== id);
+      if (planMemoEditId === id) planMemoEditId = null;
+      save(); render();
+      showToast('予定から外しました（タスクは残っています）');
+      break;
+    }
+    case 'plan-menu': {
+      // ⋯ ボタン: ボタンの左下にメニューを開く（右クリックと同じメニュー）
+      e.stopPropagation();
+      const r = el.getBoundingClientRect();
+      openPlanMenu(id, r.right - 236, r.bottom + 4);
+      break;
+    }
+    case 'plan-set-estimate': {
+      const p = dayPlan.find(x => x.id === id);
+      if (p) {
+        const h = parseFloat(el.dataset.h);
+        if (h > 0) p.estimate = h; else delete p.estimate;
+        save();
+      }
+      closePlanMenu(); render();
+      break;
+    }
+    case 'plan-memo-edit': {
+      const p = dayPlan.find(x => x.id === id);
+      closePlanMenu();
+      if (!p) { render(); break; }
+      planMemoEditId = p.id; planMemoDraft = p.memo || '';
+      render();
+      const ta = document.getElementById('plan-memo-inp');
+      if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      break;
+    }
+    case 'plan-memo-save':   commitPlanMemo(); break;
+    case 'plan-memo-cancel': planMemoEditId = null; render(); break;
+    case 'plan-open-task': {
+      const p = dayPlan.find(x => x.id === id);
+      const t = p && planTodo(p);
+      closePlanMenu();
+      if (t) jumpToTodo(t.listId, t.id); else render();
+      break;
+    }
+    case 'plan-date': {
+      const dir = parseInt(el.dataset.dir, 10);
+      planDate = dir === 0 ? null : addDaysYmd(planDateYmd(), dir);
+      if (planDate === today()) planDate = null;
+      render();
+      break;
+    }
+    case 'plan-add-free': addFreePlanFromInput(); break;
+    case 'plan-picker-toggle': {
+      planPickerOpen = !planPickerOpen;
+      planSearch = '';
+      render();
+      if (planPickerOpen) document.getElementById('plan-search')?.focus();
+      break;
+    }
+    case 'plan-add-todo': {
+      if (addPlanItem({ date: planDateYmd(), slot: el.dataset.slot, todoId: id })) { save(); render(); }
+      break;
+    }
+    case 'plan-carry': {
+      const copy = el.dataset.copy === '1';
+      const n = carryOverPlan(planDateYmd(), copy);
+      save(); render();
+      showToast(copy ? `↪ ${n} 件を今日の予定に持ち越しました` : '持ち越しをスキップしました');
+      break;
+    }
     case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;
     case 'toggle-list-type': e.stopPropagation(); editingListType = editingListType === 'todo' ? 'memo' : 'todo'; render(); break;
     case 'start-add-list': addingList = true; newListName = ''; render(); break;
     case 'open-export':     openExportModal(); break;
     case 'open-import':     openImportModal(); break;
     case 'open-git-config': openGitConfigModal(); break;
+    case 'open-app-settings': {
+      modalMode = 'app-settings';
+      if (isMobile()) sidebarOpen = false;
+      render();
+      break;
+    }
+    case 'toggle-setting': {
+      const k = el.dataset.key;
+      if (!(k in DEFAULT_APP_SETTINGS)) break;
+      appSettings[k] = !appSettings[k];
+      saveAppSettings();
+      render();
+      if (k === 'showGitSync' && appSettings.showGitSync) refreshGitStatus();
+      break;
+    }
+    case 'calendar-open-plan': {
+      // カレンダーから、その日の「今日の予定」を開く
+      const d = el.dataset.date;
+      if (!d) break;
+      closeModal();
+      todayTab = 'plan';
+      planDate = d === today() ? null : d;
+      planPickerOpen = false;
+      selectTodayList();
+      render();
+      break;
+    }
     case 'open-notify-config': {
       modalMode = 'notify-config';
       render();
@@ -5249,7 +6038,7 @@ document.addEventListener('click', e => {
     case 'toggle-stats': toggleListStats(); break;
     case 'toggle-list-expand': toggleListExpand(); break;
     case 'close-move-popup': closeMovePopup(); break;
-    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; ctxSubmenuOpen = false; render(); break;
+    case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuListId = null; planMenuId = null; ctxMenuPos = null; ctxSubmenuOpen = false; render(); break;
     case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; startEdit(tid); break; }
     case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; moveToTrash(tid); break; }
     case 'ctx-rename-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; startRenameList(lid); break; }
@@ -5284,6 +6073,17 @@ document.addEventListener('click', e => {
       const tid = id;
       ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
       promoteSubToMain(tid);
+      break;
+    }
+    case 'ctx-add-to-plan': {
+      const tid = id;
+      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; movePopupTodoId = null;
+      const slot = defaultPlanSlot();
+      if (!planHasTodo(today(), tid) && addPlanItem({ date: today(), slot, todoId: tid })) {
+        save();
+        showToast(`📋 今日の予定（${slot === 'am' ? '午前' : '午後'}）に追加しました`);
+      }
+      render();
       break;
     }
     case 'ctx-toggle-heading': {
@@ -5349,6 +6149,12 @@ document.addEventListener('dblclick', e => {
     jumpFromCalendarToTodo(calRow.dataset.listId, calRow.dataset.todoId);
     return;
   }
+  // 今日の予定: タスクに紐づく行はダブルクリックで元のタスクへ
+  const planRow = e.target.closest('.plan-row[data-todo-id]');
+  if (planRow && !e.target.closest('button, select, textarea, .cb, .plan-memo')) {
+    jumpFromCalendarToTodo(planRow.dataset.listId, planRow.dataset.todoId);
+    return;
+  }
   const todoItem = e.target.closest('.todo-item');
   if (todoItem) {
     if (e.target.closest('.cb-wrap') || e.target.closest('.item-del')) return;
@@ -5374,9 +6180,19 @@ document.addEventListener('dblclick', e => {
     const sameTarget = lastTarget && (
       target === lastTarget || target.closest('.todo-item') === lastTarget.closest('.todo-item') ||
       target.closest('.list-nav-item') === lastTarget.closest('.list-nav-item') ||
-      target.closest('.cal-detail-todo-row') === lastTarget.closest('.cal-detail-todo-row')
+      target.closest('.cal-detail-todo-row') === lastTarget.closest('.cal-detail-todo-row') ||
+      target.closest('.plan-row') === lastTarget.closest('.plan-row')
     );
     if (elapsed < DOUBLE_TAP_MS && sameTarget) {
+      // 今日の予定の行: 元のタスクへジャンプ
+      const planRow = target.closest('.plan-row[data-todo-id]');
+      if (planRow && !target.closest('button, select, textarea, .cb, .plan-memo')) {
+        e.preventDefault();
+        _suppressNextDblclick = true;
+        jumpFromCalendarToTodo(planRow.dataset.listId, planRow.dataset.todoId);
+        lastTap = 0; lastTarget = null;
+        return;
+      }
       // ダブルタップ確定
       // カレンダー詳細パネル行: 該当タスクへジャンプ
       const calRow = target.closest('.cal-detail-todo-row');
@@ -5471,7 +6287,21 @@ document.addEventListener('input', e => {
   if (e.target.id === 'ei-folder')       editFolderPath   = e.target.value;
   if (e.target.id === 'list-rename-inp') editingListName  = e.target.value;
   if (e.target.id === 'list-add-inp')    newListName      = e.target.value;
+  if (e.target.id === 'plan-search' && !e.isComposing) applyPlanSearch(e.target);
+  if (e.target.id === 'plan-memo-inp') planMemoDraft = e.target.value; // 再描画されても下書きを保持
 });
+// 日本語入力（IME）の変換中は再描画しない。確定時にまとめて反映する
+document.addEventListener('compositionend', e => {
+  if (e.target.id === 'plan-search') applyPlanSearch(e.target);
+});
+// 候補を絞り込んで再描画し、入力欄のフォーカスとカーソル位置を戻す
+function applyPlanSearch(inputEl) {
+  planSearch = inputEl.value;
+  const pos = inputEl.selectionStart;
+  render();
+  const inp = document.getElementById('plan-search');
+  if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
+}
 
 document.addEventListener('keydown', e => {
   if (modalMode && e.key === 'Escape') { closeModal(); return; }
@@ -5482,6 +6312,16 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'list-rename-inp') {
     if (e.key === 'Enter')  { e.preventDefault(); commitRenameList(); }
     if (e.key === 'Escape') { editingListId = null; render(); }
+  }
+  if (e.target.id === 'plan-add-inp' && e.key === 'Enter' && !e.isComposing) {
+    e.preventDefault(); addFreePlanFromInput();
+  }
+  if (e.target.id === 'plan-memo-inp' && !e.isComposing) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitPlanMemo(); }
+    if (e.key === 'Escape') { e.preventDefault(); planMemoEditId = null; render(); }
+  }
+  if (e.target.id === 'plan-search' && e.key === 'Escape') {
+    e.preventDefault(); planPickerOpen = false; planSearch = ''; render();
   }
   if (e.target.id === 'list-add-inp') {
     if (e.key === 'Enter')  { e.preventDefault(); commitAddList(); }
@@ -5841,6 +6681,12 @@ document.addEventListener('contextmenu', e => {
     const sel = window.getSelection();
     if (sel && sel.removeAllRanges) sel.removeAllRanges();
   } catch (_) { /* ignore */ }
+  // 今日の予定の行で右クリック → 予定用メニュー
+  const planRowEl = e.target.closest('.plan-row');
+  if (planRowEl && planRowEl.dataset.id) {
+    openPlanMenu(planRowEl.dataset.id, e.clientX, e.clientY);
+    return;
+  }
   // タスク行で右クリック → タスク用メニュー
   const item = e.target.closest('.todo-item');
   if (item && !e.target.closest('.edit-form')) {
@@ -5860,8 +6706,8 @@ document.addEventListener('contextmenu', e => {
     return;
   }
   // 別の場所でメニューが開いている場合は閉じる
-  if (ctxMenuTodoId || ctxMenuListId) {
-    ctxMenuTodoId = null; ctxMenuListId = null; ctxMenuPos = null; render();
+  if (ctxMenuTodoId || ctxMenuListId || planMenuId) {
+    ctxMenuTodoId = null; ctxMenuListId = null; planMenuId = null; ctxMenuPos = null; render();
   }
 });
 

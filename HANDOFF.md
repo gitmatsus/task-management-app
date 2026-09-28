@@ -2,7 +2,9 @@
 
 ## プロジェクト概要
 
-- **ファイル**: `C:\AI\タスク管理アプリ\TList.html`（単一ファイル、約3040行）
+- **ファイル**: `C:\AI\タスク管理アプリ\TList.html`（単一ファイル、約5900行）
+- **現行バージョン**: **v1.5.0**（`APP_VERSION` と `tauri/package.json` / `Cargo.toml` / `tauri.conf.json` の4箇所を揃えて更新する）
+- **最終更新**: 2026-09-28（`23af2ce` 時点）
 - **リポジトリ**: `https://github.com/gitmatsus/task-management-app.git`（ブランチ: `master`）
 - **公開URL**: https://gitmatsus.github.io/task-management-app/ （GitHub Pages、master 自動デプロイ）
 - **構成**: バニラJS + localStorage、外部依存なし、単一HTMLファイルで完結
@@ -46,12 +48,37 @@ let sidebarOpen = false;
 let showListStats = localStorage.getItem('todo-app-show-stats') !== 'false';
 let listExpanded = false;
 const LIST_COLLAPSE_LIMIT = 5;
-let collapsedIds = new Set();        // 折りたたみ中の親ID（セッション単位、非永続）
-let expandedDoneSubs = new Set();    // 「▷ 完了 (N件)」トグル展開中の親ID（セッション単位）
+let collapsedIds = new Set();        // 折りたたみ中の親ID（todo-app-ui-state に永続化）
+let expandedDoneSubs = new Set();    // 「▷ 完了 (N件)」トグル展開中の親ID（永続化）
 let subInputParentId = null;         // サブタスク連続追加モードの親ID
-let taskFilter = 'all';              // all / week / actionable / overdue / today
-let showCompletedSection = false;    // 完了セクションの開閉
+let taskFilter = 'all';              // all / week / actionable / overdue / today（永続化）
+let showCompletedSection = false;    // 完了セクションの開閉（永続化）
+
+// 今日のToDo（仮想リスト）
+const TODAY_LIST_ID = '__today__';   // selectedListId にこの値が入ると集約ビュー
+let todayViewMode = 'date';          // 'date'=日付順 / 'list'=リスト毎（永続化）
+let todayFilter = 'all';             // 'all' / 'urgent'(超過+今日) / 'progress'(進行中)（永続化）
+let todayTab = 'todo';               // 'todo'=今日のToDo / 'plan'=今日の予定（永続化）
+
+// 今日の予定（v1.5.0）
+let dayPlan = [];                    // 予定項目のフラット配列（todo-app-day-plan / Git 同期対象）
+let planDate = null;                 // 表示中の予定日（null=今日。非永続）
+let planPickerOpen = false, planSearch = '';  // 「タスクから追加」パネル
+
+// カレンダー
+let calendarYear, calendarMonth;     // 表示中の年・月(1-12)
+let calendarSelectedDate = null;     // 'YYYY-MM-DD'
+let calendarShowDone = false;        // 完了済みも表示
+let calendarFilterListId = null;     // null=全リスト
+let calendarDateMode = 'due';        // 'due' / 'start' / 'both'
+let calendarCellMenu = null;         // 日セル右クリックメニュー { date, x, y }
+
+// インポート / Git
+let importMode = 'add';              // 'add'=既存に追記 / 'replace'=全消去して取り込む
+let gitBusy = false;                 // pull/push 実行中フラグ
 ```
+
+UI状態（`collapsedIds` / `expandedDoneSubs` / `showCompletedSection` / `listExpanded` / `taskFilter` / `todayViewMode` / `todayFilter`）は `todo-app-ui-state` に保存し、`load()` で復元・`render()` 末尾で保存する。`sidebarOpen` は意図的に対象外（モバイル起動時にサイドバーが開きっぱなしになるのを避けるため）。
 
 ### タスクデータ構造
 ```javascript
@@ -69,6 +96,8 @@ let showCompletedSection = false;    // 完了セクションの開閉
   detail?: string,        // 詳細・メモ（複数行可）
   parentId?: string,      // 値があればサブタスク。親はメイン（parentId 無し）のみ。
                           // 2階層固定（サブのサブは禁止）
+  isHeading?: boolean,    // 見出し（分類ラベル）。メインのみ。チェック不可・件数集計から除外
+                          // サブに降格すると自動解除（v1.4.0）
   recurrence?: {          // 繰り返し設定（あればこのタスクは繰り返しタスク）
     type: 'daily' | 'weekly' | 'monthly',
     weekday?: 0-6,        // type:'weekly' のとき、0=日〜6=土
@@ -156,6 +185,18 @@ const endOfWeekYmd = () => ymd(new Date(Date.now() + 6 * 86400000));
 | URLボタン（モバイル） | linkType='url' なら touch 環境でも表示 |
 | 詳細・メモ | タスクに詳細テキスト追加、メモボタンでポップアップ表示 |
 | 右クリック標準メニュー抑制 | 入力欄を除き標準コンテキストメニューを抑制 |
+| Git/GitHub 同期（v1.1.0） | Tauri 版のみ。サイドバーの Pull / Push で `tasks.json` を Git リポジトリ経由で複数PC同期。3-way マージ＋競合解決UI。詳細は「Git 同期」節 |
+| カレンダー（月ビュー） | ヘッダー「📅 カレンダー」から開く。全リストの期限/開始日タスクを集約表示。詳細は「カレンダー」節 |
+| 今日のToDo（v1.3.x） | サイドバー最上部の仮想リスト。全リスト（メモ除く）の超過・今日・進行中を集約。詳細は「今日のToDo」節 |
+| 見出し（v1.4.0） | メインを右クリック/長押し→「見出し」で分類ラベル化。チェック非表示、配下サブの進捗（完了数/全数）を表示、太字＋背景 |
+| 今日の予定（v1.5.0） | 「今日のToDo」内のタブ。朝に午前/午後の時間割を組み、目安時間を付けてチェックしていく。チェック＝「今日の分は完了」でタスクの完了とは別。タスク以外の予定も可。Git 同期対象。詳細は「今日の予定」節 |
+| 設定（v1.5.0） | サイドバー下部の「⚙ 設定」。「今日の予定」「Git 同期（Tauri 版のみ）」の表示/非表示を切り替える。非表示にしてもデータ・設定は残る。「🔔 通知（バッジ）」（Tauri 版以外）もここから開く |
+| インポート置き換え（v1.4.1） | インポート画面で「追加（既定）」/「置き換え（全リスト・タスク・ゴミ箱を消去して取り込む）」を選択。置き換えは警告バナー・危険色ボタン・確認ダイアログ付き |
+| UI状態の永続化 | 折りたたみ・完了展開・フィルター・最後に開いたリスト等を再起動後も保持 |
+| iPhone PWA バッジ | 「⚙ 設定」→「🔔 通知（バッジ）」から通知許可→ホーム画面アイコンにバッジ。未追加時はホーム画面追加手順を案内。Tauri 版では項目非表示。v1.5.0 でヘッダーの 🔔 ボタンから設定画面へ移動。iPhone で通知が未設定のときだけ、メニュー（☰）と「設定」ボタンに赤い点を表示（`needsNotifySetup()`。PC ブラウザでは出さない） |
+| 日付ソート改良 | サブも日付順、完了は末尾（完了日の新しい順）、メインはグループ（自身+未完了サブ）の最古期日で判定。サブの日付フォールバックあり |
+| サイドバー追従 | デスクトップでは `position:sticky` でスクロール追従（モバイルは縦積み） |
+| 件数バッジ分割 | サイドバー件数を超過(赤)／今日(橙)に分けて同時表示 |
 
 ### 撤廃された機能
 - ❌ 3タブフィルター（すべて/未完了/完了）→ 完了セクション + フィルターチップに置き換え
@@ -224,11 +265,16 @@ recurrence?: {
 | `getPeriodKey(ymd, type)` | 日/週/月の周期キーを統一フォーマットで返す |
 | `applyRecurringResets()` | 周期境界をまたいだ完了タスクを未完了に戻し `dueDate` を次回へ進める |
 
-### 周期境界リセット
-- `render()` の冒頭で `applyRecurringResets()` を呼ぶ
-- 完了済み（`completed === true`）で `recurrence` がある todo が対象
-- 「最後に完了した周期キー」と「今日の周期キー」が異なれば未完了化＋次回日付へ
-- 結果として、毎日タスクは翌日0時以降に開くと自動復活、毎週タスクは次の週、毎月タスクは次の月
+### リセット（v1.2.0 でイベント駆動に変更）
+- チェック時はいったん完了状態にして「完了」セクションへ移動（達成感を残す）
+- 以下のイベントで `applyRecurringResets()` を呼び、完了済みの繰り返しタスクを **即座に** 未完了化＋`dueDate` を次回発生日へ進める:
+  - `load()`（アプリ起動）
+  - `selectList()`（別リストへ切替）
+  - `visibilitychange`（visible 復帰）
+  - `applyExportPayloadInPlace()`（Git Pull / インポート / マージ反映）
+- `render()` からの呼び出しは削除（チェック直後に即リセットされるのを防ぐため）
+- 周期境界の判定には使わなくなったため、リセット時に `completedAt` はクリアする
+- 旧仕様（周期境界をまたいだ render 時にリセット）では完了セクションに埋もれて次回予定が見えない問題があった
 
 ### 編集 UI の挙動
 - 編集画面に「繰り返し」セレクト（なし／毎日／毎週／毎月）
@@ -259,7 +305,7 @@ recurrence?: {
 | `overdue` | 🔥 超過 | `dueDate < today` |
 | `today` | ⚡ 今日 | `dueDate === today` |
 
-完了済みタスクはどのフィルターにも該当しない（`matchFilter()` で除外）。
+完了済みタスクはどのフィルターにも該当しない（`matchFilter()` で除外）。見出し（`isHeading`）は残数の集計時に呼び出し側で除外する。
 フィルター中は完了セクションも非表示。
 フィルター中の表示結果からも完了済みは除外。
 グループ単位でフィルター: メインまたはサブのいずれかが条件一致ならグループ全体を残す。
@@ -375,7 +421,7 @@ tauri\
     │   └── default.json      ← core:default
     ├── icons\
     └── src\
-        └── main.rs           ← open_folder コマンド + WebView2追加引数設定
+        └── main.rs           ← open_folder / set_taskbar_badge / git_* コマンド + WebView2追加引数設定
 ```
 
 ### 起動・ビルド
@@ -492,9 +538,16 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 | `todo-app-trash` | ゴミ箱内タスク |
 | `todo-app-lists` | リスト配列 |
 | `todo-app-list-trash` | リストゴミ箱 |
-| `todo-app-selected-list` | 選択中リストID |
+| `todo-app-selected-list` | 選択中リストID（`__today__` も可。リスト切替だけでも保存） |
 | `todo-app-dark` | ダークモードフラグ |
 | `todo-app-show-stats` | リストステータス表示フラグ |
+| `todo-app-ui-state` | UI表示状態（折りたたみ・フィルター・今日のToDoの並び/絞り込み/タブ等） |
+| `todo-app-day-plan` | 今日の予定（`dayPlan` 配列。180日より古い分は load 時に削除） |
+| `todo-app-settings` | 設定（`showDayPlan` / `showGitSync`）。端末ごとの設定で Git 同期しない |
+| `todo-app-git-config` | Git 同期設定（enabled / repoPath / fileName / remote / branch / commitTemplate） |
+| `todo-app-git-baseline` | 3-way マージの基準（最後に同期した内容） |
+| `todo-app-git-stash` | 競合時に退避したローカル内容（マージ確定で削除） |
+| `todo-app-git-last-sync` | 最終同期日時（ISO文字列） |
 
 ### 撤廃された localStorage キー
 - `todo-app-auto-sort` — 自動整列廃止に伴い不要（残っても無視される）
@@ -530,11 +583,147 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 
 ---
 
+## Git 同期（v1.1.0〜、Tauri 版のみ）
+
+ローカル Git リポジトリを介して GitHub 上の `tasks.json` にデータを保存し、複数PCで同期する。Firebase 方式は採用せず、こちらに置き換えた。
+
+### 構成
+- **設定モーダル**: リポジトリパス・ファイル名（既定 `tasks.json`）・リモート（既定 `origin`）・ブランチ・コミットメッセージテンプレート。接続テスト、ベースラインリセット（次回 Pull を初回扱いにする）ボタンあり
+- **サイドバー**: Pull / Push ボタン。リモートが進んでいる件数（behind）をバッジ表示
+- **Rust 側**（`main.rs`）: git CLI を子プロセスで起動するコマンド群（依存クレート追加なし）
+  - `git_check_available` / `git_validate_repo` / `git_status` / `git_fetch`
+  - `git_read_file` / `git_read_file_at_ref` / `git_write_file`
+  - `git_pull_ff_only` / `git_commit_and_push` / `git_commit_only` / `git_abort_state`
+  - セキュリティ: パストラバーサル防止、ref/remote/branch の文字種検証、`GIT_TERMINAL_PROMPT=0`。認証は OS の credential manager に任せ、PAT は扱わない
+
+### Pull（`gitPull()`）
+1. 手動 Pull は確認ダイアログを表示（Push フローから内部で呼ぶ Pull では出さない）
+2. ローカルに未同期の変更があるときだけ、直前に全データを `tasks-backup-<日時>.json` としてダウンロード退避（`backupBeforePullIfNeeded()`）。復元は通常のインポートで行う
+3. `git_fetch` → `git_status`。上流ブランチが未設定なら中止
+4. `behind > 0` なら `FETCH_HEAD`、そうでなければ `HEAD` の `tasks.json` を読む。behind=0 でもローカルとリモートの内容が違えば処理を続ける
+5. リモートにファイルが無い場合は**中止**する（無言でローカル上書きしない）。ローカルが空なら「Push で初回作成してください」と案内する
+6. `git pull --ff-only` でローカルブランチを実際に進めてから、`mergeThreeWay(base, ours, theirs)` を実行
+7. 競合がなければ自動マージし、件数をトーストに表示。競合があれば ours を `git-stash` に退避してマージ UI を開く（タスク・リスト単位で ours/theirs/両方残すを選び、一括選択も可）
+
+### Push（`gitPush()`）
+- まず Pull を実行し、続けて `tasks.json` の書き出し→コミット→push まで行う（Pull だけで終わらない）
+- 書き出す JSON からは `exportedAt` を除く（差分が毎回出ないようにするため）
+
+### 注意
+- 別PCで初回 Pull するときは baseline が無い。初回扱いのロジックで localStorage に反映する（`062a5a1` で修正済み）
+- Pull/Push 後は `gitBusy` を必ず解除する（`finally` で解除。`b55d759`）
+
+---
+
+## カレンダー（月ビュー）
+
+- ヘッダー「📅 カレンダー」ボタンからモーダルで開く。6週×7日、土日と国民の祝日（2025〜2030）を色分け
+- 表示対象: 終了日 / 開始日 / 両方（`calendarDateMode`）、リスト絞り込み、完了済みの表示切替
+- 起動時は今日を選択。月送りで選択を解除する。選択中セルを再クリックしても解除しない
+- サイドパネルにメモ・フォルダ/URL アイコン、開始/終了日チップを表示
+- タスクをダブルクリックすると該当リストへジャンプし、移動先を一時ハイライトする。折りたたまれていれば自動で展開
+- 日セルを右クリックするとタスク一覧ポップアップを開き、クリックで移動
+- カレンダー内の操作は専用の部分 render にして、ちらつきを抑えている
+- iPhone PWA では × ボタンが押せない問題を修正済み（`81345f0` / `1dbf1c3`）
+
+---
+
+## 今日のToDo（集約ビュー）
+
+- サイドバー最上部の仮想リスト（`selectedListId === TODAY_LIST_ID`）。描画は `htmlTodayView()`
+- 集約対象: メモリスト以外の全リストで、超過・今日が期限・進行中（開始日 ≤ 今日 ≤ 終了日）の未完了タスク。見出しは除外
+- 並び: `todayViewMode` = 日付順（フラット）/ リスト毎
+- 絞り込みチップ: すべて / 超過＋今日 / 進行中（通常リストのフィルターチップと同じ様式）
+- リスト名バッジは固定幅（タスク文字の開始位置を揃える）。日付は通常の due-badge 配色
+- 行をダブルクリック/ダブルタップすると実タスクへジャンプ
+
+---
+
+## 今日の予定（v1.5.0）
+
+「今日のToDo」画面上部のタブ（今日のToDo ／ 今日の予定）で切り替える。朝に時間割を作り、その順にチェックしていく使い方を想定。
+
+### データ構造（`dayPlan` の各要素）
+```javascript
+{
+  id: string,
+  date: 'YYYY-MM-DD',     // 予定日
+  slot: 'am' | 'pm',      // 午前 / 午後
+  order: number,          // 枠内の並び順
+  todoId?: string,        // タスクに紐づく場合。無ければ「タスク以外の予定」
+  text: string,           // 追加時点の本文（1行目）。紐づくタスクがあれば表示はタスク側の現在の本文
+  estimate?: number,      // 目安時間（時間単位: 0.25〜8）
+  done: boolean,          // 今日の分は完了（タスクの completed とは独立）
+  doneAt?: number,
+  createdAt: number,
+  carriedFrom?: string,   // 持ち越し元の日付
+  carried?: boolean,      // この項目は持ち越し処理済み（持ち越した／持ち越さないを選んだ）
+  memo?: string,          // 項目ごとのメモ（複数行可。持ち越し時はコピーしない）
+}
+```
+タスク本体（`todos`）には何も書き込まないので、既存の完了判定・件数集計・バッジには影響しない。
+
+### 操作
+- **追加**: 入力欄でタスク以外の予定を追加（午前/午後を選択、Enter で連続追加）。「タスクから追加」で今日のToDo（超過/今日/進行中）が候補に出る。検索欄に語を入れると全タスク（未完了・見出し/メモリスト除く）から検索できる
+- 今日のToDo タブの各行の「＋」でも今日の予定に追加できる（12時前は午前、以降は午後。追加済みの行は 📋 表示）
+- **今日に属さないタスク**（期限が先・期限なし）も追加できる: ①候補パネルの検索欄（全リストの未完了タスクが対象。パネルに案内文あり）②通常リストのタスク右クリックメニュー、モバイルは長押しポップアップの「📋 今日の予定に追加」（`ctx-add-to-plan`。見出し・完了済み・メモリストは対象外、追加済みなら「追加済み」表示、設定でオフなら非表示）
+- **チェック**: 今日の分が終わった印。通常 ToDo（丸）と区別するため **四角のチェック枠**。後から読み返せるよう取り消し線は使わず、緑のチェック＋淡い緑の背景＋チェック時刻（✓ 11:39）で表示
+- **バッジの並び**: 本文の後ろに「出どころ（リスト名 or 予定）→ 状態（タスク完了/削除済み）→ 持ち越し元 → 目安時間 → チェック時刻」の順。出どころは同じ見た目（`.plan-src`、グレー）
+- **色の意味**: 緑＝今日の予定の「済」（チェック枠・チェック時刻・行背景）／藍色＝タスク自体の完了（「タスク完了」タグ。通常 ToDo の完了チェック・サイドバーの完了件数と同じ色）
+- **行に常時出すのは** チェック・本文・↑↓（枠内の並び替え）・⋯ だけ。誤操作防止のため、次の操作は **右クリック／⋯ メニュー**（`planMenuId`、位置は `ctxMenuPos` を共用、描画は `htmlCtxMenu()`）に集約:
+  - 目安時間（なし / 15分〜8h のチップから選択。設定済みなら行に「⏱ 1h」と表示）
+  - メモを書く／編集（行の下に表示。メモ部分クリックでも編集。Ctrl+Enter 保存 / Esc 取消）
+  - 午後へ移動／午前へ移動
+  - 元のタスクを開く・タスクも完了にする（タスクに紐づく場合のみ。完了で予定側も済になる）
+  - 予定から外す（赤。タスクは残る）
+- スマホは右クリックが無いので ⋯ ボタンで同じメニューを開く
+- 紐づく行はダブルクリック（モバイルはダブルタップ）で元タスクへジャンプ
+- 日付送り（◀ ▶ / 今日へ）で過去や翌日の予定も見られる。過去分は日報のように残る
+- **持ち越し**: 今日を表示中、前日以前に未済かつ未処理の項目があればバナーを出す。「今日に持ち越す」で今日にコピー（`carriedFrom` 付き。紐づくタスクが完了/削除済み、または今日すでに予定に入っているものはコピーしない）。「持ち越さない」は処理済みにするだけ
+- 各枠の見出しとフッターに目安時間の合計・済件数・残り時間を表示
+- **カレンダーでの履歴**: 予定がある日のセルに「📋 済/件数」を表示（全部済なら緑）。日付を選ぶと詳細パネル上部に「この日の予定」（午前/午後・済・目安・メモ）を表示し、「予定を開く」でその日の予定タブへ移動。今日以降で予定がない日は「予定を作る」を表示（`htmlCalendarDayPlan()` / `calendar-open-plan`）
+
+### 設定（表示/非表示）
+- `appSettings = { showDayPlan, showGitSync }`（既定はどちらも true）。`todo-app-settings` に保存し、Git 同期しない（端末ごとの好み）
+- `showDayPlan=false`: 今日のToDo のタブ・「＋」ボタン・カレンダーの予定表示を隠し、従来の「今日のToDo」だけの画面にする。`dayPlan` のデータと同期は維持
+- `showGitSync=false`: サイドバーの Git 同期エリアを隠し、`refreshGitStatus()` も止める。Git 設定は保持。設定画面の Git 項目は Tauri 版でのみ表示
+
+### 同期・エクスポート
+- `buildExportPayload()` は全リストを対象にしたときだけ `dayPlan` を含める（一部リストのエクスポートには含めない）
+- インポートの「置き換え」では `dayPlan` も消去し、ファイル内の `dayPlan` を復元する（`todoId` は新IDへ付け替え、見つからなければタスク以外の予定として残す）。「追加」では予定は取り込まない
+- Git 同期: `SYNC_CATEGORIES` に `dayPlan` を追加し、3-way マージ・競合 UI（種別「予定」）の対象にした
+- 旧バージョンが書いた tasks.json（`dayPlan` キーなし）は「base から変更なし」とみなしてローカルの予定を保持する（`mergeThreeWay` / `applyExportPayloadInPlace`）。ただし旧バージョンの PC から Push すると `dayPlan` が落ちた内容になるため、**同期する全 PC を v1.5.0 以上に揃えること**
+- 併せて `MEANINGFUL_FIELDS_TODO` に `isHeading` を追加（見出しの切替だけの変更が同期で検知されない問題の修正）
+
+---
+
+## 見出し（isHeading）
+
+- メインの右クリック/長押しメニューで見出しの ON/OFF を切り替える
+- 見出し行はチェックボックスと繰り返しバッジを表示しない。配下サブの進捗「完了数/全数」を表示
+- サイドバー件数・フッター残数・今日のToDo・バッジ数（`listStats` 系）から除外する
+- サブに降格した時点でフラグを自動解除
+
+---
+
+## 配布ビルドの状況
+
+`tauri/src-tauri/target/release/bundle/nsis/` にビルド済みインストーラがある:
+`TList_1.0.0` / `1.2.0` / `1.3.0` / `1.3.1`（setup2）/ `1.4.0`。**v1.4.1 はまだビルドしていない**。
+`tauri/build.bat`（ビルド）と `tauri/debug.bat`（`npm run dev`。未コミット）を用意している。
+
+---
+
 ## 未実装・検討事項
 
-- **データ同期**（Firebase Firestore方式Bを検討したが未実装）
-- **Tauri配布ビルド**: `npm run build` で NSIS インストーラ生成（未実施）
-- **Outlook連携**: `outlook:` プロトコルがWindows未登録のため断念
+- **v1.5.0 の配布ビルド**: `cd tauri && npm run build` で NSIS インストーラを作る（v1.4.1 / v1.5.0 とも未実施）
+- **今日の予定の今後の改善候補**: ドラッグでの並び替え、時刻（開始時刻）指定、実績時間の記録、週単位の振り返り表示
+- **ブラウザ版（GitHub Pages / PWA）での同期**: Git 同期は Tauri 専用。ブラウザ/iPhone 版は JSON エクスポート/インポートで手動移行
+- **`docs/` の追従**: v1.1.0 以降（Git 同期・カレンダー・今日のToDo・見出し等）は `docs/` に未反映。この HANDOFF.md を一次情報源とする
+- **祝日データ**: 2025〜2030 年分をハードコードしている。2031年以降は追加が必要
+- **Outlook連携**: `outlook:` プロトコルが Windows に未登録のため断念
+- ~~データ同期（Firebase Firestore 方式B）~~ → Git/GitHub 同期（v1.1.0）で実現済み
+- ~~Tauri 配布ビルド~~ → v1.4.0 まで実施済み
 
 ---
 
@@ -554,6 +743,45 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 ## 直近コミット履歴
 
 ```
+23af2ce feat: インポートに「置き換え（全消去して取り込む）」を追加し v1.4.1 へ
+f563203 feat: メインタスクの見出し（分類ラベル）化を追加し v1.4.0 へ
+55d40f7 feat: Pull に確認ダイアログと直前自動バックアップを追加
+1e61154 fix: 今日のToDoの絞り込みチップを通常リストと同じ様式に統一
+5662317 feat: 今日のToDoに絞り込み（すべて/超過＋今日/進行中）追加し v1.3.1 へ
+2970931 feat: 今日のToDoに「進行中」を追加し v1.3.0 へ
+79f13e2 feat: 「今日のToDo」集約ビュー追加とサイドバー追従・日付ソート改良
+171d16b feat: サイドバーのリスト件数で超過+今日を同時表示
+c2310b6 feat: 日付ソートを 2 点改良（サブ日付フォールバック / リスト日付ソート）
+da758e8 chore: Tauri 版バージョンを 1.2.0 に揃える
+68ae353 feat: 繰り返しタスクのリセットをイベント駆動に変更 (v1.2.0)
+1dbf1c3 fix: iPhone PWA でカレンダー × ボタンが押せない問題を再修正
+81345f0 fix: iPhone でカレンダーが操作しにくい 2 件を修正
+3ca7c54 fix: カレンダーからのジャンプ時に折りたたみを自動展開
+bd44749 feat: タスク一覧にカレンダー（月ビュー）機能を追加
+4ac9cff fix: リスト切り替えだけでも次回起動時に最後のリストが復元されるよう保存
+1e87da6 feat: UI 表示状態（展開・折りたたみ・フィルター）をアプリ再起動後も保持
+c844842 fix: 長押し後に画面切り替え先で選択ハイライトが残る現象を抑制
+0607ac4 fix: iPhone 長押し時のテキスト選択ハイライトを抑制
+76831b6 fix: 日付入力ラベルも 16px に揃えて iOS Safari の自動ズームを抑える
+0d55c01 fix: iPhone Safari の編集モード自動ズームを防止
+1ccd173 fix: モバイルでバッジ・アイコンを更にコンパクトにして 1 行に収まりやすく
+d86be71 chore: Tauri 版では 🔔 通知設定ボタンを非表示に
+947ce8d fix: モバイル表示でタスク 1 件が縦長になる問題を緩和
+0deaf6f feat: iPhone (PWA) でホーム画面アイコンにバッジ通知を出せるよう改造
+0f90638 fix: Push 押下時に Pull だけして終了せず、続けて Push まで実行する
+4a44c9e fix: 3-way マージ前にローカルブランチを ff-only で前進させる
+2bffd55 fix: Pull で git pull --ff-only を実行してローカルブランチを実際に前進させる
+b55d759 fix: Pull/Push 後にボタンの disabled が解除されない問題を修正
+3fda5e0 fix: リモート tasks.json が取得できないときに無音でローカル上書きしないようにする
+bea0f93 chore: 自動マージ完了トーストにマージ結果の件数を表示
+1583fc0 fix: behind=0 でもローカル内容がリモートと食い違うときは Pull を実行
+191432c feat: 設定モーダルにベースラインリセットボタンを追加
+062a5a1 fix: 別 PC での初回 Pull で localStorage に反映されないバグを修正
+204222f fix: Git 同期で書き出す tasks.json から exportedAt を除外
+5eabf88 fix: 接続テストが入力途中の値を反映しないバグを修正
+c84343a feat: Git/GitHub 連携によるタスクデータ同期機能を追加 (v1.1.0)
+8dcce88 feat: タスクバーバッジ機能を追加（Tauri / PWA / Title） (#3)
+27a8178 refactor: Tauri に一本化（Electron / Photino 撤廃）+ ドキュメント最新化 (#2)
 437bfb5 refactor: 重複 CSS と曜日配列を集約
 b87a2bc feat: 繰り返し機能（毎日/毎週X曜/毎月X日 or 末日）を追加
 c65408c ui: サブグループ内に完了トグル「▷ 完了 (N件)」を追加

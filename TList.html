@@ -537,6 +537,11 @@
       .today-tab { padding:4px 8px; font-size:12px; gap:4px; }
       .today-tab-ic { display:none; }
       .today-tabs { gap:2px; }
+      /* 狭い画面ではヘッダーのはみ出しで並び替えボタンが見えなくなるため、
+         太陽アイコンを省き、並び替えボタンはアイコンのみにする */
+      .list-card-icon.today-card-icon { display:none; }
+      .today-mode-label { display:none; }
+      .today-mode-btn { padding:4px 6px; }
       .plan-add .plan-input { flex-basis:100%; }
       /* iOS Safari はフォーム要素が 16px 未満だとフォーカス時に自動ズームするため揃える */
       .plan-input, .plan-est, .plan-add .plan-est { font-size:16px; }
@@ -1350,7 +1355,7 @@
     .move-popup-title { font-size:14px; font-weight:700; color:var(--t1); }
     .move-popup-task { padding:0 20px 12px; font-size:12px; color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .move-popup-list {
-      list-style:none; padding:0 8px 8px; max-height:50vh; overflow-y:auto;
+      list-style:none; padding:0 8px 8px; max-height:65vh; overflow-y:auto;
     }
     .move-popup-item {
       display:flex; align-items:center; gap:10px; padding:12px;
@@ -1360,10 +1365,18 @@
     .move-popup-item:active { background:rgba(99,102,241,.1); }
     .move-popup-item-name { flex:1; font-size:14px; font-weight:500; color:var(--t1); }
     .move-popup-item-count { font-size:11px; color:var(--t3); }
-    /* 「今日の予定に追加」は移動先リストと区切って先頭に置く */
-    .move-popup-plan { border-bottom:1px solid var(--divider); border-radius:10px 10px 0 0; margin-bottom:4px; }
-    .move-popup-plan.is-added { cursor:default; }
-    .move-popup-plan.is-added .move-popup-item-name { color:var(--t3); }
+    /* 「タスクの操作」メニュー */
+    .move-popup-item.is-added { cursor:default; }
+    .move-popup-item.is-added .move-popup-item-name { color:var(--t3); }
+    .move-popup-item-icon { width:20px; text-align:center; flex-shrink:0; }
+    .move-popup-chev { display:inline-block; margin-left:8px; font-size:10px; color:var(--t3); transition:transform .15s; }
+    .move-popup-chev.open { transform:rotate(90deg); }
+    .move-popup-sub > ul { list-style:none; margin:0 0 4px 30px; padding:2px 0 2px 8px; border-left:2px solid var(--divider); }
+    .move-popup-sub .move-popup-item { padding:9px 10px; }
+    .move-popup-sub .move-popup-item-name { font-size:13px; }
+    .move-popup-danger { margin-top:4px; border-top:1px solid var(--divider); border-radius:0 0 10px 10px; }
+    .move-popup-danger .move-popup-item-name { color:#dc2626; }
+    html.dark .move-popup-danger .move-popup-item-name { color:#f87171; }
     .move-popup-item-icon { color:#6366f1; flex-shrink:0; }
     .move-popup-item-icon svg { width:16px; height:16px; }
 
@@ -1426,10 +1439,33 @@
     .input-bar-mobile .todo-input { flex:1; font-size:16px; padding:10px 12px; }
     .input-bar-mobile .add-btn { flex-shrink:0; padding:10px 16px; font-size:14px; }
 
+    /* モバイル用の切替バー（今日のToDo ⇄ 直前のリスト） */
+    .mobile-quickbar { display:none; gap:6px; margin-bottom:10px; }
+    .mqb-btn {
+      flex:1; min-width:0; display:flex; align-items:center; gap:6px; padding:9px 12px;
+      border-radius:12px; border:1px solid var(--card-border); background:var(--card);
+      color:var(--t2); font-size:14px; font-weight:600; font-family:inherit; cursor:pointer;
+      box-shadow:0 1px 2px rgba(0,0,0,.05);
+    }
+    .mqb-btn .mqb-ic { display:inline-flex; width:16px; height:16px; flex-shrink:0; }
+    .mqb-btn .mqb-ic svg { width:16px; height:16px; }
+    .mqb-btn .mqb-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mqb-today { flex:1.4; }
+    .mqb-today .mqb-ic { color:#f59e0b; }
+    .mqb-today.active { background:#f59e0b; border-color:#f59e0b; color:#fff; }
+    html.dark .mqb-today.active { background:#d97706; border-color:#d97706; }
+    .mqb-today.active .mqb-ic { color:#fff; }
+    .mqb-list.active { background:#6366f1; border-color:#6366f1; color:#fff; }
+    html.dark .mqb-list.active { background:#4f46e5; border-color:#4f46e5; }
+    .mqb-btn .list-count-pill { flex-shrink:0; }
+    .mqb-plan { flex-shrink:0; margin-left:auto; font-size:11px; font-weight:700; padding:1px 7px; border-radius:9999px; background:var(--filter-bg); color:var(--t2); }
+    .mqb-today.active .mqb-plan { background:#fff; color:#b45309; }
+
     /* ══════════════════════════════════════════
        モバイル対応 (max-width: 640px)
     ══════════════════════════════════════════ */
     @media (max-width: 640px), (max-width: 1024px) and (pointer: coarse) {
+      .mobile-quickbar { display:flex; }
       /* 長押しコンテキストメニュー・テキスト選択を抑制
          アプリ全体に適用しないと、メニュー操作で画面が切り替わった後に
          別の要素上でテキスト選択ハイライトが残る現象が起きる */
@@ -1963,7 +1999,9 @@ let sidebarOpen = false; // モバイル用サイドバー開閉状態
 let showListStats = localStorage.getItem('todo-app-show-stats') !== 'false'; // リストステータス表示
 let listExpanded = false; // リスト一覧の展開状態
 const LIST_COLLAPSE_LIMIT = 5; // 折りたたみ時の表示件数
-let movePopupTodoId = null; // リスト移動ポップアップ対象タスクID
+let movePopupTodoId = null; // モバイル長押し「タスクの操作」メニューの対象タスクID
+let lastRegularListId = null; // 最後に開いた通常リスト（モバイル切替バー用。非永続）
+let movePopupSection = null; // 同メニューで展開中の項目: 'parent'（サブに登録）/ 'move'（別のリストへ移動）
 let ctxMenuTodoId = null, ctxMenuPos = null; // 右クリックメニュー対象とポップアップ位置
 let ctxMenuListId = null; // リスト用右クリックメニュー対象
 let ctxSubmenuOpen = false; // 「サブに登録」サブメニューの展開状態（モバイル用、デスクトップはhover）
@@ -3119,6 +3157,34 @@ function htmlSidebar() {
   </div>`;
 }
 
+// ── モバイル用の切替バー（ヘッダー直下に1行）────────────────
+// スマホではサイドバーが ☰ の中にあり「今日のToDo」を開くのに手数がかかるため、
+// 「今日のToDo」と「直前の通常リスト」を1タップで行き来できるようにする。
+function htmlMobileQuickBar() {
+  const isToday = selectedListId === TODAY_LIST_ID;
+  let ov = 0, td = 0;
+  for (const l of lists) {
+    if (l.type === 'memo') continue;
+    const st = listStats(l.id);
+    ov += st.overdue; td += st.dueToday;
+  }
+  const pills = `${ov ? `<span class="list-count-pill urgent-ov" title="超過${ov}件">${ov}</span>` : ''}${td ? `<span class="list-count-pill urgent-td" title="今日${td}件">${td}</span>` : ''}`;
+  const planItems = appSettings.showDayPlan ? dayPlan.filter(p => p.date === today()) : [];
+  const planInfo = planItems.length
+    ? `<span class="mqb-plan">📋 ${planItems.filter(p => p.done).length}/${planItems.length}</span>` : '';
+  const backId = (lastRegularListId && lists.some(l => l.id === lastRegularListId)) ? lastRegularListId : lists[0]?.id;
+  const back = lists.find(l => l.id === (isToday ? backId : selectedListId));
+  const backIcon = back?.type === 'memo' ? I.notepad : I.clip;
+  return `<div class="mobile-quickbar">
+    <button class="mqb-btn mqb-today${isToday ? ' active' : ''}" data-a="select-today" title="全リストの超過・今日のタスク">
+      <span class="mqb-ic">${I.sun}</span><span class="mqb-label">今日のToDo</span>${pills}${planInfo}
+    </button>
+    ${back ? `<button class="mqb-btn mqb-list${isToday ? '' : ' active'}" data-a="select-list" data-id="${back.id}" title="${esc(back.name)}">
+      <span class="mqb-ic">${backIcon}</span><span class="mqb-label">${esc(back.name)}</span>
+    </button>` : ''}
+  </div>`;
+}
+
 // ── Git 同期エリア（サイドバー）──────────────────────────
 function htmlGitSyncArea() {
   if (!isTauriEnv() || !appSettings.showGitSync) return '';
@@ -4217,48 +4283,66 @@ function htmlGitErrorModal() {
   </div>`;
 }
 
+// モバイルの長押しで開く「タスクの操作」メニュー（下から出るシート）。
+// iPhone では右クリックメニューを開けないため、PC の右クリックメニューと同じ操作をここに揃える。
+// 「サブに登録」「別のリストへ移動」は押すと候補がその場に展開される（movePopupSection）。
 function htmlMovePopup() {
   if (!movePopupTodoId) return '';
   const t = todos.find(x => x.id === movePopupTodoId);
   if (!t) return '';
+  const lst = lists.find(l => l.id === t.listId);
+  const isMemoTask = lst?.type === 'memo';
+  const item = (attrs, icon, label, extra = '') =>
+    `<li class="move-popup-item${extra}" ${attrs}><span class="move-popup-item-icon">${icon}</span><span class="move-popup-item-name">${label}</span></li>`;
+  const sub = (key, html) => movePopupSection === key ? `<li class="move-popup-sub"><ul>${html}</ul></li>` : '';
+  const chev = key => `<span class="move-popup-chev${movePopupSection === key ? ' open' : ''}">▶</span>`;
+
+  const rows = [];
+  // 今日の予定に追加（右クリックメニューと同条件）
+  if (appSettings.showDayPlan && !t.isHeading && !t.completed && !isMemoTask) {
+    rows.push(planHasTodo(today(), t.id)
+      ? item('', '📋', '今日の予定に追加済み', ' is-added')
+      : item(`data-a="ctx-add-to-plan" data-id="${t.id}"`, '📋', '今日の予定に追加'));
+  }
+  // 編集（完了済みの通常タスクは編集不可なので出さない）
+  if (!(t.completed && !isMemoTask)) rows.push(item(`data-a="ctx-edit" data-id="${t.id}"`, '✏️', '編集'));
+  // 見出し（メインのみ）
+  if (!t.parentId) {
+    rows.push(item(`data-a="ctx-toggle-heading" data-id="${t.id}"`, t.isHeading ? '☑️' : '🏷️', t.isHeading ? '見出しを解除' : '見出しにする'));
+  }
+  // サブに登録（自身にサブが無い場合のみ。候補は同じリストの未完了メイン）
+  const parents = !hasSubs(t.id)
+    ? todos.filter(p => p.listId === t.listId && !p.parentId && p.id !== t.id && p.id !== t.parentId && !p.completed)
+    : [];
+  if (parents.length) {
+    rows.push(item(`data-a="move-popup-section" data-section="parent"`, '↳', `サブに登録${chev('parent')}`));
+    rows.push(sub('parent', parents.map(p =>
+      item(`data-a="ctx-set-parent" data-id="${t.id}" data-parent-id="${p.id}"`, '', esc(String(p.text).split('\n')[0]).slice(0, 40))).join('')));
+  }
+  // メインに昇格（サブのみ）
+  if (t.parentId) rows.push(item(`data-a="promote-to-main" data-id="${t.id}"`, '⬆️', 'メインに昇格'));
+  // 別のリストへ移動
   const otherLists = lists.filter(l => l.id !== t.listId);
-  const arrowSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>`;
-  const upSvg = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>`;
-  const promoteItem = t.parentId
-    ? `<li class="move-popup-item" data-a="promote-to-main" data-id="${t.id}">
-        <span class="move-popup-item-icon">${upSvg}</span>
-        <span class="move-popup-item-name">⬆️ メインに昇格</span>
-      </li>` : '';
-  // モバイルの長押しメニューからも「今日の予定に追加」できるように（右クリックメニューと同条件）
-  const isMemoTask = lists.find(l => l.id === t.listId)?.type === 'memo';
-  const planItem = (appSettings.showDayPlan && !t.isHeading && !t.completed && !isMemoTask)
-    ? (planHasTodo(today(), t.id)
-        ? `<li class="move-popup-item move-popup-plan is-added">
-            <span class="move-popup-item-icon">📋</span>
-            <span class="move-popup-item-name">今日の予定に追加済み</span>
-          </li>`
-        : `<li class="move-popup-item move-popup-plan" data-a="ctx-add-to-plan" data-id="${t.id}">
-            <span class="move-popup-item-icon">📋</span>
-            <span class="move-popup-item-name">今日の予定に追加</span>
-          </li>`)
-    : '';
-  if (!otherLists.length && !promoteItem && !planItem) return '';
-  const items = planItem + otherLists.map(l => {
-    const s = listStats(l.id);
-    return `<li class="move-popup-item" data-a="move-to-list" data-list-id="${l.id}" data-todo-id="${t.id}">
-      <span class="move-popup-item-icon">${arrowSvg}</span>
-      <span class="move-popup-item-name">${esc(l.name)}</span>
-      <span class="move-popup-item-count">${s.total}件</span>
-    </li>`;
-  }).join('') + promoteItem;
+  if (otherLists.length) {
+    rows.push(item(`data-a="move-popup-section" data-section="move"`, '➡️', `別のリストへ移動${chev('move')}`));
+    rows.push(sub('move', otherLists.map(l =>
+      `<li class="move-popup-item" data-a="move-to-list" data-list-id="${l.id}" data-todo-id="${t.id}">
+        <span class="move-popup-item-icon"></span>
+        <span class="move-popup-item-name">${esc(l.name)}</span>
+        <span class="move-popup-item-count">${listStats(l.id).total}件</span>
+      </li>`).join('')));
+  }
+  // 削除（ゴミ箱へ）
+  rows.push(item(`data-a="ctx-delete" data-id="${t.id}"`, '🗑️', '削除', ' move-popup-danger'));
+
   return `<div class="move-popup-overlay" data-a="close-move-popup">
     <div class="move-popup" data-a="move-popup-body">
       <div class="move-popup-header">
-        <span class="move-popup-title">${planItem ? 'タスクの操作' : 'タスクを移動'}</span>
+        <span class="move-popup-title">タスクの操作</span>
         <button class="modal-close" data-a="close-move-popup">${I.x}</button>
       </div>
       <div class="move-popup-task">${esc(t.text)}</div>
-      <ul class="move-popup-list">${items}</ul>
+      <ul class="move-popup-list">${rows.join('')}</ul>
     </div>
   </div>`;
 }
@@ -4412,6 +4496,7 @@ function html() {
         <button class="dark-toggle" data-a="dark">${dark ? I.sun : I.moon}</button>
       </div>
     </div>
+    ${htmlMobileQuickBar()}
     <div class="layout">
       ${htmlSidebar()}
       ${htmlMain()}
@@ -4436,6 +4521,8 @@ function render() {
   // しまうため、リスト切替・アプリ起動・visibilitychange(visible) のイベント駆動で
   // のみ実行する。
   const sy = window.scrollY;
+  // 最後に開いていた通常リスト（モバイルの切替バーで「今日のToDo」から戻る先）
+  if (selectedListId !== TODAY_LIST_ID && lists.some(l => l.id === selectedListId)) lastRegularListId = selectedListId;
   document.getElementById('app').innerHTML = html();
   window.scrollTo(0, sy);
   if (editId && !skipFocusRestore) {
@@ -4834,7 +4921,7 @@ function showToast(msg) {
 
 // ── Move-to-list popup ───────────────────────────────
 let movePopupOpenedAt = 0;
-function showMovePopup(todoId) { movePopupTodoId = todoId; movePopupOpenedAt = Date.now(); render(); }
+function showMovePopup(todoId) { movePopupTodoId = todoId; movePopupSection = null; movePopupOpenedAt = Date.now(); render(); }
 function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; movePopupTodoId = null; render(); }
 function moveToList(todoId, listId) {
   const t = todos.find(x => x.id === todoId);
@@ -6148,8 +6235,15 @@ document.addEventListener('click', e => {
     case 'toggle-list-expand': toggleListExpand(); break;
     case 'close-move-popup': closeMovePopup(); break;
     case 'close-ctx-menu': ctxMenuTodoId = null; ctxMenuListId = null; planMenuId = null; ctxMenuPos = null; ctxSubmenuOpen = false; render(); break;
-    case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; startEdit(tid); break; }
-    case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; moveToTrash(tid); break; }
+    case 'ctx-edit': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; movePopupTodoId = null; startEdit(tid); break; }
+    case 'ctx-delete': { const tid = id; ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; movePopupTodoId = null; moveToTrash(tid); break; }
+    case 'move-popup-section': {
+      e.stopPropagation();
+      const s = el.dataset.section;
+      movePopupSection = movePopupSection === s ? null : s;
+      render();
+      break;
+    }
     case 'ctx-rename-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; startRenameList(lid); break; }
     case 'ctx-delete-list': { const lid = id; ctxMenuListId = null; ctxMenuPos = null; handleDeleteList(lid); break; }
     case 'ctx-toggle-submenu': { e.stopPropagation(); ctxSubmenuOpen = !ctxSubmenuOpen; render(); break; }
@@ -6174,7 +6268,7 @@ document.addEventListener('click', e => {
         if (collapsedIds.has(pid)) collapsedIds.delete(pid);
         save();
       }
-      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
+      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; movePopupTodoId = null;
       render();
       break;
     }
@@ -6197,7 +6291,7 @@ document.addEventListener('click', e => {
     }
     case 'ctx-toggle-heading': {
       const tid = id;
-      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false;
+      ctxMenuTodoId = null; ctxMenuPos = null; ctxSubmenuOpen = false; movePopupTodoId = null;
       toggleHeading(tid);
       break;
     }
@@ -6636,8 +6730,8 @@ document.addEventListener('drop', e => {
       }, LONG_PRESS);
       return;
     }
-    // タスクのリスト間移動（テキスト部分長押し）
-    if (lists.length > 1) {
+    // タスクの長押し → 「タスクの操作」メニュー（リストが1つでも開く）
+    {
       const todoItem = e.target.closest('.todo-item');
       if (todoItem && !e.target.closest('.cb-wrap') && !e.target.closest('.item-del') && !todoItem.querySelector('.edit-form')) {
         const moveTimer = setTimeout(() => {

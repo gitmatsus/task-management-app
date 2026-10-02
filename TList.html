@@ -332,16 +332,27 @@
     .today-mode-btn svg { width:14px; height:14px; }
     .today-mode-label { line-height:1; }
     /* 今日のToDo / 今日の予定 タブ */
-    .today-tabs { display:inline-flex; gap:2px; padding:2px; border-radius:9px; background:var(--filter-bg); }
+    /* 選択中のタブは塗りつぶし（白文字）＋太字、非選択は枠線だけの淡い表示にして、ひと目で区別できるようにする */
+    .today-tabs { display:inline-flex; gap:4px; padding:3px; border-radius:10px; background:var(--filter-bg); }
     .today-tab {
-      display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border:none; border-radius:7px;
-      background:transparent; color:var(--t2); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;
+      display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border:1px solid transparent; border-radius:8px;
+      background:transparent; color:var(--t3); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;
+      transition:background .15s,color .15s,box-shadow .15s;
     }
-    .today-tab:hover { color:var(--t1); }
-    .today-tab.active { background:var(--card); color:var(--t1); box-shadow:0 1px 2px rgba(0,0,0,.08); }
-    .today-tab-cnt { font-size:11px; font-weight:700; color:var(--t3); }
-    .today-tab.active .today-tab-cnt { color:#d97706; }
-    html.dark .today-tab.active .today-tab-cnt { color:#fbbf24; }
+    .today-tab:hover:not(.active) { color:var(--t1); background:var(--card); border-color:var(--input-border); }
+    .today-tab-ic { font-size:13px; line-height:1; filter:grayscale(1); opacity:.6; }
+    .today-tab.active {
+      background:#f59e0b; color:#fff; font-weight:700; border-color:#f59e0b;
+      box-shadow:0 2px 6px rgba(245,158,11,.35);
+    }
+    .today-tab.active .today-tab-ic { filter:none; opacity:1; }
+    html.dark .today-tab.active { background:#d97706; border-color:#d97706; box-shadow:0 2px 6px rgba(217,119,6,.4); }
+    .today-tab-cnt {
+      font-size:11px; font-weight:700; color:var(--t3);
+      padding:0 6px; border-radius:9999px; background:var(--card); line-height:16px;
+    }
+    .today-tab.active .today-tab-cnt { color:#b45309; background:#fff; }
+    html.dark .today-tab.active .today-tab-cnt { color:#b45309; background:#fef3c7; }
     .plan-add-btn svg { width:12px !important; height:12px !important; }
     .plan-in-mark { font-size:11px; flex-shrink:0; opacity:.8; }
 
@@ -434,10 +445,26 @@
     .plan-pick-row { display:flex; align-items:center; gap:6px; padding:4px 6px; border-radius:6px; font-size:13px; }
     .plan-pick-row:hover { background:var(--item-hover); }
     .plan-carry {
-      display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
-      background:rgba(245,158,11,.1); color:var(--t1); font-size:13px;
+      display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-radius:10px;
+      background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:var(--t1); font-size:13px;
     }
-    .plan-carry > span { flex:1; min-width:180px; }
+    .plan-carry-list { display:flex; flex-direction:column; gap:1px; max-height:240px; overflow-y:auto; }
+    .plan-carry-row { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:6px; cursor:pointer; }
+    .plan-carry-row:hover { background:rgba(245,158,11,.12); }
+    .plan-carry-row .cb { width:18px; height:18px; }
+    /* 持ち越しの選択チェック: 「済」の緑と混同しないよう、パネルと同じオレンジにする */
+    .cb.carry-cb { border-radius:5px; border-color:rgba(245,158,11,.6); }
+    .cb.carry-cb.checked, html.dark .cb.carry-cb.checked { background:#f59e0b; border-color:#f59e0b; }
+    html.dark .cb.carry-cb.checked { background:#d97706; border-color:#d97706; }
+    .plan-carry-date { flex-shrink:0; font-size:11px; color:var(--t3); white-space:nowrap; }
+    .plan-carry-kind {
+      flex-shrink:0; min-width:58px; text-align:center; font-size:10px; font-weight:600; padding:1px 7px; border-radius:9999px; white-space:nowrap;
+      background:var(--filter-bg); color:var(--t2);
+    }
+    .plan-carry-kind.is-cont { background:rgba(16,185,129,.14); color:#047857; }
+    html.dark .plan-carry-kind.is-cont { color:#34d399; }
+    .plan-carry-note { font-size:11px; color:var(--t3); line-height:1.5; }
+    .plan-carry-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
     .plan-section { display:flex; flex-direction:column; gap:2px; }
     .plan-section-hd {
       display:flex; align-items:baseline; gap:10px; padding:4px 2px;
@@ -507,7 +534,9 @@
       .plan-text { flex-basis:100%; white-space:normal; }
       .plan-memo-hint { display:none; }
       .plan-pick-row .today-row-list { display:none; }
-      .today-tab { padding:4px 8px; font-size:12px; }
+      .today-tab { padding:4px 8px; font-size:12px; gap:4px; }
+      .today-tab-ic { display:none; }
+      .today-tabs { gap:2px; }
       .plan-add .plan-input { flex-basis:100%; }
       /* iOS Safari はフォーム要素が 16px 未満だとフォーカス時に自動ズームするため揃える */
       .plan-input, .plan-est, .plan-add .plan-est { font-size:16px; }
@@ -1948,6 +1977,7 @@ let planDate = null;        // 表示中の予定日（null=今日。非永続�
 let planPickerOpen = false; // 「タスクから追加」パネルの開閉
 let planSearch = '';        // 候補パネルの検索語
 let planMenuId = null;      // 右クリック（⋯）メニュー対象の予定ID（位置は ctxMenuPos を共用）
+let planCarryUnchecked = new Set(); // 持ち越し候補のうち「持ち越さない」と外した予定ID（非永続）
 let planMemoEditId = null, planMemoDraft = ''; // メモ編集中の予定IDと下書き
 const PLAN_KEEP_DAYS = 180; // これより古い予定は load 時に削除
 const PLAN_ESTIMATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
@@ -3493,16 +3523,43 @@ function togglePlanSlot(id) {
   p.slot = to;
   p.order = dest.length ? (dest[dest.length - 1].order ?? 0) + 1 : 0;
 }
-// 持ち越し候補: 表示日より前の、未済・未持ち越しの予定
+// 持ち越し候補（未処理＝carried でないもの）:
+//   kind 'undone'   … 未済の予定（表示日より前の全日付。タスクが完了/削除済みのものは除く）
+//   kind 'continue' … 済にしたがタスク自体は未完了（直近の予定日のみ。続きを翌日もやる想定）
+//                     ※ 繰り返しタスクは完了すると自動で未完了に戻るため対象外
 function planCarryCandidates(date) {
-  return dayPlan.filter(p => p.date < date && !p.done && !p.carried);
+  const live = p => { const t = planTodo(p); return !p.todoId || (t && !t.completed); };
+  const undone = dayPlan.filter(p => p.date < date && !p.carried && !p.done && live(p));
+  const prevDates = dayPlan.filter(p => p.date < date).map(p => p.date).sort();
+  const lastDate = prevDates[prevDates.length - 1];
+  const cont = lastDate ? dayPlan.filter(p => {
+    if (p.date !== lastDate || p.carried || !p.done || !p.todoId) return false;
+    const t = planTodo(p);
+    return t && !t.completed && !t.recurrence?.type;
+  }) : [];
+  const byOrder = (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1
+    : (a.slot === b.slot ? 0 : a.slot === 'am' ? -1 : 1) || (a.order ?? 0) - (b.order ?? 0);
+  return [
+    ...undone.sort(byOrder).map(p => ({ p, kind: 'undone' })),
+    ...cont.sort(byOrder).map(p => ({ p, kind: 'continue' })),
+  ];
 }
-function carryOverPlan(date, doCopy) {
-  const cands = planCarryCandidates(date).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.order ?? 0) - (b.order ?? 0));
+// 処理しても候補から消えない「タスク完了/削除済みの未済」も、持ち越しの判断時に処理済みにしておく
+function markStalePlanCarried(date) {
+  dayPlan.forEach(p => {
+    if (p.date >= date || p.carried || p.done || !p.todoId) return;
+    const t = planTodo(p);
+    if (!t || t.completed) p.carried = true;
+  });
+}
+// selectedIds: 持ち越す予定IDの Set。候補のうち選ばれなかったものは「持ち越さない」扱い（処理済み）にする
+function carryOverPlan(date, selectedIds) {
+  const cands = planCarryCandidates(date);
+  markStalePlanCarried(date);
   let n = 0;
-  cands.forEach(p => {
+  cands.forEach(({ p }) => {
     p.carried = true;
-    if (!doCopy) return;
+    if (!selectedIds.has(p.id)) return;
     const t = planTodo(p);
     if (p.todoId && (!t || t.completed)) return;          // タスクが完了/削除済みなら持ち越さない
     if (p.todoId && planHasTodo(date, p.todoId)) return;  // 既に予定に入っている
@@ -3552,10 +3609,10 @@ function htmlTodayTabs(todoCount) {
   const d = today();
   const planItems = dayPlan.filter(p => p.date === d);
   const planDone = planItems.filter(p => p.done).length;
-  const tab = (key, label, cnt) => `<button class="today-tab${todayTab === key ? ' active' : ''}" data-a="today-tab" data-tab="${key}">${label}<span class="today-tab-cnt">${cnt}</span></button>`;
-  return `<div class="today-tabs">
-    ${tab('todo', '今日のToDo', todoCount)}
-    ${tab('plan', '今日の予定', planItems.length ? `${planDone}/${planItems.length}` : '0')}
+  const tab = (key, ic, label, cnt) => `<button class="today-tab${todayTab === key ? ' active' : ''}" data-a="today-tab" data-tab="${key}" aria-pressed="${todayTab === key}"><span class="today-tab-ic">${ic}</span>${label}<span class="today-tab-cnt">${cnt}</span></button>`;
+  return `<div class="today-tabs" role="tablist">
+    ${tab('todo', '☀️', '今日のToDo', todoCount)}
+    ${tab('plan', '📋', '今日の予定', planItems.length ? `${planDone}/${planItems.length}` : '0')}
   </div>`;
 }
 
@@ -3624,11 +3681,30 @@ function htmlPlanView() {
   };
 
   // 持ち越しバナー（今日を表示しているときだけ）
+  // 候補を一覧で出し、チェックで持ち越す項目を選ぶ（既定はすべて選択）
   const carry = isToday ? planCarryCandidates(d) : [];
+  const md = ymdStr => `${Number(ymdStr.slice(5, 7))}/${Number(ymdStr.slice(8))}`;
+  const selCount = carry.filter(c => !planCarryUnchecked.has(c.p.id)).length;
   const carryBar = carry.length ? `<div class="plan-carry">
-      <span>前回までの未済の予定が <strong>${carry.length}</strong> 件あります</span>
-      <button class="plan-btn plan-btn-primary" data-a="plan-carry" data-copy="1">今日に持ち越す</button>
-      <button class="plan-btn" data-a="plan-carry" data-copy="0">持ち越さない</button>
+      <div class="plan-carry-hd">↪ 前回までの予定から、今日に持ち越せる項目が <strong>${carry.length}</strong> 件あります</div>
+      <div class="plan-carry-list">
+        ${carry.map(({ p, kind }) => {
+          const on = !planCarryUnchecked.has(p.id);
+          return `<div class="plan-carry-row" data-a="plan-carry-pick" data-id="${p.id}">
+            <span class="cb carry-cb${on ? ' checked' : ''}" title="${on ? '持ち越す' : '持ち越さない'}">${on ? I.check : ''}</span>
+            <span class="plan-carry-date">${md(p.date)} ${p.slot === 'am' ? '午前' : '午後'}</span>
+            ${kind === 'continue'
+              ? '<span class="plan-carry-kind is-cont" title="前回チェック済みだが、タスク自体はまだ完了していない">済・継続中</span>'
+              : '<span class="plan-carry-kind" title="前回チェックが付かなかった予定">未済</span>'}
+            <span class="plan-text">${esc(planText(p))}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="plan-carry-note">「済・継続中」は前回チェックを付けたが、タスク自体はまだ完了していない項目です。外したい項目はチェックを外してください。</div>
+      <div class="plan-carry-actions">
+        <button class="plan-btn plan-btn-primary" data-a="plan-carry" data-copy="1"${selCount ? '' : ' disabled'}>選んだ ${selCount} 件を持ち越す</button>
+        <button class="plan-btn" data-a="plan-carry" data-copy="0">持ち越さない</button>
+      </div>
     </div>` : '';
 
   // タスクから追加（候補: 今日のToDo。検索語があれば全タスクから検索）
@@ -5865,9 +5941,19 @@ document.addEventListener('click', e => {
     }
     case 'plan-carry': {
       const copy = el.dataset.copy === '1';
-      const n = carryOverPlan(planDateYmd(), copy);
+      const d = planDateYmd();
+      const sel = copy
+        ? new Set(planCarryCandidates(d).map(c => c.p.id).filter(pid => !planCarryUnchecked.has(pid)))
+        : new Set();
+      const n = carryOverPlan(d, sel);
+      planCarryUnchecked.clear();
       save(); render();
       showToast(copy ? `↪ ${n} 件を今日の予定に持ち越しました` : '持ち越しをスキップしました');
+      break;
+    }
+    case 'plan-carry-pick': {
+      if (planCarryUnchecked.has(id)) planCarryUnchecked.delete(id); else planCarryUnchecked.add(id);
+      render();
       break;
     }
     case 'del-list':     e.stopPropagation(); handleDeleteList(id); break;

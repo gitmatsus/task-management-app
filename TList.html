@@ -1096,6 +1096,9 @@
       border-radius:8px; padding:6px 8px; margin-bottom:8px;
     }
     html.dark .import-mode-warn { color:#fca5a5; background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.35); }
+    /* iPhone のエクスポート案内は警告ではないので青系の案内表示にする */
+    .import-mode-warn.export-ios-hint { color:#1d4ed8; background:rgba(59,130,246,.08); border-color:rgba(59,130,246,.3); font-size:12px; }
+    html.dark .import-mode-warn.export-ios-hint { color:#93c5fd; background:rgba(59,130,246,.12); border-color:rgba(59,130,246,.35); }
 
     /* ── Sidebar IO buttons ── */
     .io-area { padding:8px; border-top:1px solid var(--divider); display:flex; gap:4px; }
@@ -3889,7 +3892,10 @@ function htmlModal() {
   const checkSvg = I.check;
 
   // インポート方式の選択（追加 / 置き換え）。エクスポートでは出さない。
-  const importModeBar = isExport ? '' : `
+  const iosExportHint = (isExport && isIOSDevice())
+    ? '<div class="import-mode-warn export-ios-hint">📱 iPhone では「エクスポート」を押すと共有メニューが開きます。<b>「"ファイル"に保存」</b>を選んで保存先を決めてください。</div>'
+    : '';
+  const importModeBar = isExport ? iosExportHint : `
     <div class="import-mode-bar">
       <button class="task-filter-chip${importMode === 'add' ? ' active' : ''}" data-a="import-mode" data-mode="add">追加（既存に追記）</button>
       <button class="task-filter-chip${importMode === 'replace' ? ' active' : ''}" data-a="import-mode" data-mode="replace">🗑️ 置き換え（全消去）</button>
@@ -4948,37 +4954,54 @@ function applyExportPayloadInPlace(payload) {
   save();
 }
 
+// iPhone / iPad か（ホーム画面アプリでは UA に "Safari" が無いことがあるので端末だけで判定）
+function isIOSDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+// JSON をファイルとして保存する。
+// iPhone はダウンロードすると JSON が画面に表示されるだけで保存されないため、共有メニュー
+// （「"ファイル"に保存」が選べる）を開く。使えない環境では従来どおりダウンロードする。
+// ※ navigator.share はクリック直後に呼ぶ必要があるので、この関数の前で await しないこと。
+function saveJsonFile(fileName, text) {
+  const blob = new Blob([text], { type: 'application/json' });
+  if (isIOSDevice() && navigator.canShare && typeof File === 'function') {
+    const file = new File([blob], fileName, { type: 'application/json' });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: fileName })
+        .then(() => showToast('💾 共有メニューから保存しました'))
+        .catch(e => { if (e && e.name !== 'AbortError') downloadBlob(blob, fileName); });
+      return;
+    }
+  }
+  downloadBlob(blob, fileName);
+}
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function executeExport() {
   const selectedIds = new Set(modalLists.filter(l => l.checked).map(l => l.id));
   if (selectedIds.size === 0) return;
   const payload = buildExportPayload(selectedIds);
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `tasks-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // ファイル名は端末のローカル日付（toISOString は UTC のため朝 9 時前だと前日になる）
+  saveJsonFile(`tasks-${today()}.json`, JSON.stringify(payload, null, 2));
   closeModal();
 }
 // 既存のエクスポートと同じ JSON を、指定プレフィックス＋日時のファイル名でダウンロードする。
 // Pull 前バックアップ等で流用（復元は通常のインポートで可能）。
 function downloadBackup(prefix) {
   const payload = buildExportPayload(null, { includeTimestamp: true });
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
   const n = new Date();
   const p2 = v => String(v).padStart(2, '0');
   const ts = `${n.getFullYear()}${p2(n.getMonth()+1)}${p2(n.getDate())}-${p2(n.getHours())}${p2(n.getMinutes())}${p2(n.getSeconds())}`;
-  a.download = `${prefix}-${ts}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `${prefix}-${ts}.json`);
 }
 
 // Pull 直前のバックアップ：ローカルに未同期の変更がある時だけ、現在のデータを

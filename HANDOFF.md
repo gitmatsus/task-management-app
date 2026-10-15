@@ -3,7 +3,7 @@
 ## プロジェクト概要
 
 - **ファイル**: `C:\AI\タスク管理アプリ\TList.html`（単一ファイル、約5900行）
-- **現行バージョン**: **v1.5.0**（`APP_VERSION` と `tauri/package.json` / `Cargo.toml` / `tauri.conf.json` の4箇所を揃えて更新する）
+- **現行バージョン**: **v1.6.0**（`APP_VERSION` と `tauri/package.json` / `Cargo.toml` / `tauri.conf.json` の4箇所を揃えて更新する）
 - **最終更新**: 2026-09-28（`23af2ce` 時点）
 - **リポジトリ**: `https://github.com/gitmatsus/task-management-app.git`（ブランチ: `master`）
 - **公開URL**: https://gitmatsus.github.io/task-management-app/ （GitHub Pages、master 自動デプロイ）
@@ -423,7 +423,7 @@ tauri\
     │   └── default.json      ← core:default
     ├── icons\
     └── src\
-        └── main.rs           ← open_folder / set_taskbar_badge / git_* コマンド + WebView2追加引数設定
+        └── main.rs           ← open_folder / alert_window / set_plan_alarms（＋通知の見張りスレッド）/ set_taskbar_badge / git_* コマンド + WebView2追加引数設定
 ```
 
 ### 起動・ビルド
@@ -545,7 +545,9 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 | `todo-app-show-stats` | リストステータス表示フラグ |
 | `todo-app-ui-state` | UI表示状態（折りたたみ・フィルター・今日のToDoの並び/絞り込み/タブ等） |
 | `todo-app-day-plan` | 今日の予定（`dayPlan` 配列。180日より古い分は load 時に削除） |
-| `todo-app-settings` | 設定（`showDayPlan` / `showGitSync`）。端末ごとの設定で Git 同期しない |
+| `todo-app-settings` | 設定（`showDayPlan` / `showGitSync` / `planNotify`）。端末ごとの設定で Git 同期しない |
+| `todo-app-plan-notified` | 時刻通知の通知済みキー一覧（端末ごと。Git 同期しない） |
+| `todo-app-plan-snooze` | 時刻通知の再通知予約（予定ID → 時刻 ms。端末ごと。Git 同期しない） |
 | `todo-app-git-config` | Git 同期設定（enabled / repoPath / fileName / remote / branch / commitTemplate） |
 | `todo-app-git-baseline` | 3-way マージの基準（最後に同期した内容） |
 | `todo-app-git-stash` | 競合時に退避したローカル内容（マージ確定で削除） |
@@ -687,6 +689,20 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 - 各枠の見出しとフッターに目安時間の合計・済件数・残り時間を表示
 - **カレンダーでの履歴**: 予定がある日のセルに「📋 済/件数」を表示（全部済なら緑）。日付を選ぶと詳細パネル上部に「この日の予定」（午前/午後・済・目安・メモ）を表示し、「予定を開く」でその日の予定タブへ移動。今日以降で予定がない日は「予定を作る」を表示（`htmlCalendarDayPlan()` / `calendar-open-plan`）
 
+### 時刻通知（v1.6.0・Tauri 版のみ・既定オフ）
+- 設定画面「⏰ 予定の時刻通知」（`appSettings.planNotify`）をオンにすると有効。Tauri 版以外・「今日の予定」オフのときは UI も動作も一切出さない（`planNotifyEnabled()`）
+- **登録**: 予定の右クリック（⋯）メニュー「⏰ 通知時刻」に時刻を入れて「設定」。その下のチップで **何分前に知らせるか（ちょうど/5/10/15分前、既定ちょうど）を予定ごとに選ぶ**。`p.notifyAt`（'HH:MM'）・`p.notifyLead`（分。0 は保存しない）に保存し Git 同期される。行に「⏰ 13:00」（何分前なら「・10分前」）チップ（橙=これから／灰=通知済み・予定済／赤=通知せず時刻を過ぎた）。持ち越し時はコピーしない
+  - 当初は全体設定（5分前固定）だったが、分かりにくいため v1.6.0 内で予定ごとの選択に変更した（`appSettings.planNotifyLead` は廃止。残っていても無視）
+- **通知一覧**: 今日の予定タブの日付行右の「⏰ 通知一覧 (これからの件数)」。今日以降の通知を日付・時刻順に表示し、時刻の変更（time 入力）と解除ができる
+- **最小化中の見張り（Rust 側）**: WebView2 は最小化中に JS のタイマーがほぼ止まり、JS だけでは通知できない。そのため JS は `render()` のたびに `syncPlanAlarms()` で「これから通知する時刻（Unix ms）の一覧」を Rust の `set_plan_alarms` に渡す（前回と同じ内容なら送らない。スヌーズ分も含む）。Rust の見張りスレッド（`start_plan_alarm_watcher`、5 秒間隔）が時刻になったものを取り除き、ウインドウを前面化（`bring_window_to_front`）して `plan-alarm` イベントを送る。JS は `window.__TAURI__.event.listen('plan-alarm')` で受けて `checkPlanNotifications()` を実行し、ポップアップと音を出す
+- **動作**: `checkPlanNotifications()` を 20 秒ごと＋起動時＋復帰時（visibilitychange）＋ `plan-alarm` 受信時に実行。今日・未済・通知時刻あり・未通知で、「時刻 − 何分前」を過ぎたものを通知する
+  - アプリ内ポップアップ `htmlPlanAlert()`（z-index 400、時刻順）。ボタン: 予定を開く／5分後にもう一度／OK
+  - **再通知（5分後にもう一度）**: `planSnooze`（予定ID → 再通知時刻 ms）を `todo-app-plan-snooze` に保存し、再起動しても残る。待っている間は状態「再通知待ち」として、行のチップに「・再通知 13:05」、通知一覧に「再通知 13:05」（橙）と表示し、件数にも数える。通知一覧の行と予定の右クリック（⋯）メニューの「再通知をやめる」で予約だけ取り消せる（通知時刻の登録は残る）。予定が済・削除・今日でなくなった予約は自動で捨てる
+  - 検知が 2 分以上遅れ、かつ予定の時刻そのものも過ぎていたもの（アプリを閉じていた間など）は「時刻を過ぎています」として表示し、前面化・音は行わない（予定の時刻がまだ先なら通常の通知にする）
+  - 通常の通知では Rust の `alert_window` コマンドでウインドウを最小化解除・前面化（一時的に最前面固定 → 1.5 秒後に解除）・タスクバー点滅（`request_user_attention(Critical)`）し、短い通知音を鳴らす
+- **通知済みの記録**は端末ごと（`todo-app-plan-notified`、キー = `予定ID@日付 時刻`。今日より前は自動で捨てる）。時刻を変えると再通知、「何分前」の変更では再通知しない。設定をオンにした瞬間は、すでに過ぎた今日の分を通知済み扱いにしてまとめて出ないようにしている
+- 注意: `alert_window` / `set_plan_alarms` は Rust 側の機能なので、**v1.6.0 以降のインストーラでないと前面化・点滅・最小化中の通知は効かない**（旧ビルドでは invoke 失敗を無視し、表示中のポップアップのみ）
+
 ### 設定（表示/非表示）
 - `appSettings = { showDayPlan, showGitSync }`（既定はどちらも true）。`todo-app-settings` に保存し、Git 同期しない（端末ごとの好み）
 - `showDayPlan=false`: 今日のToDo のタブ・「＋」ボタン・カレンダーの予定表示を隠し、従来の「今日のToDo」だけの画面にする。`dayPlan` のデータと同期は維持
@@ -720,7 +736,7 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 
 ## 未実装・検討事項
 
-- **v1.5.0 の配布ビルド**: `cd tauri && npm run build` で NSIS インストーラを作る（v1.4.1 / v1.5.0 とも未実施）
+- **配布ビルド**: `cd tauri && npm run build` で NSIS インストーラを作る（`tauri/src-tauri/target/release/bundle/nsis/`）。v1.5.0・v1.6.0 はビルド済み。v1.6.0 は Rust 側に `alert_window` を追加しているので、時刻通知の前面化・点滅を使うには v1.6.0 以降のインストーラが必須。画面（TList.html）だけの変更でも Tauri 版に反映するにはビルドし直しが必要（dist/index.html が exe に埋め込まれるため）
 - **今日の予定の今後の改善候補**: ドラッグでの並び替え、時刻（開始時刻）指定、実績時間の記録、週単位の振り返り表示
 - **ブラウザ版（GitHub Pages / PWA）での同期**: Git 同期は Tauri 専用。ブラウザ/iPhone 版は JSON エクスポート/インポートで手動移行
 - **`docs/` の追従**: v1.1.0 以降（Git 同期・カレンダー・今日のToDo・見出し等）は `docs/` に未反映。この HANDOFF.md を一次情報源とする

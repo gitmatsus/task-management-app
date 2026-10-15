@@ -515,6 +515,65 @@
     .plan-menu-est:hover { color:#6366f1; border-color:#a5b4fc; }
     .plan-menu-est.active { background:#6366f1; border-color:#6366f1; color:#fff; }
     .ctx-menu-sep { height:1px; margin:4px 6px; background:var(--divider); }
+    /* ── 時刻通知 ── */
+    .plan-menu-sub { font-weight:400; color:var(--t3); margin-left:2px; }
+    .plan-menu-notify { display:flex; align-items:center; gap:4px; padding:4px 8px 6px; }
+    .plan-notify-inp { flex:1; height:28px; padding:0 6px; font-size:13px; }
+    .plan-notify-chip { flex-shrink:0; font-size:11px; font-weight:600; white-space:nowrap; padding:1px 7px; border-radius:9999px; }
+    .plan-notify-chip.is-upcoming, .plan-notify-chip.is-snoozed { background:rgba(245,158,11,.15); color:#b45309; }
+    html.dark .plan-notify-chip.is-upcoming, html.dark .plan-notify-chip.is-snoozed { color:#fbbf24; }
+    .plan-notify-chip.is-notified, .plan-notify-chip.is-done { background:var(--filter-bg); color:var(--t3); }
+    .plan-notify-lead { font-weight:400; opacity:.85; }
+    .plan-notify-leadtag { flex-shrink:0; font-size:10px; color:var(--t3); white-space:nowrap; }
+    .plan-menu-leads { padding-top:0; }
+    .plan-notify-chip.is-missed { background:rgba(239,68,68,.12); color:#dc2626; }
+    html.dark .plan-notify-chip.is-missed { color:#f87171; }
+    .plan-notify-list-btn { margin-left:auto; }
+    .plan-notify-panel {
+      display:flex; flex-direction:column; gap:4px; padding:10px 12px; border-radius:10px;
+      border:1px solid var(--input-border); background:var(--input-bg);
+    }
+    .plan-notify-hd { font-size:12px; font-weight:700; color:var(--t2); }
+    .plan-notify-date { font-size:11px; font-weight:700; color:var(--t3); margin-top:4px; }
+    .plan-notify-row { display:flex; align-items:center; gap:8px; font-size:13px; }
+    .plan-notify-time { flex:0 0 auto; width:96px; height:28px; padding:0 6px; font-size:13px; }
+    .plan-notify-st { flex-shrink:0; font-size:10px; font-weight:600; padding:1px 7px; border-radius:9999px; background:var(--filter-bg); color:var(--t3); }
+    .plan-notify-st.is-upcoming, .plan-notify-st.is-snoozed { background:rgba(245,158,11,.15); color:#b45309; }
+    html.dark .plan-notify-st.is-upcoming, html.dark .plan-notify-st.is-snoozed { color:#fbbf24; }
+    .plan-notify-st.is-snoozed { font-weight:700; }
+    .plan-notify-row .plan-btn { flex-shrink:0; height:24px; padding:0 8px; }
+    .plan-menu-snooze { padding-top:0; }
+    .plan-menu-snooze-label { flex:1; font-size:12px; font-weight:600; color:#b45309; }
+    html.dark .plan-menu-snooze-label { color:#fbbf24; }
+    .plan-notify-st.is-missed { background:rgba(239,68,68,.12); color:#dc2626; }
+    .plan-notify-row.is-notified .plan-text, .plan-notify-row.is-done .plan-text { color:var(--t3); }
+    .plan-notify-note { font-size:11px; color:var(--t3); line-height:1.5; margin-top:4px; }
+    /* 通知ポップアップ（他のモーダルより手前） */
+    .plan-alert-overlay {
+      position:fixed; inset:0; z-index:400; background:rgba(0,0,0,.45);
+      display:flex; align-items:center; justify-content:center; padding:16px; animation:fadeIn .15s ease;
+    }
+    .plan-alert {
+      width:min(440px, 100%); background:var(--card); border-radius:16px; border:2px solid #f59e0b;
+      box-shadow:0 20px 50px rgba(0,0,0,.35); padding:18px 18px 14px; display:flex; flex-direction:column; gap:12px;
+      animation:planAlertPop .25s ease;
+    }
+    @keyframes planAlertPop { from { transform:scale(.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+    .plan-alert-hd { font-size:16px; font-weight:800; color:var(--t1); }
+    .plan-alert-list { display:flex; flex-direction:column; gap:6px; max-height:50vh; overflow-y:auto; }
+    .plan-alert-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(245,158,11,.12); }
+    .plan-alert-row.missed { background:var(--filter-bg); }
+    .plan-alert-time { flex-shrink:0; font-size:18px; font-weight:800; color:#d97706; font-variant-numeric:tabular-nums; }
+    html.dark .plan-alert-time { color:#fbbf24; }
+    .plan-alert-text { flex:1; min-width:0; font-size:15px; font-weight:600; color:var(--t1); overflow-wrap:anywhere; }
+    .plan-alert-tag { flex-shrink:0; font-size:10px; font-weight:600; color:#dc2626; }
+    .plan-alert-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+    .plan-alert-actions .plan-btn { height:32px; padding:0 12px; font-size:13px; }
+    .plan-alert-ok { min-width:80px; }
+    /* 設定画面の補助行 */
+    .settings-sub { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:-4px 0 2px 14px; }
+    .settings-sub-label { font-size:12px; color:var(--t2); }
+    .settings-chips { display:flex; flex-wrap:wrap; gap:4px; }
     .ctx-menu-item.ctx-menu-muted { color:var(--t3); cursor:default; }
     .ctx-menu-item.ctx-menu-muted:hover { background:none; }
     .plan-tag { flex-shrink:0; font-size:10px; padding:1px 6px; border-radius:9999px; background:var(--filter-bg); color:var(--t2); white-space:nowrap; }
@@ -1978,7 +2037,7 @@
 <div id="app" class="app"></div>
 <script>
 // ── App Version ────────────────────────────────────────
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 // ── State ──────────────────────────────────────────────
 // 「今日のToDo」仮想リストの識別子（実データの lists には存在しない特別 ID）
@@ -2019,12 +2078,19 @@ let planPickerOpen = false; // 「タスクから追加」パネルの開閉
 let planSearch = '';        // 候補パネルの検索語
 let planMenuId = null;      // 右クリック（⋯）メニュー対象の予定ID（位置は ctxMenuPos を共用）
 let planCarryUnchecked = new Set(); // 持ち越し候補のうち「持ち越さない」と外した予定ID（非永続）
+let planAlerts = [];         // 表示中の時刻通知 [{ id, missed }]
+let planSnooze = {};         // 「5分後にもう一度」: 予定ID → 再通知する時刻(ms)。端末ごとに保存（todo-app-plan-snooze）
+let planNotifyListOpen = false; // 通知一覧パネルの開閉
+let planNotifyTimeDraft = null, planNotifyLeadDraft = null; // メニューで入力中の通知時刻・何分前（未設定の予定用）
 let planMemoEditId = null, planMemoDraft = ''; // メモ編集中の予定IDと下書き
 const PLAN_KEEP_DAYS = 180; // これより古い予定は load 時に削除
 const PLAN_ESTIMATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
 // ── アプリ設定（機能の表示/非表示。端末ごとの好みなので Git 同期しない） ──
-const DEFAULT_APP_SETTINGS = { showDayPlan: true, showGitSync: true };
+// planNotify: 今日の予定の時刻通知（Tauri 版のみ。既定オフ）。何分前に知らせるかは予定ごと（p.notifyLead）
+const DEFAULT_APP_SETTINGS = { showDayPlan: true, showGitSync: true, planNotify: false };
+const PLAN_NOTIFY_LEADS = [0, 5, 10, 15];
+const planLeadLabel = m => m ? `${m}分前` : 'ちょうど';
 let appSettings = { ...DEFAULT_APP_SETTINGS };
 function loadAppSettings() {
   try { appSettings = { ...DEFAULT_APP_SETTINGS, ...JSON.parse(localStorage.getItem('todo-app-settings') || '{}') }; }
@@ -2144,6 +2210,7 @@ function load() {
   try { listTrash = JSON.parse(localStorage.getItem('todo-app-list-trash') || '[]'); } catch { listTrash = []; }
   try { dayPlan = JSON.parse(localStorage.getItem('todo-app-day-plan') || '[]'); } catch { dayPlan = []; }
   loadAppSettings();
+  loadPlanSnooze();
   repairAfterLoad();
   prunePlan();
   // 全データ読み込み後に選択リストを復元
@@ -3642,9 +3709,172 @@ function carryOverPlan(date, selectedIds) {
   return n;
 }
 
+// ── 今日の予定の時刻通知（Tauri 版のみ） ─────────────────────────
+// p.notifyAt（'HH:MM'）の p.notifyLead 分前（既定 0＝時刻ちょうど）になったら、アプリ内ポップアップを出し、
+// Rust の alert_window でウインドウを前面に出してタスクバーを点滅させる。
+// 通知済みかどうかは端末ごと（localStorage）に持つ。キーに日付・時刻・何分前を含めるので、
+// 時刻を変えれば再び通知される（「何分前」の変更では再通知しない）。
+const PLAN_NOTIFY_KEY = 'todo-app-plan-notified';
+const PLAN_NOTIFY_MISSED_MIN = 2; // これより遅れて検知した通知は「時刻を過ぎた予定」として出す
+function planNotifyEnabled() {
+  return isTauriEnv() && appSettings.showDayPlan && appSettings.planNotify;
+}
+function planNotifyFireAt(p) {
+  const [y, m, d] = p.date.split('-').map(Number);
+  const [hh, mm] = p.notifyAt.split(':').map(Number);
+  return new Date(y, m - 1, d, hh, mm).getTime() - (p.notifyLead || 0) * 60000;
+}
+// 「何分前」を変えただけで通知済みが再通知されないよう、キーには日付と時刻だけを含める
+function planNotifyKey(p) { return `${p.id}@${p.date} ${p.notifyAt}`; }
+function loadPlanNotified() {
+  try { return new Set(JSON.parse(localStorage.getItem(PLAN_NOTIFY_KEY) || '[]')); } catch { return new Set(); }
+}
+function savePlanNotified(set) {
+  // 今日より前の分は不要なので捨てる（キーに日付を含む）
+  const t = today();
+  const keep = [...set].filter(k => (k.split('@')[1] || '').slice(0, 10) >= t);
+  try { localStorage.setItem(PLAN_NOTIFY_KEY, JSON.stringify(keep)); } catch { /* ignore */ }
+}
+// 再通知（5分後にもう一度）の予約。再起動しても残るよう端末ごとに保存する
+const PLAN_SNOOZE_KEY = 'todo-app-plan-snooze';
+function loadPlanSnooze() {
+  try { planSnooze = JSON.parse(localStorage.getItem(PLAN_SNOOZE_KEY) || '{}') || {}; } catch { planSnooze = {}; }
+}
+function savePlanSnooze() {
+  try { localStorage.setItem(PLAN_SNOOZE_KEY, JSON.stringify(planSnooze)); } catch { /* ignore */ }
+}
+const hmOf = ms => { const d = new Date(ms); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+// 通知の状態: 'done'=予定が済 / 'snoozed'=再通知待ち / 'notified'=通知済み / 'upcoming'=これから / 'missed'=通知せず時刻を過ぎた
+function planNotifyStatus(p, notified, now) {
+  if (p.done) return 'done';
+  if (planSnooze[p.id]) return 'snoozed';
+  if (notified.has(planNotifyKey(p))) return 'notified';
+  // 予定の時刻そのもの（「何分前」を戻した時刻）を過ぎるまでは「これから」
+  const eventAt = planNotifyFireAt(p) + (p.notifyLead || 0) * 60000;
+  return eventAt > now ? 'upcoming' : 'missed';
+}
+function checkPlanNotifications() {
+  if (!planNotifyEnabled()) return;
+  const now = Date.now();
+  const t = today();
+  const notified = loadPlanNotified();
+  const fired = [];
+  // 予定が消えた・済になった・今日でなくなった再通知の予約は捨てる
+  let snoozeChanged = false;
+  Object.keys(planSnooze).forEach(sid => {
+    const sp = dayPlan.find(x => x.id === sid);
+    if (!sp || sp.done || sp.date !== t || !sp.notifyAt) { delete planSnooze[sid]; snoozeChanged = true; }
+  });
+  dayPlan.forEach(p => {
+    if (p.date !== t || !p.notifyAt || p.done) return;
+    if (planAlerts.some(a => a.id === p.id)) return;
+    // 「5分後にもう一度」
+    if (planSnooze[p.id]) {
+      if (planSnooze[p.id] <= now) { delete planSnooze[p.id]; snoozeChanged = true; fired.push({ id: p.id, missed: false }); }
+      return;
+    }
+    const key = planNotifyKey(p);
+    if (notified.has(key)) return;
+    const at = planNotifyFireAt(p);
+    if (at > now) return;
+    notified.add(key);
+    // 検知が遅れても、予定の時刻そのものがまだ来ていなければ通常の通知（前面化・音あり）にする
+    const eventAt = at + (p.notifyLead || 0) * 60000;
+    fired.push({ id: p.id, missed: now - at > PLAN_NOTIFY_MISSED_MIN * 60000 && now > eventAt });
+  });
+  if (snoozeChanged) savePlanSnooze();
+  if (!fired.length) { if (snoozeChanged) render(); return; }
+  savePlanNotified(notified);
+  planAlerts = [...planAlerts, ...fired];
+  render();
+  if (fired.some(f => !f.missed)) {
+    const invoke = tauriInvoke();
+    if (invoke) invoke('alert_window').catch(() => {}); // 旧ビルドではコマンドが無いので無視
+    playPlanChime();
+  }
+}
+// Rust 側の見張り役（最小化中も動く）に、これから通知する時刻の一覧を渡す。
+// 内容が前回と同じなら送らない。render() のたびに呼ぶ。
+let _planAlarmsSent = null;
+function syncPlanAlarms() {
+  const invoke = tauriInvoke();
+  if (!invoke) return;
+  const now = Date.now();
+  let times = [];
+  if (planNotifyEnabled()) {
+    const notified = loadPlanNotified();
+    dayPlan.forEach(p => {
+      if (!p.notifyAt || p.done || p.date < today() || notified.has(planNotifyKey(p))) return;
+      const at = planNotifyFireAt(p);
+      if (at > now) times.push(at);
+    });
+    Object.values(planSnooze).forEach(at => { if (at > now) times.push(at); });
+  }
+  times = [...new Set(times)].sort((a, b) => a - b);
+  const sig = times.join(',');
+  if (sig === _planAlarmsSent) return;
+  _planAlarmsSent = sig;
+  invoke('set_plan_alarms', { times }).catch(() => { _planAlarmsSent = null; }); // 旧ビルドでは無い
+}
+// 短い通知音（鳴らせない環境では何もしない）
+function playPlanChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1175].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; o.type = 'sine';
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.18 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.35);
+      o.connect(g).connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.18); o.stop(ctx.currentTime + i * 0.18 + 0.4);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch { /* ignore */ }
+}
+// lead を省略したときは「何分前」を変更しない（通知一覧で時刻だけ変える場合など）
+function setPlanNotifyAt(id, hhmm, lead) {
+  const p = dayPlan.find(x => x.id === id);
+  if (!p) return;
+  if (/^\d{2}:\d{2}$/.test(hhmm || '')) {
+    p.notifyAt = hhmm;
+    if (lead !== undefined) { if (lead) p.notifyLead = lead; else delete p.notifyLead; }
+  } else {
+    delete p.notifyAt; delete p.notifyLead;
+  }
+  delete planSnooze[id]; savePlanSnooze();
+  planAlerts = planAlerts.filter(a => a.id !== id);
+  save();
+}
+
+function htmlPlanAlert() {
+  const items = planAlerts.map(a => ({ ...a, p: dayPlan.find(x => x.id === a.id) })).filter(a => a.p)
+    .sort((a, b) => a.p.notifyAt < b.p.notifyAt ? -1 : a.p.notifyAt > b.p.notifyAt ? 1 : 0);
+  if (!items.length) return '';
+  const anyNow = items.some(a => !a.missed);
+  const rows = items.map(({ p, missed }) => `<div class="plan-alert-row${missed ? ' missed' : ''}">
+      <span class="plan-alert-time">${esc(p.notifyAt)}</span>
+      <span class="plan-alert-text">${esc(planText(p))}</span>
+      ${missed ? '<span class="plan-alert-tag">時刻を過ぎています</span>' : ''}
+    </div>`).join('');
+  return `<div class="plan-alert-overlay">
+    <div class="plan-alert" role="alertdialog">
+      <div class="plan-alert-hd">${!anyNow ? '⏰ 通知時刻を過ぎた予定があります'
+        : items.some(a => !a.missed && a.p.notifyLead) ? '🔔 まもなく予定の時刻です' : '🔔 予定の時刻です'}</div>
+      <div class="plan-alert-list">${rows}</div>
+      <div class="plan-alert-actions">
+        <button class="plan-btn" data-a="plan-alert-open">予定を開く</button>
+        <button class="plan-btn" data-a="plan-alert-snooze">5分後にもう一度</button>
+        <button class="plan-btn plan-btn-primary plan-alert-ok" data-a="plan-alert-ok">OK</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function openPlanMenu(id, x, y) {
   ctxMenuTodoId = null; ctxMenuListId = null; ctxSubmenuOpen = false;
   planMenuId = id; ctxMenuPos = { x, y };
+  planNotifyTimeDraft = null; planNotifyLeadDraft = null;
   render();
 }
 function closePlanMenu() { planMenuId = null; ctxMenuPos = null; }
@@ -3697,6 +3927,9 @@ function htmlPlanView() {
   // 行に常時出すのは「チェック・本文・並び替え・⋯」だけ。目安時間・メモ・午前/午後の移動・
   // タスク完了・予定から外す は右クリック（または ⋯）メニューに集約して誤操作を防ぐ。
   const hm = ts => { const d = new Date(ts); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  const notifyOn = planNotifyEnabled();
+  const notified = notifyOn ? loadPlanNotified() : new Set();
+  const nowMs = Date.now();
   const row = (p, idx, len) => {
     const t = planTodo(p);
     const lost = p.todoId && !t;
@@ -3709,6 +3942,13 @@ function htmlPlanView() {
               : taskDone ? '<span class="plan-tag plan-tag-done">タスク完了</span>' : '';
     const carried = p.carriedFrom ? `<span class="plan-tag" title="${esc(p.carriedFrom)} から持ち越し">↪ ${Number(p.carriedFrom.slice(5, 7))}/${Number(p.carriedFrom.slice(8))}</span>` : '';
     const est = p.estimate ? `<span class="plan-est-chip" title="目安時間（右クリックで変更）">⏱ ${formatHours(p.estimate)}</span>` : '';
+    const ntf = (notifyOn && p.notifyAt)
+      ? (() => { const st = planNotifyStatus(p, notified, nowMs);
+          const tip = st === 'notified' ? '通知済み' : st === 'missed' ? '通知せずに時刻を過ぎました' : st === 'done' ? '予定は済'
+            : st === 'snoozed' ? `${hmOf(planSnooze[p.id])} にもう一度通知します` : 'これから通知します';
+          const extra = st === 'snoozed' ? `・再通知 ${hmOf(planSnooze[p.id])}` : p.notifyLead ? `・${p.notifyLead}分前` : '';
+          return `<span class="plan-notify-chip is-${st}" title="${tip}（右クリックで変更）">⏰ ${esc(p.notifyAt)}${extra ? `<span class="plan-notify-lead">${extra}</span>` : ''}</span>`; })()
+      : '';
     const doneAt = (p.done && p.doneAt) ? `<span class="plan-done-at" title="チェックした時刻">✓ ${hm(p.doneAt)}</span>` : '';
     const memo = planMemoEditId === p.id
       ? `<div class="plan-memo-edit">
@@ -3725,7 +3965,7 @@ function htmlPlanView() {
       <div class="plan-main">
         <div class="plan-line">
           <span class="plan-text">${esc(planText(p))}</span>
-          ${srcBadge}${tag}${carried}${est}${doneAt}
+          ${srcBadge}${tag}${carried}${ntf}${est}${doneAt}
         </div>
         ${memo}
       </div>
@@ -3813,14 +4053,45 @@ function htmlPlanView() {
       <button class="plan-btn${planPickerOpen ? ' active' : ''}" data-a="plan-picker-toggle">${planPickerOpen ? '閉じる' : 'タスクから追加'}</button>
     </div>`;
 
+  // 通知一覧: 今日以降に通知時刻を登録した予定を、日付・時刻順に並べる（時刻の変更・解除もここで）
+  const notifyItems = notifyOn
+    ? dayPlan.filter(p => p.notifyAt && p.date >= today())
+        .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.notifyAt < b.notifyAt ? -1 : a.notifyAt > b.notifyAt ? 1 : 0)
+    : [];
+  const notifyCount = notifyItems.filter(p => ['upcoming', 'snoozed'].includes(planNotifyStatus(p, notified, nowMs))).length;
+  const stLabel = { upcoming: 'これから', notified: '通知済み', missed: '時刻を過ぎた', done: '予定は済', snoozed: '再通知待ち' };
+  let notifyPanel = '';
+  if (notifyOn && planNotifyListOpen) {
+    let lastDate = '';
+    const rowsHtml = notifyItems.map(p => {
+      const st = planNotifyStatus(p, notified, nowMs);
+      const dateHd = p.date !== lastDate ? `<div class="plan-notify-date">${p.date === today() ? '今日' : `${Number(p.date.slice(5, 7))}/${Number(p.date.slice(8))}`}</div>` : '';
+      lastDate = p.date;
+      return `${dateHd}<div class="plan-notify-row is-${st}">
+        <input class="plan-input plan-notify-time" type="time" value="${esc(p.notifyAt)}" data-a="plan-notify-time" data-id="${p.id}" title="時刻を変更">
+        <span class="plan-text">${esc(planText(p))}</span>
+        ${p.notifyLead ? `<span class="plan-notify-leadtag">${p.notifyLead}分前に通知</span>` : ''}
+        <span class="plan-notify-st is-${st}">${st === 'snoozed' ? `再通知 ${hmOf(planSnooze[p.id])}` : stLabel[st]}</span>
+        ${st === 'snoozed' ? `<button class="plan-btn" data-a="plan-snooze-cancel" data-id="${p.id}" title="再通知の予約を取り消す（通知時刻の登録は残ります）">再通知をやめる</button>` : ''}
+        <button class="plan-btn plan-btn-del" data-a="plan-notify-clear" data-id="${p.id}" title="通知を解除">${I.x}</button>
+      </div>`;
+    }).join('');
+    notifyPanel = `<div class="plan-notify-panel">
+      <div class="plan-notify-hd">⏰ 登録した通知</div>
+      ${notifyItems.length ? rowsHtml : '<div class="plan-empty">登録した通知はありません。予定の右クリック（⋯）メニューの「⏰ 通知時刻」で登録できます。</div>'}
+      <div class="plan-notify-note">※ 通知は TList を起動している間だけ出ます（最小化していても可）。閉じていた間に過ぎた通知は、次に開いたときに表示します。</div>
+    </div>`;
+  }
+
   const dateNav = `<div class="plan-date-nav">
       <button class="plan-btn" data-a="plan-date" data-dir="-1" title="前日">${I.chevLeft}</button>
       <span class="plan-date-label${isToday ? ' is-today' : ''}">${mm}/${dd}（${wd}）${isToday ? ' 今日' : ''}</span>
       <button class="plan-btn" data-a="plan-date" data-dir="1" title="翌日">${I.chevRight}</button>
       ${isToday ? '' : '<button class="plan-btn" data-a="plan-date" data-dir="0">今日へ</button>'}
+      ${notifyOn ? `<button class="plan-btn plan-notify-list-btn${planNotifyListOpen ? ' active' : ''}" data-a="plan-notify-list" title="登録した通知の一覧">⏰ 通知一覧${notifyCount ? ` (${notifyCount})` : ''}</button>` : ''}
     </div>`;
 
-  return `${dateNav}${carryBar}${addBar}${picker}
+  return `${dateNav}${notifyPanel}${carryBar}${addBar}${picker}
     ${section('am', '午前')}
     ${section('pm', '午後')}
     <div class="today-view-hint">※ チェックは「今日の分が終わった」印で、タスク自体は完了になりません。目安時間・メモ・午前/午後の移動・タスクの完了・予定から外す は、右クリックまたは「⋯」のメニューから行えます。</div>`;
@@ -4151,6 +4422,10 @@ function htmlAppSettingsModal() {
   const gitRow = isTauriEnv()
     ? row('showGitSync', 'Git 同期', 'サイドバーに Pull / Push と同期設定を表示します。オフにしても設定内容は残ります。')
     : '';
+  // 時刻通知（Tauri 版のみ。「今日の予定」がオンのときだけ意味を持つ）
+  const notifyTimeRow = (isTauriEnv() && appSettings.showDayPlan)
+    ? row('planNotify', '⏰ 予定の時刻通知', '今日の予定に通知時刻を登録すると、その時刻にポップアップで知らせ、ウインドウを前面に出してタスクバーを点滅させます（TList を起動している間のみ）。時刻と「何分前に知らせるか」は予定の右クリック（⋯）メニューで設定します。')
+    : '';
   // 通知（バッジ）: iPhone のホーム画面アイコンに件数バッジを出すための設定。Tauri 版はタスクバーに自動表示されるので出さない
   const perm = getNotifyPermission();
   const permLabel = perm === 'granted' ? '許可済み' : perm === 'denied' ? 'ブロック中' : perm === 'unsupported' ? '非対応' : '未設定';
@@ -4172,6 +4447,7 @@ function htmlAppSettingsModal() {
       <div class="git-modal-body">
         <div class="settings-group-hd">表示する機能</div>
         ${row('showDayPlan', '今日の予定', '「今日のToDo」に「今日の予定」タブを表示し、カレンダーに予定の履歴を表示します。オフにしても予定のデータは残ります。')}
+        ${notifyTimeRow}
         ${gitRow}
         ${notifyRow}
         <div class="settings-note">この設定はこの端末だけに保存されます（Git 同期されません）。</div>
@@ -4356,7 +4632,7 @@ function htmlCtxMenu() {
     const p = dayPlan.find(x => x.id === planMenuId);
     if (!p) return '';
     const t = planTodo(p);
-    const MENU_W = 236, MENU_H = 330;
+    const MENU_W = 236, MENU_H = planNotifyEnabled() ? 410 : 330;
     const x = Math.max(8, Math.min(ctxMenuPos.x, window.innerWidth - MENU_W - 8));
     const y = Math.max(8, Math.min(ctxMenuPos.y, window.innerHeight - MENU_H - 8));
     const estChips = [null, ...PLAN_ESTIMATES].map(h =>
@@ -4366,6 +4642,20 @@ function htmlCtxMenu() {
       <ul class="ctx-menu plan-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
         <li class="plan-menu-label">⏱ 目安時間</li>
         <li class="plan-menu-ests" data-a="ctx-menu-body">${estChips}</li>
+        ${planNotifyEnabled() ? `<li class="ctx-menu-sep"></li>
+        <li class="plan-menu-label">⏰ 通知時刻</li>
+        <li class="plan-menu-notify" data-a="ctx-menu-body">
+          <input id="plan-notify-inp" class="plan-input plan-notify-inp" type="time" value="${esc(planNotifyTimeDraft ?? p.notifyAt ?? '')}">
+          <button class="plan-btn plan-btn-primary" data-a="plan-notify-set" data-id="${p.id}">設定</button>
+          ${p.notifyAt ? `<button class="plan-btn" data-a="plan-notify-clear" data-id="${p.id}">解除</button>` : ''}
+        </li>
+        ${planSnooze[p.id] ? `<li class="plan-menu-notify plan-menu-snooze" data-a="ctx-menu-body">
+          <span class="plan-menu-snooze-label">🔁 ${hmOf(planSnooze[p.id])} に再通知予定</span>
+          <button class="plan-btn" data-a="plan-snooze-cancel" data-id="${p.id}">再通知をやめる</button>
+        </li>` : ''}
+        <li class="plan-menu-ests plan-menu-leads" data-a="ctx-menu-body">
+          ${PLAN_NOTIFY_LEADS.map(m => `<button class="plan-menu-est${(planNotifyLeadDraft ?? p.notifyLead ?? 0) === m ? ' active' : ''}" data-a="plan-notify-lead" data-id="${p.id}" data-min="${m}">${planLeadLabel(m)}</button>`).join('')}
+        </li>` : ''}
         <li class="ctx-menu-sep"></li>
         <li class="ctx-menu-item" data-a="plan-memo-edit" data-id="${p.id}">📝<span>${p.memo ? 'メモを編集' : 'メモを書く'}</span></li>
         <li class="ctx-menu-item" data-a="plan-slot" data-id="${p.id}">${p.slot === 'am' ? '🌇<span>午後へ移動</span>' : '🌅<span>午前へ移動</span>'}</li>
@@ -4512,6 +4802,7 @@ function html() {
     ${htmlMovePopup()}
     ${htmlMemoPopup()}
     ${htmlCtxMenu()}
+    ${htmlPlanAlert()}
     ${dropZone}`;
 }
 
@@ -4542,6 +4833,8 @@ function render() {
   updateBadge(computeBadgeCount());
   // UI 表示状態を永続化（折りたたみ・展開・フィルター等）
   saveUiState();
+  // 時刻通知の予定時刻を Rust 側へ（変化があったときだけ送る）
+  syncPlanAlarms();
 }
 
 // ── Todo Actions ───────────────────────────────────────
@@ -5630,7 +5923,7 @@ const MEANINGFUL_FIELDS_TODO = [
 ];
 const MEANINGFUL_FIELDS_LIST = ['name', 'createdAt', 'type'];
 const MEANINGFUL_FIELDS_PLAN = [
-  'date', 'slot', 'order', 'todoId', 'text', 'estimate', 'done', 'doneAt', 'createdAt', 'carriedFrom', 'carried', 'memo',
+  'date', 'slot', 'order', 'todoId', 'text', 'estimate', 'done', 'doneAt', 'createdAt', 'carriedFrom', 'carried', 'memo', 'notifyAt', 'notifyLead',
 ];
 // マージ・比較の対象カテゴリ（dayPlan は旧バージョンの tasks.json には存在しない）
 const SYNC_CATEGORIES = [
@@ -6021,6 +6314,65 @@ document.addEventListener('click', e => {
       if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
       break;
     }
+    case 'plan-notify-set': {
+      const v = document.getElementById('plan-notify-inp')?.value;
+      if (!v) { showToast('時刻を入力してください'); break; }
+      const p = dayPlan.find(x => x.id === id);
+      const lead = planNotifyLeadDraft ?? p?.notifyLead ?? 0;
+      setPlanNotifyAt(id, v, lead);
+      planNotifyTimeDraft = null; planNotifyLeadDraft = null;
+      closePlanMenu(); render();
+      showToast(`⏰ ${v} に通知を設定しました${lead ? `（${lead}分前に通知）` : ''}`);
+      break;
+    }
+    case 'plan-notify-lead': {
+      // 何分前に知らせるか。入力中の時刻は消さないよう下書きに退避してから再描画
+      const m = parseInt(el.dataset.min, 10);
+      if (!PLAN_NOTIFY_LEADS.includes(m)) break;
+      const inp = document.getElementById('plan-notify-inp');
+      if (inp) planNotifyTimeDraft = inp.value;
+      const p = dayPlan.find(x => x.id === id);
+      if (p && p.notifyAt) {
+        // 登録済みならその場で反映
+        if (m) p.notifyLead = m; else delete p.notifyLead;
+        save();
+      } else {
+        planNotifyLeadDraft = m;
+      }
+      render();
+      break;
+    }
+    case 'plan-notify-clear': {
+      setPlanNotifyAt(id, '');
+      closePlanMenu(); render();
+      showToast('通知を解除しました');
+      break;
+    }
+    case 'plan-notify-list': planNotifyListOpen = !planNotifyListOpen; render(); break;
+    case 'plan-snooze-cancel': {
+      // 再通知の予約だけを取り消す（通知時刻の登録と「通知済み」の記録はそのまま）
+      if (planSnooze[id]) { delete planSnooze[id]; savePlanSnooze(); }
+      if (planMenuId) closePlanMenu();
+      render();
+      showToast('🔁 再通知を取り消しました');
+      break;
+    }
+    case 'plan-alert-ok': planAlerts = []; render(); break;
+    case 'plan-alert-snooze': {
+      // 表示中の通知を 5 分後にもう一度出す
+      const at = Date.now() + 5 * 60000;
+      planAlerts.forEach(a => { planSnooze[a.id] = at; });
+      savePlanSnooze();
+      planAlerts = []; render();
+      showToast(`⏰ ${hmOf(at)} にもう一度お知らせします`);
+      break;
+    }
+    case 'plan-alert-open': {
+      planAlerts = []; closeModal();
+      todayTab = 'plan'; planDate = null;
+      selectTodayList(); render();
+      break;
+    }
     case 'plan-memo-save':   commitPlanMemo(); break;
     case 'plan-memo-cancel': planMemoEditId = null; render(); break;
     case 'plan-open-task': {
@@ -6083,6 +6435,12 @@ document.addEventListener('click', e => {
       if (!(k in DEFAULT_APP_SETTINGS)) break;
       appSettings[k] = !appSettings[k];
       saveAppSettings();
+      // 時刻通知をオンにした瞬間に、すでに時刻を過ぎた分がまとめて出ないよう通知済み扱いにする
+      if (k === 'planNotify' && appSettings.planNotify) {
+        const ns = loadPlanNotified(), now = Date.now();
+        dayPlan.forEach(p => { if (p.date === today() && p.notifyAt && planNotifyFireAt(p) <= now) ns.add(planNotifyKey(p)); });
+        savePlanNotified(ns);
+      }
       render();
       if (k === 'showGitSync' && appSettings.showGitSync) refreshGitStatus();
       break;
@@ -6438,6 +6796,11 @@ document.addEventListener('focusin', e => {
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 document.addEventListener('change', e => {
+  // 今日の予定: 通知一覧で時刻を変更
+  if (e.target.dataset?.a === 'plan-notify-time') {
+    if (e.target.value) { setPlanNotifyAt(e.target.dataset.id, e.target.value); render(); }
+    return;
+  }
   // カレンダー: リスト絞り込みセレクト
   if (e.target.closest('[data-a="calendar-filter-list"]')) {
     calendarFilterListId = e.target.value || null;
@@ -6518,6 +6881,10 @@ document.addEventListener('keydown', e => {
   }
   if (e.target.id === 'plan-add-inp' && e.key === 'Enter' && !e.isComposing) {
     e.preventDefault(); addFreePlanFromInput();
+  }
+  if (e.target.id === 'plan-notify-inp' && e.key === 'Enter') {
+    e.preventDefault();
+    document.querySelector('[data-a="plan-notify-set"]')?.click();
   }
   if (e.target.id === 'plan-memo-inp' && !e.isComposing) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitPlanMemo(); }
@@ -6918,6 +7285,7 @@ document.addEventListener('contextmenu', e => {
 // 完了済み繰り返しタスクを次回発生日へ進めて未完了に戻す
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
+    checkPlanNotifications();
     if (applyRecurringResets()) render();
   }
 });
@@ -6927,6 +7295,12 @@ load();
 render();
 // 起動時に Git ステータスを取得（Tauri 環境かつ enabled の場合のみ）
 refreshGitStatus();
+// 今日の予定の時刻通知（Tauri 版・設定オン時のみ動作）。20 秒ごとに確認する
+checkPlanNotifications();
+setInterval(checkPlanNotifications, 20000);
+// 最小化中は上のタイマーが止まるため、Rust 側の見張り役が時刻にウインドウを前面に出し、
+// 'plan-alarm' イベントを送ってくる。受けたらすぐ確認してポップアップを出す。
+try { window.__TAURI__?.event?.listen?.('plan-alarm', () => checkPlanNotifications()); } catch { /* ignore */ }
 </script>
 </body>
 </html>

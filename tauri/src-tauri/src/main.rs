@@ -31,6 +31,69 @@ fn open_folder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+// ── 時刻通知：ウインドウを前面に出して気付かせる ───────────────
+// 今日の予定の通知時刻になったとき JS から呼ぶ。最小化を解除して前面に出し、
+// タスクバーを点滅させる。Windows のフォアグラウンド制限で前面化できない場合も
+// 点滅で気付けるようにし、一時的な最前面固定は少し待ってから解除する。
+#[tauri::command]
+fn alert_window(window: tauri::WebviewWindow) -> Result<(), String> {
+    bring_window_to_front(&window);
+    Ok(())
+}
+
+fn bring_window_to_front(window: &tauri::WebviewWindow) {
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_always_on_top(true);
+    let _ = window.set_focus();
+    let _ = window.request_user_attention(Some(tauri::UserAttentionType::Critical));
+    let w = window.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        let _ = w.set_always_on_top(false);
+    });
+}
+
+// ── 時刻通知：最小化中でも時刻を見張る ─────────────────────────
+// WebView2 は最小化中に JS のタイマーがほぼ止まるため、JS 側だけでは通知時刻に
+// 気付けない。JS から「通知する時刻（Unix ミリ秒）の一覧」を受け取り、Rust 側の
+// スレッドで見張って、時刻になったらウインドウを前面に出す。表示されると JS の
+// タイマーが動き出し、ポップアップと通知音は JS 側（checkPlanNotifications）が出す。
+static PLAN_ALARMS: std::sync::Mutex<Vec<i64>> = std::sync::Mutex::new(Vec::new());
+
+#[tauri::command]
+fn set_plan_alarms(times: Vec<i64>) -> Result<(), String> {
+    let mut a = PLAN_ALARMS.lock().map_err(|e| e.to_string())?;
+    *a = times;
+    Ok(())
+}
+
+fn start_plan_alarm_watcher(app: tauri::AppHandle) {
+    use tauri::{Emitter, Manager};
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0);
+        let due = match PLAN_ALARMS.lock() {
+            Ok(mut a) => {
+                let before = a.len();
+                a.retain(|&t| t > now);
+                a.len() != before
+            }
+            Err(_) => false,
+        };
+        if due {
+            if let Some(w) = app.get_webview_window("main") {
+                bring_window_to_front(&w);
+            }
+            // JS に知らせて、すぐにポップアップを出させる
+            let _ = app.emit("plan-alarm", ());
+        }
+    });
+}
+
 // ── タスクバーバッジ ─────────────────────────────────────────
 // 期限超過 + 今日が期限のタスク数を Windows タスクバーアイコンに
 // オーバーレイ表示する。ITaskbarList3::SetOverlayIcon を使用。
@@ -710,8 +773,14 @@ fn main() {
     );
 
     tauri::Builder::default()
+        .setup(|app| {
+            start_plan_alarm_watcher(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             open_folder,
+            alert_window,
+            set_plan_alarms,
             set_taskbar_badge,
             git_check_available,
             git_validate_repo,

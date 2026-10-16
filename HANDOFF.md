@@ -692,6 +692,8 @@ function closeMovePopup() { if (Date.now() - movePopupOpenedAt < 400) return; ..
 ### 時刻通知（v1.6.0・Tauri 版のみ・既定オフ）
 - 設定画面「⏰ 予定の時刻通知」（`appSettings.planNotify`）をオンにすると有効。Tauri 版以外・「今日の予定」オフのときは UI も動作も一切出さない（`planNotifyEnabled()`）
 - **登録**: 予定の右クリック（⋯）メニュー「⏰ 通知時刻」に時刻を入れて「設定」。その下のチップで **何分前に知らせるか（ちょうど/5/10/15分前、既定ちょうど）を予定ごとに選ぶ**。`p.notifyAt`（'HH:MM'）・`p.notifyLead`（分。0 は保存しない）に保存し Git 同期される。行に「⏰ 13:00」（何分前なら「・10分前」）チップ（橙=これから／灰=通知済み・予定済／赤=通知せず時刻を過ぎた）。持ち越し時はコピーしない
+  - 時刻の選択は「時」「分（5分刻み）」のプルダウン（`htmlTimeSelects()` / `readTimeSelects()`）。`<input type="time">` はマウスホイールで回りすぎて合わせにくいため置き換えた。既存の値が 5 分刻みでなければその分も選択肢に加える
+  - 未設定時の初期値（`defaultPlanNotifyTime()`）: 午後の予定は 12:00 前（または明日以降の予定）なら 12:00、12:00 を過ぎていれば現在時刻。午前の予定は現在時刻
   - 当初は全体設定（5分前固定）だったが、分かりにくいため v1.6.0 内で予定ごとの選択に変更した（`appSettings.planNotifyLead` は廃止。残っていても無視）
 - **通知一覧**: 今日の予定タブの日付行右の「⏰ 通知一覧 (これからの件数)」。今日以降の通知を日付・時刻順に表示し、時刻の変更（time 入力）と解除ができる
 - **最小化中の見張り（Rust 側）**: WebView2 は最小化中に JS のタイマーがほぼ止まり、JS だけでは通知できない。そのため JS は `render()` のたびに `syncPlanAlarms()` で「これから通知する時刻（Unix ms）の一覧」を Rust の `set_plan_alarms` に渡す（前回と同じ内容なら送らない。スヌーズ分も含む）。Rust の見張りスレッド（`start_plan_alarm_watcher`、5 秒間隔）が時刻になったものを取り除き、ウインドウを前面化（`bring_window_to_front`）して `plan-alarm` イベントを送る。JS は `window.__TAURI__.event.listen('plan-alarm')` で受けて `checkPlanNotifications()` を実行し、ポップアップと音を出す

@@ -518,7 +518,16 @@
     /* ── 時刻通知 ── */
     .plan-menu-sub { font-weight:400; color:var(--t3); margin-left:2px; }
     .plan-menu-notify { display:flex; align-items:center; gap:4px; padding:4px 8px 6px; }
-    .plan-notify-inp { flex:1; height:28px; padding:0 6px; font-size:13px; }
+    /* 時刻の選択欄（時・分のプルダウン） */
+    .time-sel { display:inline-flex; align-items:center; gap:2px; flex-shrink:0; }
+    .time-sel select {
+      height:28px; padding:0 4px; border-radius:6px; border:1px solid var(--input-border);
+      background:var(--input-bg); color:var(--t1); font-size:13px; font-family:inherit; cursor:pointer;
+      font-variant-numeric:tabular-nums;
+    }
+    .time-sel select:focus { outline:none; border-color:#818cf8; }
+    .time-sel .ts-colon { font-weight:700; color:var(--t2); }
+    .plan-menu-notify .time-sel { flex:1; }
     .plan-notify-chip { flex-shrink:0; font-size:11px; font-weight:600; white-space:nowrap; padding:1px 7px; border-radius:9999px; }
     .plan-notify-chip.is-upcoming, .plan-notify-chip.is-snoozed { background:rgba(245,158,11,.15); color:#b45309; }
     html.dark .plan-notify-chip.is-upcoming, html.dark .plan-notify-chip.is-snoozed { color:#fbbf24; }
@@ -536,7 +545,6 @@
     .plan-notify-hd { font-size:12px; font-weight:700; color:var(--t2); }
     .plan-notify-date { font-size:11px; font-weight:700; color:var(--t3); margin-top:4px; }
     .plan-notify-row { display:flex; align-items:center; gap:8px; font-size:13px; }
-    .plan-notify-time { flex:0 0 auto; width:96px; height:28px; padding:0 6px; font-size:13px; }
     .plan-notify-st { flex-shrink:0; font-size:10px; font-weight:600; padding:1px 7px; border-radius:9999px; background:var(--filter-bg); color:var(--t3); }
     .plan-notify-st.is-upcoming, .plan-notify-st.is-snoozed { background:rgba(245,158,11,.15); color:#b45309; }
     html.dark .plan-notify-st.is-upcoming, html.dark .plan-notify-st.is-snoozed { color:#fbbf24; }
@@ -3833,6 +3841,34 @@ function playPlanChime() {
   } catch { /* ignore */ }
 }
 // lead を省略したときは「何分前」を変更しない（通知一覧で時刻だけ変える場合など）
+// 時刻の選択欄（時・分のプルダウン）。<input type="time"> はマウスホイールで値が
+// 回りすぎて合わせにくいため、クリックで選ぶプルダウンにする。分は 5 分刻み
+// （既存の値が 5 分刻みでなければ、その値も選択肢に加える）。
+function htmlTimeSelects(hhmm, attrs) {
+  const [h, m] = (hhmm || '12:00').split(':').map(Number);
+  const mins = [];
+  for (let i = 0; i < 60; i += 5) mins.push(i);
+  if (!mins.includes(m)) { mins.push(m); mins.sort((a, b) => a - b); }
+  const p2 = v => String(v).padStart(2, '0');
+  const hourOpts = Array.from({ length: 24 }, (_, i) => `<option value="${i}"${i === h ? ' selected' : ''}>${i}</option>`).join('');
+  const minOpts = mins.map(i => `<option value="${i}"${i === m ? ' selected' : ''}>${p2(i)}</option>`).join('');
+  return `<span class="time-sel" ${attrs}><select class="ts-h" title="時">${hourOpts}</select><span class="ts-colon">:</span><select class="ts-m" title="分">${minOpts}</select></span>`;
+}
+function readTimeSelects(el) {
+  const box = el?.closest?.('.time-sel') || el;
+  const h = box?.querySelector('.ts-h')?.value, m = box?.querySelector('.ts-m')?.value;
+  if (h == null || m == null) return '';
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+// 通知時刻が未設定のときの入力欄の初期値。
+// 午後の予定は、まだ 12:00 前（または明日以降の予定）なら 12:00 から、12:00 を過ぎていれば現在時刻から。
+// 午前の予定は現在時刻から。
+function defaultPlanNotifyTime(p) {
+  const n = new Date();
+  const now = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  if (p.slot === 'pm' && (p.date > today() || now < '12:00')) return '12:00';
+  return now;
+}
 function setPlanNotifyAt(id, hhmm, lead) {
   const p = dayPlan.find(x => x.id === id);
   if (!p) return;
@@ -4068,7 +4104,7 @@ function htmlPlanView() {
       const dateHd = p.date !== lastDate ? `<div class="plan-notify-date">${p.date === today() ? '今日' : `${Number(p.date.slice(5, 7))}/${Number(p.date.slice(8))}`}</div>` : '';
       lastDate = p.date;
       return `${dateHd}<div class="plan-notify-row is-${st}">
-        <input class="plan-input plan-notify-time" type="time" value="${esc(p.notifyAt)}" data-a="plan-notify-time" data-id="${p.id}" title="時刻を変更">
+        ${htmlTimeSelects(p.notifyAt, `data-a="plan-notify-time" data-id="${p.id}" title="時刻を変更"`)}
         <span class="plan-text">${esc(planText(p))}</span>
         ${p.notifyLead ? `<span class="plan-notify-leadtag">${p.notifyLead}分前に通知</span>` : ''}
         <span class="plan-notify-st is-${st}">${st === 'snoozed' ? `再通知 ${hmOf(planSnooze[p.id])}` : stLabel[st]}</span>
@@ -4645,7 +4681,7 @@ function htmlCtxMenu() {
         ${planNotifyEnabled() ? `<li class="ctx-menu-sep"></li>
         <li class="plan-menu-label">⏰ 通知時刻</li>
         <li class="plan-menu-notify" data-a="ctx-menu-body">
-          <input id="plan-notify-inp" class="plan-input plan-notify-inp" type="time" value="${esc(planNotifyTimeDraft ?? p.notifyAt ?? '')}">
+          ${htmlTimeSelects(planNotifyTimeDraft || p.notifyAt || defaultPlanNotifyTime(p), 'id="plan-notify-inp"')}
           <button class="plan-btn plan-btn-primary" data-a="plan-notify-set" data-id="${p.id}">設定</button>
           ${p.notifyAt ? `<button class="plan-btn" data-a="plan-notify-clear" data-id="${p.id}">解除</button>` : ''}
         </li>
@@ -6315,8 +6351,8 @@ document.addEventListener('click', e => {
       break;
     }
     case 'plan-notify-set': {
-      const v = document.getElementById('plan-notify-inp')?.value;
-      if (!v) { showToast('時刻を入力してください'); break; }
+      const v = readTimeSelects(document.getElementById('plan-notify-inp'));
+      if (!v) { showToast('時刻を選んでください'); break; }
       const p = dayPlan.find(x => x.id === id);
       const lead = planNotifyLeadDraft ?? p?.notifyLead ?? 0;
       setPlanNotifyAt(id, v, lead);
@@ -6330,7 +6366,7 @@ document.addEventListener('click', e => {
       const m = parseInt(el.dataset.min, 10);
       if (!PLAN_NOTIFY_LEADS.includes(m)) break;
       const inp = document.getElementById('plan-notify-inp');
-      if (inp) planNotifyTimeDraft = inp.value;
+      if (inp) planNotifyTimeDraft = readTimeSelects(inp);
       const p = dayPlan.find(x => x.id === id);
       if (p && p.notifyAt) {
         // 登録済みならその場で反映
@@ -6797,8 +6833,15 @@ document.addEventListener('focusin', e => {
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 document.addEventListener('change', e => {
   // 今日の予定: 通知一覧で時刻を変更
-  if (e.target.dataset?.a === 'plan-notify-time') {
-    if (e.target.value) { setPlanNotifyAt(e.target.dataset.id, e.target.value); render(); }
+  const timeBox = e.target.closest?.('[data-a="plan-notify-time"]');
+  if (timeBox) {
+    const v = readTimeSelects(timeBox);
+    if (v) { setPlanNotifyAt(timeBox.dataset.id, v); render(); }
+    return;
+  }
+  // 通知時刻メニューの時・分は下書きに保持（「何分前」を押して再描画しても消えないように）
+  if (e.target.closest?.('#plan-notify-inp')) {
+    planNotifyTimeDraft = readTimeSelects(e.target);
     return;
   }
   // カレンダー: リスト絞り込みセレクト
@@ -6882,7 +6925,7 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'plan-add-inp' && e.key === 'Enter' && !e.isComposing) {
     e.preventDefault(); addFreePlanFromInput();
   }
-  if (e.target.id === 'plan-notify-inp' && e.key === 'Enter') {
+  if (e.target.closest?.('#plan-notify-inp') && e.key === 'Enter') {
     e.preventDefault();
     document.querySelector('[data-a="plan-notify-set"]')?.click();
   }

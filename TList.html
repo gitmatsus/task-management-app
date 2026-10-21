@@ -500,6 +500,10 @@
     }
     .plan-memo:hover { color:var(--t1); }
     .plan-memo-edit { display:flex; flex-direction:column; gap:4px; }
+    .plan-text-edit { display:flex; align-items:center; gap:6px; }
+    .plan-text-edit .plan-input { height:30px; }
+    .plan-text-edit-hint { font-size:11px; color:var(--t3); }
+    .plan-text.is-free { cursor:text; }
     .plan-memo-inp { height:auto; min-height:52px; padding:6px 10px; resize:vertical; line-height:1.5; }
     .plan-memo-actions { display:flex; align-items:center; gap:6px; justify-content:flex-end; }
     .plan-memo-hint { margin-right:auto; font-size:11px; color:var(--t3); }
@@ -2091,6 +2095,7 @@ let planSnooze = {};         // 「5分後にもう一度」: 予定ID → 再�
 let planNotifyListOpen = false; // 通知一覧パネルの開閉
 let planNotifyTimeDraft = null, planNotifyLeadDraft = null; // メニューで入力中の通知時刻・何分前（未設定の予定用）
 let planMemoEditId = null, planMemoDraft = ''; // メモ編集中の予定IDと下書き
+let planTextEditId = null, planTextDraft = ''; // 内容（本文）編集中の予定IDと下書き
 const PLAN_KEEP_DAYS = 180; // これより古い予定は load 時に削除
 const PLAN_ESTIMATES = [0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
 
@@ -3914,6 +3919,34 @@ function openPlanMenu(id, x, y) {
   render();
 }
 function closePlanMenu() { planMenuId = null; ctxMenuPos = null; }
+// 予定の内容（本文）の編集。タスクに紐づく予定は元のタスク名（1 行目）を書き換える
+function startPlanTextEdit(id) {
+  const p = dayPlan.find(x => x.id === id);
+  if (!p) return;
+  planTextEditId = p.id; planTextDraft = planText(p);
+  render();
+  const inp = document.getElementById('plan-text-inp');
+  if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+function commitPlanText() {
+  const p = dayPlan.find(x => x.id === planTextEditId);
+  const inp = document.getElementById('plan-text-inp');
+  const v = (inp ? inp.value : planTextDraft).trim();
+  if (p && v) {
+    const t = planTodo(p);
+    if (t) {
+      const lines = String(t.text).split('\n');
+      lines[0] = v;
+      t.text = lines.join('\n');
+    }
+    p.text = v;
+    save();
+  } else if (p && !v) {
+    showToast('内容が空のため保存しませんでした');
+  }
+  planTextEditId = null; planTextDraft = '';
+  render();
+}
 function commitPlanMemo() {
   const p = dayPlan.find(x => x.id === planMemoEditId);
   const inp = document.getElementById('plan-memo-inp');
@@ -3999,10 +4032,17 @@ function htmlPlanView() {
     return `<div class="plan-row${p.done ? ' done' : ''}" data-id="${p.id}"${t ? ` data-list-id="${t.listId}" data-todo-id="${t.id}"` : ''} title="${t ? 'ダブルクリックで元のタスクへ移動 / ' : ''}右クリックでメニュー">
       <div class="cb plan-cb${p.done ? ' checked' : ''}" data-a="plan-toggle" data-id="${p.id}" title="今日の分を終えたらチェック（タスクの完了とは別）">${p.done ? I.check : ''}</div>
       <div class="plan-main">
-        <div class="plan-line">
-          <span class="plan-text">${esc(planText(p))}</span>
+        ${planTextEditId === p.id
+          ? `<div class="plan-text-edit">
+              <input id="plan-text-inp" class="plan-input" type="text" value="${esc(planTextDraft)}" autocomplete="off" placeholder="${t ? 'タスク名' : '予定の内容'}">
+              <button class="plan-btn" data-a="plan-text-cancel">取消</button>
+              <button class="plan-btn plan-btn-primary" data-a="plan-text-save" data-id="${p.id}">保存</button>
+            </div>
+            ${t ? '<div class="plan-text-edit-hint">※ 元のタスクの名前も変わります</div>' : ''}`
+          : `<div class="plan-line">
+          <span class="plan-text${t ? '' : ' is-free'}"${t ? '' : ' title="ダブルクリックで内容を編集"'}>${esc(planText(p))}</span>
           ${srcBadge}${tag}${carried}${ntf}${est}${doneAt}
-        </div>
+        </div>`}
         ${memo}
       </div>
       <span class="plan-row-tools">
@@ -4130,7 +4170,7 @@ function htmlPlanView() {
   return `${dateNav}${notifyPanel}${carryBar}${addBar}${picker}
     ${section('am', '午前')}
     ${section('pm', '午後')}
-    <div class="today-view-hint">※ チェックは「今日の分が終わった」印で、タスク自体は完了になりません。目安時間・メモ・午前/午後の移動・タスクの完了・予定から外す は、右クリックまたは「⋯」のメニューから行えます。</div>`;
+    <div class="today-view-hint">※ チェックは「今日の分が終わった」印で、タスク自体は完了になりません。内容の編集・目安時間・メモ・午前/午後の移動・タスクの完了・予定から外す は、右クリックまたは「⋯」のメニューから行えます（タスク以外の予定は文字のダブルクリックでも編集できます）。</div>`;
 }
 function htmlPlanFooter() {
   const all = dayPlan.filter(p => p.date === planDateYmd());
@@ -4693,6 +4733,7 @@ function htmlCtxMenu() {
           ${PLAN_NOTIFY_LEADS.map(m => `<button class="plan-menu-est${(planNotifyLeadDraft ?? p.notifyLead ?? 0) === m ? ' active' : ''}" data-a="plan-notify-lead" data-id="${p.id}" data-min="${m}">${planLeadLabel(m)}</button>`).join('')}
         </li>` : ''}
         <li class="ctx-menu-sep"></li>
+        <li class="ctx-menu-item" data-a="plan-text-edit" data-id="${p.id}">✏️<span>${t ? 'タスク名を編集' : '内容を編集'}</span></li>
         <li class="ctx-menu-item" data-a="plan-memo-edit" data-id="${p.id}">📝<span>${p.memo ? 'メモを編集' : 'メモを書く'}</span></li>
         <li class="ctx-menu-item" data-a="plan-slot" data-id="${p.id}">${p.slot === 'am' ? '🌇<span>午後へ移動</span>' : '🌅<span>午前へ移動</span>'}</li>
         ${t ? `<li class="ctx-menu-item" data-a="plan-open-task" data-id="${p.id}">↗<span>元のタスクを開く</span></li>` : ''}
@@ -6409,6 +6450,9 @@ document.addEventListener('click', e => {
       selectTodayList(); render();
       break;
     }
+    case 'plan-text-edit':   closePlanMenu(); startPlanTextEdit(id); break;
+    case 'plan-text-save':   commitPlanText(); break;
+    case 'plan-text-cancel': planTextEditId = null; render(); break;
     case 'plan-memo-save':   commitPlanMemo(); break;
     case 'plan-memo-cancel': planMemoEditId = null; render(); break;
     case 'plan-open-task': {
@@ -6746,6 +6790,12 @@ document.addEventListener('dblclick', e => {
     jumpFromCalendarToTodo(calRow.dataset.listId, calRow.dataset.todoId);
     return;
   }
+  // 今日の予定: タスク以外の予定は本文のダブルクリックで内容を編集
+  const freeText = e.target.closest('.plan-row .plan-text.is-free');
+  if (freeText) {
+    startPlanTextEdit(freeText.closest('.plan-row').dataset.id);
+    return;
+  }
   // 今日の予定: タスクに紐づく行はダブルクリックで元のタスクへ
   const planRow = e.target.closest('.plan-row[data-todo-id]');
   if (planRow && !e.target.closest('button, select, textarea, .cb, .plan-memo')) {
@@ -6781,6 +6831,15 @@ document.addEventListener('dblclick', e => {
       target.closest('.plan-row') === lastTarget.closest('.plan-row')
     );
     if (elapsed < DOUBLE_TAP_MS && sameTarget) {
+      // 今日の予定: タスク以外の予定は本文のダブルタップで内容を編集
+      const freeText = target.closest('.plan-row .plan-text.is-free');
+      if (freeText) {
+        e.preventDefault();
+        _suppressNextDblclick = true;
+        startPlanTextEdit(freeText.closest('.plan-row').dataset.id);
+        lastTap = 0; lastTarget = null;
+        return;
+      }
       // 今日の予定の行: 元のタスクへジャンプ
       const planRow = target.closest('.plan-row[data-todo-id]');
       if (planRow && !target.closest('button, select, textarea, .cb, .plan-memo')) {
@@ -6898,6 +6957,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'list-add-inp')    newListName      = e.target.value;
   if (e.target.id === 'plan-search' && !e.isComposing) applyPlanSearch(e.target);
   if (e.target.id === 'plan-memo-inp') planMemoDraft = e.target.value; // 再描画されても下書きを保持
+  if (e.target.id === 'plan-text-inp') planTextDraft = e.target.value;
 });
 // 日本語入力（IME）の変換中は再描画しない。確定時にまとめて反映する
 document.addEventListener('compositionend', e => {
@@ -6928,6 +6988,10 @@ document.addEventListener('keydown', e => {
   if (e.target.closest?.('#plan-notify-inp') && e.key === 'Enter') {
     e.preventDefault();
     document.querySelector('[data-a="plan-notify-set"]')?.click();
+  }
+  if (e.target.id === 'plan-text-inp' && !e.isComposing) {
+    if (e.key === 'Enter') { e.preventDefault(); commitPlanText(); }
+    if (e.key === 'Escape') { e.preventDefault(); planTextEditId = null; render(); }
   }
   if (e.target.id === 'plan-memo-inp' && !e.isComposing) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitPlanMemo(); }

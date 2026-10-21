@@ -504,7 +504,6 @@
     .plan-actual-inp { flex:0 0 88px; width:88px; height:28px; padding:0 8px; font-size:13px; }
     .plan-menu-unit { font-size:12px; color:var(--t2); }
     .plan-menu-actual { padding-top:0; }
-    .plan-menu { max-height:calc(100vh - 16px); overflow-y:auto; }
     .cal-plan-actual { color:#047857; }
     html.dark .cal-plan-actual { color:#34d399; }
     .plan-memo {
@@ -4963,6 +4962,24 @@ function render() {
   saveUiState();
   // 時刻通知の予定時刻を Rust 側へ（変化があったときだけ送る）
   syncPlanAlarms();
+  // 右クリックメニューが画面外にはみ出さないよう、実際の高さで位置を直す
+  fitCtxMenuInViewport();
+}
+
+// 右クリックメニューを実際の大きさで測り、画面内に収める。
+// 下にはみ出すなら上へずらし、画面より高い場合はメニュー内をスクロールさせる。
+function fitCtxMenuInViewport() {
+  const menu = document.querySelector('.ctx-menu-overlay > .ctx-menu');
+  if (!menu) return;
+  const M = 8, vh = window.innerHeight, vw = window.innerWidth;
+  // 画面より高いときだけメニュー内スクロールにする（常時だと「サブに登録」の横に出るサブメニューが切れるため）
+  if (menu.getBoundingClientRect().height > vh - M * 2) {
+    menu.style.maxHeight = `${vh - M * 2}px`;
+    menu.style.overflowY = 'auto';
+  }
+  const r = menu.getBoundingClientRect();
+  if (r.bottom > vh - M) menu.style.top = `${Math.max(M, vh - M - r.height)}px`;
+  if (r.right > vw - M) menu.style.left = `${Math.max(M, vw - M - r.width)}px`;
 }
 
 // ── Todo Actions ───────────────────────────────────────

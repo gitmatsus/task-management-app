@@ -494,6 +494,19 @@
     .plan-done-at { flex-shrink:0; font-size:11px; font-weight:600; color:#059669; white-space:nowrap; }
     html.dark .plan-done-at { color:#34d399; }
     .plan-est-chip { flex-shrink:0; font-size:11px; color:var(--t2); white-space:nowrap; }
+    /* 実績時間: 目安以内=緑 / 目安超過=橙 / 目安なし=中立 */
+    .plan-actual-chip { flex-shrink:0; font-size:11px; font-weight:600; white-space:nowrap; padding:1px 7px; border-radius:9999px; background:var(--filter-bg); color:var(--t2); }
+    .plan-actual-chip.is-ok { background:rgba(16,185,129,.14); color:#047857; }
+    html.dark .plan-actual-chip.is-ok { color:#34d399; }
+    .plan-actual-chip.is-over { background:rgba(245,158,11,.16); color:#b45309; }
+    html.dark .plan-actual-chip.is-over { color:#fbbf24; }
+    /* 実績の分入力は 4 桁程度が入る幅に留め、行がボタン群より広がらないようにする */
+    .plan-actual-inp { flex:0 0 88px; width:88px; height:28px; padding:0 8px; font-size:13px; }
+    .plan-menu-unit { font-size:12px; color:var(--t2); }
+    .plan-menu-actual { padding-top:0; }
+    .plan-menu { max-height:calc(100vh - 16px); overflow-y:auto; }
+    .cal-plan-actual { color:#047857; }
+    html.dark .cal-plan-actual { color:#34d399; }
     .plan-memo {
       font-size:12px; color:var(--t2); line-height:1.5; white-space:pre-wrap; word-break:break-word;
       padding:3px 8px; border-radius:6px; background:var(--filter-bg); cursor:text;
@@ -509,7 +522,8 @@
     .plan-memo-hint { margin-right:auto; font-size:11px; color:var(--t3); }
     .plan-btn-more { font-size:14px; font-weight:700; letter-spacing:1px; }
     /* 予定の右クリック（⋯）メニュー */
-    .plan-menu { width:236px; }
+    /* 目安・実績のボタン（13 個）が「なし〜1.5h」「2h〜8h」の 2 行で折り返す幅 */
+    .plan-menu { width:267px; max-width:calc(100vw - 16px); }
     .plan-menu-label { padding:6px 10px 2px; font-size:11px; font-weight:700; color:var(--t2); }
     .plan-menu-ests { display:flex; flex-wrap:wrap; gap:4px; padding:4px 8px 6px; }
     .plan-menu-est {
@@ -2944,11 +2958,13 @@ function htmlCalendarDayPlan(dateStr) {
       <span class="cal-plan-check">${p.done ? '✓' : '・'}</span>
       <span class="cal-detail-todo-text">${esc(planText(p))}</span>
       ${t && t.completed ? '<span class="plan-tag plan-tag-done">完了</span>' : ''}
-      ${p.estimate ? `<span class="cal-plan-est">${formatHours(p.estimate)}</span>` : ''}
+      ${p.estimate ? `<span class="cal-plan-est">目安 ${formatHours(p.estimate)}</span>` : ''}
+      ${p.actual ? `<span class="cal-plan-est cal-plan-actual">実績 ${formatHours(p.actual)}</span>` : ''}
     </div>
     ${p.memo ? `<div class="cal-plan-memo">📝 ${esc(p.memo)}</div>` : ''}`;
   }).join('');
-  return `<div class="cal-detail-section-title cal-plan-hd">この日の予定（済 ${done}/${items.length}${sumH ? `・目安 ${formatHours(sumH)}` : ''}）${openBtn}</div>
+  const sumA = items.reduce((s, p) => s + (p.actual || 0), 0);
+  return `<div class="cal-detail-section-title cal-plan-hd">この日の予定（済 ${done}/${items.length}${sumH ? `・目安 ${formatHours(sumH)}` : ''}${sumA ? `・実績 ${formatHours(sumA)}` : ''}）${openBtn}</div>
     <div class="cal-plan-list">${rows}</div>`;
 }
 
@@ -3627,10 +3643,13 @@ function planText(p) {
   const t = planTodo(p);
   return String(t ? t.text : (p.text || '')).split('\n')[0];
 }
+// 時間（h 単位）の表示。30 分刻みは「1.5h」、それ以外は「1h20分」のように時と分で出す
 function formatHours(h) {
   if (!h) return '0h';
-  if (h < 1) return `${Math.round(h * 60)}分`;
-  return `${Math.round(h * 100) / 100}h`;
+  const totalMin = Math.round(h * 60);
+  if (totalMin < 60) return `${totalMin}分`;
+  if (totalMin % 30 === 0) return `${totalMin / 60}h`;
+  return `${Math.floor(totalMin / 60)}h${totalMin % 60}分`;
 }
 // 保持期間を過ぎた予定を削除
 function prunePlan() {
@@ -3919,6 +3938,20 @@ function openPlanMenu(id, x, y) {
   render();
 }
 function closePlanMenu() { planMenuId = null; ctxMenuPos = null; }
+// 実績時間を「分」の入力欄から設定（0 や空欄は解除）
+function setPlanActualFromInput(id) {
+  const p = dayPlan.find(x => x.id === id);
+  const v = parseInt(document.getElementById('plan-actual-min')?.value, 10);
+  if (!p) return;
+  if (v > 0) {
+    p.actual = Math.min(v, 1440) / 60;
+    showToast(`⏲ 実績を ${formatHours(p.actual)} にしました`);
+  } else {
+    delete p.actual;
+  }
+  save();
+  closePlanMenu(); render();
+}
 // 予定の内容（本文）の編集。タスクに紐づく予定は元のタスク名（1 行目）を書き換える
 function startPlanTextEdit(id) {
   const p = dayPlan.find(x => x.id === id);
@@ -3992,6 +4025,7 @@ function htmlPlanView() {
   const wd = WEEKDAY_LABELS[new Date(yy, mm - 1, dd).getDay()];
   const all = dayPlan.filter(p => p.date === d);
   const sumH = arr => arr.reduce((s, p) => s + (p.estimate || 0), 0);
+  const sumA = arr => arr.reduce((s, p) => s + (p.actual || 0), 0);
 
   // 行に常時出すのは「チェック・本文・並び替え・⋯」だけ。目安時間・メモ・午前/午後の移動・
   // タスク完了・予定から外す は右クリック（または ⋯）メニューに集約して誤操作を防ぐ。
@@ -4011,6 +4045,10 @@ function htmlPlanView() {
               : taskDone ? '<span class="plan-tag plan-tag-done">タスク完了</span>' : '';
     const carried = p.carriedFrom ? `<span class="plan-tag" title="${esc(p.carriedFrom)} から持ち越し">↪ ${Number(p.carriedFrom.slice(5, 7))}/${Number(p.carriedFrom.slice(8))}</span>` : '';
     const est = p.estimate ? `<span class="plan-est-chip" title="目安時間（右クリックで変更）">⏱ ${formatHours(p.estimate)}</span>` : '';
+    // 実績時間（目安を超えたら橙、目安以内なら緑。目安なしは中立色）
+    const act = p.actual
+      ? `<span class="plan-actual-chip${p.estimate ? (p.actual > p.estimate ? ' is-over' : ' is-ok') : ''}" title="実績時間${p.estimate ? `（目安 ${formatHours(p.estimate)}）` : ''}（右クリックで変更）">実績 ${formatHours(p.actual)}</span>`
+      : '';
     const ntf = (notifyOn && p.notifyAt)
       ? (() => { const st = planNotifyStatus(p, notified, nowMs);
           const tip = st === 'notified' ? '通知済み' : st === 'missed' ? '通知せずに時刻を過ぎました' : st === 'done' ? '予定は済'
@@ -4041,7 +4079,7 @@ function htmlPlanView() {
             ${t ? '<div class="plan-text-edit-hint">※ 元のタスクの名前も変わります</div>' : ''}`
           : `<div class="plan-line">
           <span class="plan-text${t ? '' : ' is-free'}"${t ? '' : ' title="ダブルクリックで内容を編集"'}>${esc(planText(p))}</span>
-          ${srcBadge}${tag}${carried}${ntf}${est}${doneAt}
+          ${srcBadge}${tag}${carried}${ntf}${est}${act}${doneAt}
         </div>`}
         ${memo}
       </div>
@@ -4059,7 +4097,7 @@ function htmlPlanView() {
     return `<div class="plan-section">
       <div class="plan-section-hd">
         <span class="plan-section-name">${label}</span>
-        <span class="plan-section-meta">目安 ${formatHours(sumH(arr))} ・ 済 ${done}/${arr.length}</span>
+        <span class="plan-section-meta">目安 ${formatHours(sumH(arr))}${sumA(arr) ? ` ・ 実績 ${formatHours(sumA(arr))}` : ''} ・ 済 ${done}/${arr.length}</span>
       </div>
       ${arr.length ? arr.map((p, i) => row(p, i, arr.length)).join('') : '<div class="plan-empty">予定はありません</div>'}
     </div>`;
@@ -4175,8 +4213,9 @@ function htmlPlanView() {
 function htmlPlanFooter() {
   const all = dayPlan.filter(p => p.date === planDateYmd());
   const sumH = arr => arr.reduce((s, p) => s + (p.estimate || 0), 0);
+  const actual = all.reduce((s, p) => s + (p.actual || 0), 0);
   return `<div class="footer">
-    <span class="remaining">予定 <strong>${all.length}</strong> 件 ・ 済 <strong>${all.filter(p => p.done).length}</strong> ・ 目安 <strong>${formatHours(sumH(all))}</strong>（残り ${formatHours(sumH(all.filter(p => !p.done)))}）</span>
+    <span class="remaining">予定 <strong>${all.length}</strong> 件 ・ 済 <strong>${all.filter(p => p.done).length}</strong> ・ 目安 <strong>${formatHours(sumH(all))}</strong>（残り ${formatHours(sumH(all.filter(p => !p.done)))}）${actual ? ` ・ 実績 <strong>${formatHours(actual)}</strong>` : ''}</span>
   </div>`;
 }
 
@@ -4708,16 +4747,28 @@ function htmlCtxMenu() {
     const p = dayPlan.find(x => x.id === planMenuId);
     if (!p) return '';
     const t = planTodo(p);
-    const MENU_W = 236, MENU_H = planNotifyEnabled() ? 410 : 330;
+    const MENU_W = 267, MENU_H = planNotifyEnabled() ? 470 : 390;
     const x = Math.max(8, Math.min(ctxMenuPos.x, window.innerWidth - MENU_W - 8));
     const y = Math.max(8, Math.min(ctxMenuPos.y, window.innerHeight - MENU_H - 8));
     const estChips = [null, ...PLAN_ESTIMATES].map(h =>
       `<button class="plan-menu-est${(p.estimate || null) === h ? ' active' : ''}" data-a="plan-set-estimate" data-id="${p.id}" data-h="${h ?? ''}">${h ? formatHours(h) : 'なし'}</button>`
     ).join('');
+    // 実績時間: 目安と同じ候補から選ぶか、分で自由入力
+    const actChips = [null, ...PLAN_ESTIMATES].map(h =>
+      `<button class="plan-menu-est${(p.actual || null) === h ? ' active' : ''}" data-a="plan-set-actual" data-id="${p.id}" data-h="${h ?? ''}">${h ? formatHours(h) : 'なし'}</button>`
+    ).join('');
+    const actMin = p.actual && !PLAN_ESTIMATES.includes(p.actual) ? Math.round(p.actual * 60) : '';
     return `<div class="ctx-menu-overlay" data-a="close-ctx-menu">
       <ul class="ctx-menu plan-menu" style="left:${x}px;top:${y}px;" data-a="ctx-menu-body">
         <li class="plan-menu-label">⏱ 目安時間</li>
         <li class="plan-menu-ests" data-a="ctx-menu-body">${estChips}</li>
+        <li class="plan-menu-label">⏲ 実績時間${p.actual ? `<span class="plan-menu-sub">（${formatHours(p.actual)}）</span>` : ''}</li>
+        <li class="plan-menu-ests" data-a="ctx-menu-body">${actChips}</li>
+        <li class="plan-menu-notify plan-menu-actual" data-a="ctx-menu-body">
+          <input id="plan-actual-min" class="plan-input plan-actual-inp" type="number" min="1" max="1440" step="5" placeholder="分で入力" value="${actMin}">
+          <span class="plan-menu-unit">分</span>
+          <button class="plan-btn plan-btn-primary" data-a="plan-actual-set" data-id="${p.id}">設定</button>
+        </li>
         ${planNotifyEnabled() ? `<li class="ctx-menu-sep"></li>
         <li class="plan-menu-label">⏰ 通知時刻</li>
         <li class="plan-menu-notify" data-a="ctx-menu-body">
@@ -6000,7 +6051,7 @@ const MEANINGFUL_FIELDS_TODO = [
 ];
 const MEANINGFUL_FIELDS_LIST = ['name', 'createdAt', 'type'];
 const MEANINGFUL_FIELDS_PLAN = [
-  'date', 'slot', 'order', 'todoId', 'text', 'estimate', 'done', 'doneAt', 'createdAt', 'carriedFrom', 'carried', 'memo', 'notifyAt', 'notifyLead',
+  'date', 'slot', 'order', 'todoId', 'text', 'estimate', 'done', 'doneAt', 'createdAt', 'carriedFrom', 'carried', 'memo', 'notifyAt', 'notifyLead', 'actual',
 ];
 // マージ・比較の対象カテゴリ（dayPlan は旧バージョンの tasks.json には存在しない）
 const SYNC_CATEGORIES = [
@@ -6368,7 +6419,7 @@ document.addEventListener('click', e => {
       // ⋯ ボタン: ボタンの左下にメニューを開く（右クリックと同じメニュー）
       e.stopPropagation();
       const r = el.getBoundingClientRect();
-      openPlanMenu(id, r.right - 236, r.bottom + 4);
+      openPlanMenu(id, r.right - 267, r.bottom + 4);
       break;
     }
     case 'plan-set-estimate': {
@@ -6381,6 +6432,17 @@ document.addEventListener('click', e => {
       closePlanMenu(); render();
       break;
     }
+    case 'plan-set-actual': {
+      const p = dayPlan.find(x => x.id === id);
+      if (p) {
+        const h = parseFloat(el.dataset.h);
+        if (h > 0) p.actual = h; else delete p.actual;
+        save();
+      }
+      closePlanMenu(); render();
+      break;
+    }
+    case 'plan-actual-set': setPlanActualFromInput(id); break;
     case 'plan-memo-edit': {
       const p = dayPlan.find(x => x.id === id);
       closePlanMenu();
@@ -6988,6 +7050,11 @@ document.addEventListener('keydown', e => {
   if (e.target.closest?.('#plan-notify-inp') && e.key === 'Enter') {
     e.preventDefault();
     document.querySelector('[data-a="plan-notify-set"]')?.click();
+  }
+  if (e.target.id === 'plan-actual-min' && e.key === 'Enter') {
+    e.preventDefault();
+    const btn = document.querySelector('[data-a="plan-actual-set"]');
+    if (btn) setPlanActualFromInput(btn.dataset.id);
   }
   if (e.target.id === 'plan-text-inp' && !e.isComposing) {
     if (e.key === 'Enter') { e.preventDefault(); commitPlanText(); }

@@ -10,8 +10,12 @@
   <meta name="apple-mobile-web-app-title" content="タスク管理">
   <meta name="theme-color" content="#6366f1">
   <script>
-  // アプリアイコン生成（favicon + apple-touch-icon）
+  // アプリアイコン生成（apple-touch-icon + PWA manifest）。
+  // 512px のキャンバス描画と PNG 変換で 40ms 程度かかり、ページ先頭で実行すると表示が遅れるため、
+  // Tauri 版（PWA 不要）では行わず、ブラウザ版でも画面を出した後に後回しで行う。
   (function(){
+    if (window.__TAURI__ || window.__TAURI_INTERNALS__) return;
+    var run = function(){
     var c=document.createElement('canvas');c.width=512;c.height=512;var x=c.getContext('2d');
     // 背景：角丸四角（インディゴ）+ グラデーション
     var g=x.createLinearGradient(0,0,512,512);g.addColorStop(0,'#818cf8');g.addColorStop(1,'#4f46e5');
@@ -52,12 +56,16 @@
       x.strokeStyle=done?'#d1d5db':'#6b7280';x.lineWidth=6;x.lineCap='round';x.stroke();
     }
     chk(210,true);chk(280,false);chk(350,false);
-    // apple-touch-icon
-    var link=document.createElement('link');link.rel='apple-touch-icon';link.href=c.toDataURL('image/png');document.head.appendChild(link);
+    // apple-touch-icon（PNG 変換は 1 回だけにして使い回す）
+    var png=c.toDataURL('image/png');
+    var link=document.createElement('link');link.rel='apple-touch-icon';link.href=png;document.head.appendChild(link);
     // PWA manifest
-    var m={name:'タスク管理',short_name:'タスク管理',start_url:location.href,display:'standalone',background_color:'#6366f1',theme_color:'#6366f1',icons:[{src:c.toDataURL('image/png'),sizes:'512x512',type:'image/png'}]};
+    var m={name:'タスク管理',short_name:'タスク管理',start_url:location.href,display:'standalone',background_color:'#6366f1',theme_color:'#6366f1',icons:[{src:png,sizes:'512x512',type:'image/png'}]};
     var blob=new Blob([JSON.stringify(m)],{type:'application/json'});
     var ml=document.createElement('link');ml.rel='manifest';ml.href=URL.createObjectURL(blob);document.head.appendChild(ml);
+    };
+    // 初回表示が終わってから実行
+    window.addEventListener('load', function(){ setTimeout(run, 0); });
   })();
   </script>
   <script>(function(){var s=localStorage.getItem('darkMode');if(s!==null?s==='true':true)document.documentElement.classList.add('dark');}());</script>
@@ -381,14 +389,18 @@
     .plan-se-report-btn { margin-left:auto; }
     .plan-se-report-btn + .plan-notify-list-btn { margin-left:0; }
     /* SE 集計モーダル */
-    .modal.se-modal { width:94%; max-width:920px; max-height:min(86vh, 820px); }
+    /* 全画面（1920px 程度）なら月の全日（31 列）でも横スクロールなしで見渡せる幅。小さい画面では横スクロール */
+    /* 幅は表の内容に合わせる（列が少ない月は小さく）。最小はツールバーが収まる幅、最大は画面幅の 96%（1440px） */
+    .modal.se-modal { width:fit-content; min-width:min(600px, 96vw); max-width:min(96vw, 1440px); max-height:min(88vh, 900px); }
     .se-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:10px 16px; border-bottom:1px solid var(--divider); }
     .se-month-label { font-size:14px; font-weight:700; color:var(--t1); min-width:84px; text-align:center; }
     .se-grand { margin-left:auto; font-size:12px; color:var(--t2); }
     .se-grand strong { color:var(--t1); font-size:14px; }
     .se-body { flex:1; overflow-y:auto; padding:10px 16px 14px; display:flex; flex-direction:column; gap:8px; }
-    .se-table-wrap { overflow:auto; border:1px solid var(--input-border); border-radius:8px; max-height:58vh; }
-    .se-table { border-collapse:separate; border-spacing:0; width:100%; font-size:12px; font-variant-numeric:tabular-nums; }
+    /* 枠も表の幅に合わせる（列が少ない月に枠の中が空かないように）。表が広いときは親の幅で横スクロール */
+    .se-table-wrap { overflow:auto; border:1px solid var(--input-border); border-radius:8px; max-height:60vh; width:fit-content; max-width:100%; }
+    /* 列が少ないときに日付列が間延びしないよう、表は内容の幅（左寄せ） */
+    .se-table { border-collapse:separate; border-spacing:0; font-size:12px; font-variant-numeric:tabular-nums; }
     .se-table th, .se-table td { padding:4px 8px; border-bottom:1px solid var(--divider); border-right:1px solid var(--divider); white-space:nowrap; }
     /* 行=SE 番号（左端に固定）、列=日付 */
     .se-table td { text-align:right; color:var(--t1); min-width:38px; padding:4px 6px; }
@@ -410,8 +422,13 @@
     .se-table td.sun, .se-table td.sat { background:rgba(148,163,184,.07); }
     .se-table th.today, .se-table td.today { background:rgba(245,158,11,.14); }
     .se-table th.empty .se-day-num { color:var(--t3); font-weight:400; }
+    /* 日計が 8 時間を超えた日 */
+    .se-table tfoot td.se-over { background:#fde047; color:#713f12; }
+    html.dark .se-table tfoot td.se-over { background:#ca8a04; color:#fff; }
     .se-table tbody tr:hover td, .se-table tbody tr:hover th { background:var(--item-hover); }
-    .se-hint { font-size:11px; color:var(--t3); line-height:1.5; }
+    /* 注記は長いので、ポップアップの幅を広げないよう幅 0 から親の幅いっぱいに折り返す */
+    .se-hint { font-size:11px; color:var(--t3); line-height:1.5; width:0; min-width:100%; }
+    .se-manage { width:0; min-width:100%; box-sizing:border-box; }
     .se-manage-toggle { align-self:flex-start; border:none; background:none; color:var(--t2); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; padding:4px 0; }
     .se-manage-toggle:hover { color:#6366f1; }
     .se-manage { display:flex; flex-direction:column; gap:4px; padding:8px; border:1px solid var(--input-border); border-radius:8px; background:var(--input-bg); }
@@ -510,7 +527,16 @@
     /* ── 今日の予定（時間割） ── */
     .plan-body { display:flex; flex-direction:column; gap:10px; }
     .plan-date-nav { display:flex; align-items:center; gap:6px; }
-    .plan-date-label { font-size:14px; font-weight:700; color:var(--t1); min-width:92px; text-align:center; }
+    /* 日付表示はボタン（クリックでカレンダー）。隣の date 入力は見えないが showPicker の起点として置く */
+    .plan-date-pick { position:relative; display:inline-flex; }
+    .plan-date-label {
+      font-size:14px; font-weight:700; color:var(--t1); min-width:92px; text-align:center;
+      display:inline-flex; align-items:center; justify-content:center; gap:4px;
+      padding:2px 8px; border-radius:6px; border:1px solid transparent; background:none; font-family:inherit; cursor:pointer;
+    }
+    .plan-date-label:hover { border-color:var(--input-border); background:var(--item-hover); }
+    .plan-date-caret { font-size:10px; color:var(--t3); }
+    .plan-date-inp { position:absolute; left:0; bottom:0; width:100%; height:1px; opacity:0; pointer-events:none; border:0; padding:0; }
     .plan-date-label.is-today { color:#d97706; }
     html.dark .plan-date-label.is-today { color:#fbbf24; }
     .plan-btn {
@@ -3794,9 +3820,17 @@ function addPlanItem({ date, slot, todoId, text }) {
 function seEnabled() { return appSettings.showDayPlan && appSettings.showSe; }
 function seFind(no) { return seList.find(s => s.no === no) || null; }
 function seLabel(no) { const s = seFind(no); return s && s.name ? `${no}：${s.name}` : no; }
-// ドロップダウンの並び: 最近使った順 → 番号順
+// 常に一覧の一番上に置く特別な SE 番号（ドロップダウン・SE 集計の行・管理一覧）
+const SE_PINNED = ['99999999'];
+const SE_DAY_LIMIT = 8; // SE 集計の日計がこの時間を超えた日を黄色で表示
+const sePinRank = no => { const i = SE_PINNED.indexOf(String(no)); return i < 0 ? SE_PINNED.length : i; };
+// SE 番号の並び（ドロップダウン・SE 集計の行・表のコピー・CSV・管理一覧で共通）:
+// 固定番号（99999999）→ 番号順。使うたびに並びが変わらないよう、最近使った順にはしない
+function seCompareNo(a, b) {
+  return sePinRank(a) - sePinRank(b) || String(a).localeCompare(String(b), 'ja', { numeric: true });
+}
 function seSorted() {
-  return [...seList].sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0) || String(a.no).localeCompare(String(b.no), 'ja'));
+  return [...seList].sort((a, b) => seCompareNo(a.no, b.no));
 }
 function seTouch(no) { const s = seFind(no); if (s) s.lastUsed = Date.now(); }
 // 登録（既存なら案件名を更新）。戻り値は登録した番号（空なら null）
@@ -3826,8 +3860,23 @@ function addSeFromMenu(id) {
   const reg = seRegister(no, name);
   setPlanSe(id, reg);
   planSeNewOpen = false;
+  afterPlanActualOrSe(dayPlan.find(x => x.id === id), 'se', `🏷 ${seLabel(reg)} を登録して設定しました`);
+}
+// 実績時間と SE 番号はセットで集計に使うため、片方だけ入力した時点ではメニューを閉じずに
+// もう片方の入力を促す。両方そろったとき（または値を外したとき）は閉じる。
+// what: 'actual'（実績を入れた）/ 'se'（SE 番号を入れた）
+function afterPlanActualOrSe(p, what, msg) {
+  const keepOpen = seEnabled() && p && (
+    (what === 'actual' && p.actual && !p.seNo) ||
+    (what === 'se' && p.seNo && !p.actual)
+  );
+  if (keepOpen) {
+    render();
+    showToast(`${msg}（続けて${what === 'actual' ? 'SE番号' : '実績時間'}を選んでください）`);
+    return;
+  }
   closePlanMenu(); render();
-  showToast(`🏷 ${seLabel(reg)} を登録して設定しました`);
+  if (msg) showToast(msg);
 }
 function setPlanSe(id, no) {
   const p = dayPlan.find(x => x.id === id);
@@ -4128,14 +4177,9 @@ function setPlanActualFromInput(id) {
   const p = dayPlan.find(x => x.id === id);
   const v = parseInt(document.getElementById('plan-actual-min')?.value, 10);
   if (!p) return;
-  if (v > 0) {
-    p.actual = Math.min(v, 1440) / 60;
-    showToast(`⏲ 実績を ${formatHours(p.actual)} にしました`);
-  } else {
-    delete p.actual;
-  }
+  if (v > 0) p.actual = Math.min(v, 1440) / 60; else delete p.actual;
   save();
-  closePlanMenu(); render();
+  afterPlanActualOrSe(p, 'actual', p.actual ? `⏲ 実績を ${formatHours(p.actual)} にしました` : '');
 }
 // 予定の内容（本文）の編集。タスクに紐づく予定は元のタスク名（1 行目）を書き換える
 function startPlanTextEdit(id) {
@@ -4389,7 +4433,10 @@ function htmlPlanView() {
 
   const dateNav = `<div class="plan-date-nav">
       <button class="plan-btn" data-a="plan-date" data-dir="-1" title="前日">${I.chevLeft}</button>
-      <span class="plan-date-label${isToday ? ' is-today' : ''}">${mm}/${dd}（${wd}）${isToday ? ' 今日' : ''}</span>
+      <span class="plan-date-pick">
+        <button class="plan-date-label${isToday ? ' is-today' : ''}" data-a="plan-date-open" title="クリックしてカレンダーから日付を選ぶ">${mm}/${dd}（${wd}）${isToday ? ' 今日' : ''}<span class="plan-date-caret">▾</span></button>
+        <input id="plan-date-inp" class="plan-date-inp" type="date" value="${d}" tabindex="-1" aria-label="表示する日付">
+      </span>
       <button class="plan-btn" data-a="plan-date" data-dir="1" title="翌日">${I.chevRight}</button>
       ${isToday ? '' : '<button class="plan-btn" data-a="plan-date" data-dir="0">今日へ</button>'}
       ${seEnabled() ? `<button class="plan-btn plan-se-report-btn" data-a="open-se-report" title="SE番号別の実績時間を月単位で表示">📊 SE集計</button>` : ''}
@@ -4621,7 +4668,8 @@ function jumpFromSearch(listId, todoId) {
 
 // ── SE 集計（月単位・日別 × SE 番号の実績時間） ─────────────────
 function seReportYmd() { return seReportYm || today().slice(0, 7); }
-const hNum = h => Math.round(h * 100) / 100; // 集計表は Excel に貼りやすい小数の時間で出す
+// 集計表の時間は転記先のフォーマットに合わせて「時:分」（例: 5.5 時間 → 5:30。24 時間を超えても 40:30 のように出す）
+const hHm = h => { const m = Math.round((h || 0) * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 // 指定月の集計: 日（月の全日）× SE 番号（番号順、未設定は最後）の実績時間
 function seMonthData(ym) {
   const [y, m] = ym.split('-').map(Number);
@@ -4639,7 +4687,7 @@ function seMonthData(ym) {
     colTotal.set(se, (colTotal.get(se) || 0) + p.actual);
   });
   // SE 番号は番号順（月をまたいでも並びが変わらず転記しやすい）。未設定は最後
-  const cols = [...colTotal.keys()].sort((a, b) => (a === '') - (b === '') || a.localeCompare(b, 'ja', { numeric: true }));
+  const cols = [...colTotal.keys()].sort((a, b) => (a === '') - (b === '') || seCompareNo(a, b));
   const dayTotal = d => cols.reduce((s, c) => s + (cell.get(`${d}|${c}`)?.h || 0), 0);
   const grand = [...colTotal.values()].reduce((s, v) => s + v, 0);
   return { ym, days, cols, cell, colTotal, dayTotal, grand };
@@ -4653,10 +4701,10 @@ function seMonthTable(ym) {
   const rows = d.cols.map(c => [
     c || '未設定',
     c ? (seFind(c)?.name || '') : '',
-    ...d.days.map(day => { const h = d.cell.get(`${day}|${c}`)?.h; return h ? hNum(h) : ''; }),
-    hNum(d.colTotal.get(c)),
+    ...d.days.map(day => { const h = d.cell.get(`${day}|${c}`)?.h; return h ? hHm(h) : ''; }),
+    hHm(d.colTotal.get(c)),
   ]);
-  const footer = ['合計', '', ...d.days.map(day => { const t = d.dayTotal(day); return t ? hNum(t) : ''; }), hNum(d.grand)];
+  const footer = ['合計', '', ...d.days.map(day => { const t = d.dayTotal(day); return t ? hHm(t) : ''; }), hHm(d.grand)];
   return { header, rows, footer, data: d };
 }
 function seReportCsv(ym) {
@@ -4692,11 +4740,12 @@ function htmlSeReportModal() {
         const x = d.cell.get(`${day}|${c}`);
         if (!x) return `<td class="${dayCls(day)}"></td>`;
         const tip = x.items.map(p => `${planText(p)}（${formatHours(p.actual)}）`).join('\n');
-        return `<td class="${dayCls(day)}" title="${esc(tip)}">${hNum(x.h)}</td>`;
+        return `<td class="${dayCls(day)}" title="${esc(tip)}">${hHm(x.h)}</td>`;
       }).join('');
-      return `<tr class="${c ? '' : 'se-unset'}"><th class="se-th-se" title="${esc(seColTitle(c))}"><div class="se-col-no">${c ? esc(c) : '未設定'}</div>${c && seFind(c)?.name ? `<div class="se-col-name">${esc(seFind(c).name)}</div>` : ''}</th>${cells}<td class="se-td-total">${hNum(d.colTotal.get(c))}</td></tr>`;
+      return `<tr class="${c ? '' : 'se-unset'}"><th class="se-th-se" title="${esc(seColTitle(c))}"><div class="se-col-no">${c ? esc(c) : '未設定'}</div>${c && seFind(c)?.name ? `<div class="se-col-name">${esc(seFind(c).name)}</div>` : ''}</th>${cells}<td class="se-td-total">${hHm(d.colTotal.get(c))}</td></tr>`;
     }).join('');
-    const foot = `<tr><th class="se-th-se">日計</th>${days.map(day => { const tot = d.dayTotal(day); return `<td class="${dayCls(day)}">${tot ? hNum(tot) : ''}</td>`; }).join('')}<td class="se-td-total">${hNum(d.grand)}</td></tr>`;
+    // 日計が 8 時間（SE_DAY_LIMIT）を超えた日は黄色で知らせる
+    const foot = `<tr><th class="se-th-se">日計</th>${days.map(day => { const tot = d.dayTotal(day); const over = tot > SE_DAY_LIMIT + 1e-9; return `<td class="${dayCls(day)}${over ? ' se-over' : ''}"${over ? ` title="${SE_DAY_LIMIT}時間を超えています"` : ''}>${tot ? hHm(tot) : ''}</td>`; }).join('')}<td class="se-td-total">${hHm(d.grand)}</td></tr>`;
     table = `<div class="se-table-wrap"><table class="se-table"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
   }
   // SE 番号の管理（案件名の変更・削除・追加）
@@ -4726,13 +4775,13 @@ function htmlSeReportModal() {
         <button class="plan-btn" data-a="se-month" data-dir="1" title="翌月">${I.chevRight}</button>
         ${ym === t.slice(0, 7) ? '' : '<button class="plan-btn" data-a="se-month" data-dir="0">今月</button>'}
         <button class="task-filter-chip${seOnlyDays ? ' active' : ''}" data-a="se-only-days" title="オフにすると月の全日を表示します（CSV・コピーは常に全日）">実績のある日だけ</button>
-        <span class="se-grand">合計 <strong>${hNum(d.grand)}</strong> 時間</span>
+        <span class="se-grand">合計 <strong>${hHm(d.grand)}</strong></span>
         <button class="plan-btn" data-a="se-copy" title="表をコピーして Excel に貼り付け"${d.cols.length ? '' : ' disabled'}>📋 表をコピー</button>
         <button class="plan-btn" data-a="se-csv" title="CSV ファイルで保存"${d.cols.length ? '' : ' disabled'}>💾 CSV</button>
       </div>
       <div class="se-body">
         ${table}
-        <div class="se-hint">※ 単位は時間（小数）。日付は横方向（横にスクロールできます）。セルにマウスを乗せると、その日の予定の内訳が出ます。「未設定」は SE 番号が紐づいていない実績です。</div>
+        <div class="se-hint">※ 時間は「時:分」（例: 5:30）。日付は横方向（横にスクロールできます）。セルにマウスを乗せると、その日の予定の内訳が出ます。「未設定」は SE 番号が紐づいていない実績です。</div>
         <button class="se-manage-toggle" data-a="se-manage-toggle">${seManageOpen ? '▼' : '▶'} SE番号の管理（案件名の変更・削除・追加）</button>
         ${manage}
       </div>
@@ -6933,7 +6982,7 @@ document.addEventListener('click', e => {
         if (h > 0) p.actual = h; else delete p.actual;
         save();
       }
-      closePlanMenu(); render();
+      afterPlanActualOrSe(p, 'actual', p && p.actual ? `⏲ 実績を ${formatHours(p.actual)} にしました` : '');
       break;
     }
     case 'plan-actual-set': setPlanActualFromInput(id); break;
@@ -7018,6 +7067,13 @@ document.addEventListener('click', e => {
       const t = p && planTodo(p);
       closePlanMenu();
       if (t) jumpToTodo(t.listId, t.id); else render();
+      break;
+    }
+    case 'plan-date-open': {
+      // 日付表示のクリックで、ブラウザ標準のカレンダー（日付選択）を開く
+      const inp = document.getElementById('plan-date-inp');
+      if (!inp) break;
+      try { inp.showPicker(); } catch { inp.focus(); inp.click(); }
       break;
     }
     case 'plan-date': {
@@ -7515,6 +7571,16 @@ document.addEventListener('focusin', e => {
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 document.addEventListener('change', e => {
+  // 今日の予定: カレンダーで選んだ日へ移動
+  if (e.target.id === 'plan-date-inp') {
+    const v = e.target.value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      planDate = v === today() ? null : v;
+      planPickerOpen = false;
+      render();
+    }
+    return;
+  }
   // 今日の予定: SE 番号の選択
   if (e.target.id === 'plan-se-sel') {
     const id = e.target.dataset.id, v = e.target.value;
@@ -7524,8 +7590,7 @@ document.addEventListener('change', e => {
       return;
     }
     setPlanSe(id, v);
-    closePlanMenu(); render();
-    showToast(v ? `🏷 ${seLabel(v)} を設定しました` : 'SE番号を外しました');
+    afterPlanActualOrSe(dayPlan.find(x => x.id === id), 'se', v ? `🏷 ${seLabel(v)} を設定しました` : 'SE番号を外しました');
     return;
   }
   // SE 集計: SE 番号の案件名を変更
